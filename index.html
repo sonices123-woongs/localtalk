@@ -7,6 +7,9 @@
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <!-- 오픈소스 지도 Leaflet CSS & JS (무료 / API Key 불필요) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -167,9 +170,9 @@
       </footer>
     </div>
 
-    <!-- [화면 5] 네이버 지도 실시간 연동 화면 -->
+    <!-- [화면 5] 오픈소스 라이브 지도 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
-      <div id="naverMap" class="w-full h-full min-h-[300px] flex items-center justify-center text-xs text-slate-400">지도를 로딩 중입니다...</div>
+      <div id="leafletMap" class="w-full h-full min-h-[300px] z-0"></div>
     </main>
 
     <!-- 하단 탭 바 (Bottom Navigation) -->
@@ -196,9 +199,8 @@
     var currentRoom = null;
     var currentView = 'home';
 
-    var mapInstance = null;
-    var mapMarkers = [];
-    var isMapScriptLoaded = false;
+    var leafletMapInstance = null;
+    var leafletMarkers = [];
 
     var localStore = {};
 
@@ -616,86 +618,48 @@
       renderMessages();
     }
 
-    // 네이버 지도 동적 안전 로딩 함수
-    function loadNaverMapScript(callback) {
-      if (typeof naver !== 'undefined' && naver.maps) {
-        callback();
-        return;
+    // 오픈소스 지도(Leaflet.js) 렌더링
+    function renderLeafletMap() {
+      var centerLat = currentCity ? currentCity.lat : 36.3;
+      var centerLng = currentCity ? currentCity.lng : 127.8;
+      var zoomLevel = currentCity ? 10 : 7;
+
+      if (!leafletMapInstance) {
+        leafletMapInstance = L.map('leafletMap').setView([centerLat, centerLng], zoomLevel);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 18,
+          attribution: '&copy; OpenStreetMap'
+        }).addTo(leafletMapInstance);
+      } else {
+        leafletMapInstance.setView([centerLat, centerLng], zoomLevel);
       }
 
-      if (isMapScriptLoaded) {
-        callback();
-        return;
+      // 기존 마커 초기화
+      for (var i = 0; i < leafletMarkers.length; i++) {
+        leafletMapInstance.removeLayer(leafletMarkers[i]);
+      }
+      leafletMarkers = [];
+
+      // 도시별 핀 마커 생성
+      for (var j = 0; j < CITIES.length; j++) {
+        var c = CITIES[j];
+        var cName = getCityName(c);
+
+        var marker = L.marker([c.lat, c.lng]).addTo(leafletMapInstance);
+        
+        var popupContent = '<div style="padding:4px; font-size:11px; font-weight:bold; text-align:center;">' +
+          cName + '<br><a href="#" onclick="openCityBoard(\'' + c.id + '\'); return false;" style="color:#4f46e5; text-decoration:underline; font-size:10px;">[실시간 Q&A 보러가기]</a>' +
+        '</div>';
+
+        marker.bindPopup(popupContent);
+        leafletMarkers.push(marker);
       }
 
-      var script = document.createElement('script');
-      script.type = 'text/javascript';
-      script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk';
-      script.onload = function() {
-        isMapScriptLoaded = true;
-        callback();
-      };
-      script.onerror = function() {
-        var mapContainer = document.getElementById('naverMap');
-        if (mapContainer) {
-          mapContainer.innerHTML = '<div class="p-4 text-center text-xs text-rose-500">네이버 지도 연동 설정(Client ID/Domain)을 확인해 주세요.</div>';
-        }
-      };
-      document.head.appendChild(script);
-    }
-
-    function renderNaverMap() {
-      loadNaverMapScript(function() {
-        if (typeof naver === 'undefined' || !naver.maps) return;
-
-        var centerLat = currentCity ? currentCity.lat : 36.5;
-        var centerLng = currentCity ? currentCity.lng : 127.8;
-        var zoomLevel = currentCity ? 10 : 7;
-
-        var mapContainer = document.getElementById('naverMap');
-        mapContainer.innerHTML = '';
-
-        var mapOptions = {
-          center: new naver.maps.LatLng(centerLat, centerLng),
-          zoom: zoomLevel,
-          zoomControl: true,
-          zoomControlOptions: {
-            style: naver.maps.ZoomControlStyle.SMALL,
-            position: naver.maps.Position.TOP_RIGHT
-          }
-        };
-
-        mapInstance = new naver.maps.Map('naverMap', mapOptions);
-
-        for (var j = 0; j < CITIES.length; j++) {
-          var c = CITIES[j];
-          var cName = getCityName(c);
-
-          var marker = new naver.maps.Marker({
-            position: new naver.maps.LatLng(c.lat, c.lng),
-            map: mapInstance,
-            title: cName
-          });
-
-          var infoWindow = new naver.maps.InfoWindow({
-            content: '<div style="padding:8px 12px; font-size:11px; font-weight:bold; border-radius:8px;">' +
-              cName + '<br><span style="font-size:10px; color:#4f46e5; cursor:pointer;" onclick="openCityBoard(\'' + c.id + '\')">[실시간 Q&A 보러가기]</span>' +
-            '</div>'
-          });
-
-          (function(m, iw) {
-            naver.maps.Event.addListener(m, "click", function(e) {
-              if (iw.getMap()) {
-                iw.close();
-              } else {
-                iw.open(mapInstance, m);
-              }
-            });
-          })(marker, infoWindow);
-
-          mapMarkers.push(marker);
-        }
-      });
+      // 지도 사이즈 동적 재계산
+      setTimeout(function() {
+        if (leafletMapInstance) leafletMapInstance.invalidateSize();
+      }, 200);
     }
 
     function goBack() {
@@ -752,9 +716,9 @@
 
         var t = I18N[currentLang] || I18N['ko'];
         document.getElementById('headerTitle').innerText = '대한민국 지역지도';
-        document.getElementById('headerSub').innerText = '네이버 지도 실시간 위치 확인';
+        document.getElementById('headerSub').innerText = '실시간 위치 및 도시 마커 확인';
 
-        renderNaverMap();
+        renderLeafletMap();
       } else if (tabName === 'my') {
         tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
@@ -912,7 +876,6 @@
       renderCityList(query);
     }
 
-    // 메인 실행
     renderCityList('');
   </script>
 </body>
