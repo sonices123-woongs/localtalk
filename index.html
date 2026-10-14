@@ -477,4 +477,443 @@
       var container = document.getElementById('boardPosts');
       container.innerHTML = '';
       
-      var posts
+      var posts = BOARD_DATA[currentCity.id] || [
+        { 
+          id: 'def1',
+          title: { ko: '이 지역 추천 여행 코스 안내', en: 'Recommended Travel Itinerary for this City', ja: 'この地域のオススメ旅行コース案内', 'zh-CN': '本区域推荐旅游路线指南' }, 
+          author: '현지인', date: '오늘', views: 50, 
+          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' },
+          content: {
+            ko: '📍 **주요 관광 코스:**\n1. 현지인들이 자주 찾는 로컬 시장 방문\n2. 경치가 아름다운 명소 및 야경 스팟 체험\n3. 시그니처 대표 먹거리 탐방!',
+            en: '📍 **Main Tour Route:**\n1. Visit local markets popular with residents\n2. Scenic spots and beautiful night view spots\n3. Enjoy local signature delicacies!',
+            ja: '📍 **主な観光コース:**\n1. 現地人がよく訪れるローカル市場の訪問\n2. 景色の良い名所と夜景スポット体験\n3. シグネチャー名物グルメ探訪！',
+            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地居民常去的本土市场\n2. 体验风景优美的打卡点及夜景名所\n3. 品尝代表性特色美食！'
+          }
+        }
+      ];
+
+      for (var i = 0; i < posts.length; i++) {
+        var p = posts[i];
+        var pTitle = p.title[currentLang] || p.title['ko'];
+        var pTag = p.tag[currentLang] || p.tag['ko'];
+        var pContent = p.content[currentLang] || p.content['ko'];
+
+        var formattedContent = pContent.replace(/\n/g, '<br>');
+
+        var item = '<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:border-indigo-300 transition">' +
+          '<div onclick="togglePostContent(\'' + p.id + '\')" class="p-3 cursor-pointer flex flex-col space-y-1">' +
+            '<div class="flex items-center gap-1.5">' +
+              '<span class="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">' + pTag + '</span>' +
+              '<h4 class="text-xs font-bold text-slate-800 truncate flex-1">' + pTitle + '</h4>' +
+              '<i id="arrow-' + p.id + '" class="fas fa-chevron-down text-slate-400 text-[10px] transition-transform"></i>' +
+            '</div>' +
+            '<div class="flex justify-between items-center text-[10px] text-slate-400 mt-1">' +
+              '<span>' + p.author + ' · ' + p.date + '</span>' +
+              '<span>조회 ' + p.views + ' (클릭하여 보기)</span>' +
+            '</div>' +
+          '</div>' +
+          '<div id="body-' + p.id + '" class="hidden bg-slate-50 border-t border-slate-100 p-3 text-xs text-slate-700 leading-relaxed">' +
+            formattedContent +
+          '</div>' +
+        '</div>';
+        container.innerHTML += item;
+      }
+    }
+
+    function togglePostContent(postId) {
+      var body = document.getElementById('body-' + postId);
+      var arrow = document.getElementById('arrow-' + postId);
+
+      if (body.classList.contains('hidden')) {
+        body.classList.remove('hidden');
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+      } else {
+        body.classList.add('hidden');
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function openChatRoomList() {
+      if (!currentCity) return;
+      currentView = 'roomList';
+
+      document.getElementById('boardView').classList.add('hidden');
+      document.getElementById('chatView').classList.add('hidden');
+      document.getElementById('mapView').classList.add('hidden');
+      document.getElementById('roomListView').classList.remove('hidden');
+
+      var cityName = getCityName(currentCity);
+      var t = I18N[currentLang] || I18N['ko'];
+
+      document.getElementById('headerTitle').innerText = cityName + t.roomListTitle;
+      document.getElementById('headerSub').innerText = 'Max 4명 정원 대화방';
+      document.getElementById('roomListNoticeTitle').innerText = t.roomNoticeTitle;
+      document.getElementById('roomListNoticeSub').innerText = t.roomNoticeSub;
+
+      renderChatRooms();
+    }
+
+    function renderChatRooms() {
+      var container = document.getElementById('chatRoomsContainer');
+      container.innerHTML = '';
+      var t = I18N[currentLang] || I18N['ko'];
+
+      for (var i = 0; i < ROOM_STATES.length; i++) {
+        var r = ROOM_STATES[i];
+        var isFull = r.count >= r.max;
+
+        var statusBadge = isFull 
+          ? '<span class="text-[10px] bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full border border-rose-100">' + r.count + '/' + r.max + ' ' + t.roomFull + '</span>'
+          : '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100">' + r.count + '/' + r.max + '명 참여 중</span>';
+
+        var btnHtml = isFull
+          ? '<button disabled class="bg-slate-200 text-slate-400 px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-not-allowed">꽉참</button>'
+          : '<button onclick="enterSpecificChatRoom(' + r.id + ')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition shadow-sm">' + t.roomEnter + '</button>';
+
+        var card = '<div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center w-full min-w-0">' +
+          '<div class="flex items-center gap-3 min-w-0 flex-1 pr-2">' +
+            '<div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0"><i class="fas fa-hashtag"></i></div>' +
+            '<div class="min-w-0 flex-1">' +
+              '<h4 class="font-bold text-slate-800 text-sm truncate">Room #' + r.id + '</h4>' +
+              '<div class="mt-0.5">' + statusBadge + '</div>' +
+            '</div>' +
+          '</div>' +
+          btnHtml +
+        '</div>';
+
+        container.innerHTML += card;
+      }
+    }
+
+    function enterSpecificChatRoom(roomId) {
+      currentRoom = roomId;
+      currentView = 'chat';
+
+      document.getElementById('roomListView').classList.add('hidden');
+      document.getElementById('mapView').classList.add('hidden');
+      document.getElementById('chatView').classList.remove('hidden');
+      document.getElementById('chatView').classList.add('flex');
+      
+      document.getElementById('refreshBtn').classList.remove('hidden');
+      document.getElementById('refreshBtn').classList.add('flex');
+
+      var cityName = getCityName(currentCity);
+      var t = I18N[currentLang] || I18N['ko'];
+
+      document.getElementById('headerTitle').innerText = cityName + ' Room #' + roomId;
+      document.getElementById('headerSub').innerText = 'Room #' + roomId + ' (최대 4명 소수 정예 톡방)';
+      document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + roomId + ' Q&A';
+      document.getElementById('chatNoticeSub').innerText = t.noticeSub;
+
+      var storeKey = currentCity.id + '_room_' + roomId;
+      if (!localStore[storeKey]) {
+        localStore[storeKey] = [
+          { id: 1, sender: 'Alex (Tourist)', text: 'Hello! Welcome to Room #' + roomId + ' in ' + cityName + '!', time: '8:12 PM', isMe: false },
+          { id: 2, sender: '현지 가이드', text: '안녕하세요! ' + roomId + '번 방에 오신 것을 환영합니다.', time: '8:15 PM', isMe: false }
+        ];
+      }
+
+      renderMessages();
+    }
+
+    // 네이버 지도 동적 안전 로딩 함수
+    function loadNaverMapScript(callback) {
+      if (typeof naver !== 'undefined' && naver.maps) {
+        callback();
+        return;
+      }
+
+      if (isMapScriptLoaded) {
+        callback();
+        return;
+      }
+
+      var script = document.createElement('script');
+      script.type = 'text/javascript';
+      script.src = 'https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk';
+      script.onload = function() {
+        isMapScriptLoaded = true;
+        callback();
+      };
+      script.onerror = function() {
+        var mapContainer = document.getElementById('naverMap');
+        if (mapContainer) {
+          mapContainer.innerHTML = '<div class="p-4 text-center text-xs text-rose-500">네이버 지도 연동 설정(Client ID/Domain)을 확인해 주세요.</div>';
+        }
+      };
+      document.head.appendChild(script);
+    }
+
+    function renderNaverMap() {
+      loadNaverMapScript(function() {
+        if (typeof naver === 'undefined' || !naver.maps) return;
+
+        var centerLat = currentCity ? currentCity.lat : 36.5;
+        var centerLng = currentCity ? currentCity.lng : 127.8;
+        var zoomLevel = currentCity ? 10 : 7;
+
+        var mapContainer = document.getElementById('naverMap');
+        mapContainer.innerHTML = '';
+
+        var mapOptions = {
+          center: new naver.maps.LatLng(centerLat, centerLng),
+          zoom: zoomLevel,
+          zoomControl: true,
+          zoomControlOptions: {
+            style: naver.maps.ZoomControlStyle.SMALL,
+            position: naver.maps.Position.TOP_RIGHT
+          }
+        };
+
+        mapInstance = new naver.maps.Map('naverMap', mapOptions);
+
+        for (var j = 0; j < CITIES.length; j++) {
+          var c = CITIES[j];
+          var cName = getCityName(c);
+
+          var marker = new naver.maps.Marker({
+            position: new naver.maps.LatLng(c.lat, c.lng),
+            map: mapInstance,
+            title: cName
+          });
+
+          var infoWindow = new naver.maps.InfoWindow({
+            content: '<div style="padding:8px 12px; font-size:11px; font-weight:bold; border-radius:8px;">' +
+              cName + '<br><span style="font-size:10px; color:#4f46e5; cursor:pointer;" onclick="openCityBoard(\'' + c.id + '\')">[실시간 Q&A 보러가기]</span>' +
+            '</div>'
+          });
+
+          (function(m, iw) {
+            naver.maps.Event.addListener(m, "click", function(e) {
+              if (iw.getMap()) {
+                iw.close();
+              } else {
+                iw.open(mapInstance, m);
+              }
+            });
+          })(marker, infoWindow);
+
+          mapMarkers.push(marker);
+        }
+      });
+    }
+
+    function goBack() {
+      if (currentView === 'chat') {
+        openChatRoomList();
+      } else if (currentView === 'roomList') {
+        openCityBoard(currentCity.id);
+      } else {
+        currentCity = null;
+        currentRoom = null;
+        currentView = 'home';
+
+        document.getElementById('homeView').classList.remove('hidden');
+        document.getElementById('boardView').classList.add('hidden');
+        document.getElementById('roomListView').classList.add('hidden');
+        document.getElementById('chatView').classList.add('hidden');
+        document.getElementById('mapView').classList.add('hidden');
+        document.getElementById('chatView').classList.remove('flex');
+        
+        document.getElementById('backBtn').classList.add('hidden');
+        document.getElementById('refreshBtn').classList.add('hidden');
+
+        var t = I18N[currentLang] || I18N['ko'];
+        
+        document.getElementById('headerTitle').innerHTML = '<svg class="w-4 h-5 fill-indigo-200 shrink-0" viewBox="0 0 100 140"><path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/><circle cx="82" cy="118" r="5"/><circle cx="92" cy="55" r="3"/></svg><span class="truncate">Korea Local Talk</span>';
+        document.getElementById('headerSub').innerText = t.appSub;
+      }
+    }
+
+    function switchTab(tabName) {
+      var tHome = document.getElementById('tabHome');
+      var tMap = document.getElementById('tabMap');
+      var tMy = document.getElementById('tabMy');
+
+      tHome.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
+      tMap.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
+      tMy.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
+
+      if (tabName === 'home') {
+        tHome.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
+        goBack();
+      } else if (tabName === 'map') {
+        tMap.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
+        currentView = 'map';
+
+        document.getElementById('homeView').classList.add('hidden');
+        document.getElementById('boardView').classList.add('hidden');
+        document.getElementById('roomListView').classList.add('hidden');
+        document.getElementById('chatView').classList.add('hidden');
+        document.getElementById('mapView').classList.remove('hidden');
+
+        document.getElementById('backBtn').classList.remove('hidden');
+        document.getElementById('refreshBtn').classList.add('hidden');
+
+        var t = I18N[currentLang] || I18N['ko'];
+        document.getElementById('headerTitle').innerText = '대한민국 지역지도';
+        document.getElementById('headerSub').innerText = '네이버 지도 실시간 위치 확인';
+
+        renderNaverMap();
+      } else if (tabName === 'my') {
+        tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
+        alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
+      }
+    }
+
+    function renderMessages() {
+      var container = document.getElementById('messageList');
+      container.innerHTML = '';
+      var t = I18N[currentLang] || I18N['ko'];
+
+      var storeKey = currentCity.id + '_room_' + currentRoom;
+      var msgs = localStore[storeKey] || [];
+
+      if (msgs.length === 0) {
+        container.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">' + t.noMsg + '</div>';
+        return;
+      }
+
+      for (var i = 0; i < msgs.length; i++) {
+        var m = msgs[i];
+        var isMyMsg = m.isMe;
+
+        var transBtnHtml = '<button onclick="translateMsg(' + i + ')" class="mt-1 text-[10px] text-indigo-600 font-bold hover:underline block">[번역하기]</button>';
+        
+        var transBoxHtml = '';
+        if (m.trans) {
+          if (isMyMsg) {
+            transBoxHtml = '<div class="mt-1.5 pt-1.5 border-t border-indigo-400/50 text-[11px] text-amber-200 font-medium chat-bubble">' + m.trans + '</div>';
+          } else {
+            transBoxHtml = '<div class="mt-1.5 pt-1.5 border-t border-slate-200 text-[11px] text-indigo-700 font-medium chat-bubble">' + m.trans + '</div>';
+          }
+        }
+
+        var msgCard = '<div class="flex flex-col w-full ' + (isMyMsg ? 'items-end' : 'items-start') + '">' +
+          '<span class="text-[10px] text-slate-400 px-1 mb-0.5">' + m.sender + '</span>' +
+          '<div class="max-w-[80%] rounded-2xl p-2.5 text-xs leading-relaxed chat-bubble ' + (isMyMsg ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none') + '">' +
+            m.text + transBoxHtml +
+          '</div>' +
+          transBtnHtml +
+          '<span class="text-[9px] text-slate-400 px-1 mt-0.5">' + m.time + '</span>' +
+        '</div>';
+        container.innerHTML += msgCard;
+      }
+
+      var scrollArea = document.getElementById('chatScrollArea');
+      scrollArea.scrollTop = scrollArea.scrollHeight;
+    }
+
+    function translateMsg(idx) {
+      var storeKey = currentCity.id + '_room_' + currentRoom;
+      var msgObj = localStore[storeKey][idx];
+      if (!msgObj) return;
+
+      var text = msgObj.text;
+      var targetLang = currentLang;
+      if (currentLang === 'ko') {
+        var hasKorean = /[가-힣]/.test(text);
+        targetLang = hasKorean ? 'en' : 'ko';
+      }
+
+      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + targetLang + '&dt=t&q=' + encodeURIComponent(text);
+
+      fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data && data[0]) {
+            var fullTrans = '';
+            for (var i = 0; i < data[0].length; i++) {
+              if (data[0][i][0]) fullTrans += data[0][i][0];
+            }
+            msgObj.trans = '[번역] ' + fullTrans;
+            renderMessages();
+          }
+        })
+        .catch(function(err) {
+          alert('번역 실패: 인터넷 연결을 확인해 주세요.');
+        });
+    }
+
+    function sendMessage() {
+      var input = document.getElementById('msgInput');
+      var sendBtn = document.getElementById('sendBtn');
+      var text = input.value.trim();
+      if (!text || !currentCity || !currentRoom) return;
+
+      var storeKey = currentCity.id + '_room_' + currentRoom;
+      var t = I18N[currentLang] || I18N['ko'];
+      var now = new Date();
+      var hours = now.getHours();
+      var minutes = now.getMinutes();
+      var timeStr = (hours >= 12 ? 'PM' : 'AM') + ' ' + (hours % 12 || 12) + ':' + (minutes < 10 ? '0' : '') + minutes;
+
+      localStore[storeKey].push({
+        id: Date.now(),
+        sender: t.mySender,
+        text: text,
+        time: timeStr,
+        isMe: true
+      });
+
+      input.value = '';
+      input.disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
+
+      renderMessages();
+      input.focus();
+    }
+
+    function loadMessages() {
+      var icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      
+      setTimeout(function() {
+        if (icon) icon.classList.remove('fa-spin');
+        renderMessages();
+      }, 500);
+    }
+
+    function changeLanguage(lang) {
+      currentLang = lang;
+      var t = I18N[currentLang] || I18N['ko'];
+
+      document.getElementById('headerSub').innerText = t.appSub;
+      document.getElementById('citySearch').placeholder = t.searchPlaceholder;
+      document.getElementById('popularTitle').innerText = t.popularTitle;
+      document.getElementById('msgInput').placeholder = t.inputPlaceholder;
+      document.getElementById('sendBtn').innerText = t.send;
+
+      if (currentCity) {
+        var cityName = getCityName(currentCity);
+        if (currentView === 'board') {
+          document.getElementById('headerTitle').innerText = cityName + t.boardTitleSuffix;
+          document.getElementById('headerSub').innerText = t.boardSub;
+          document.getElementById('boardBannerTitle').innerText = cityName + t.boardBannerSuffix;
+          document.getElementById('boardBannerSub').innerText = t.boardBannerSub;
+          document.getElementById('boardPostsTitle').innerHTML = t.boardPostsTitle;
+          renderBoardPosts();
+        } else if (currentView === 'roomList') {
+          document.getElementById('headerTitle').innerText = cityName + t.roomListTitle;
+          renderChatRooms();
+        } else if (currentView === 'chat') {
+          document.getElementById('headerTitle').innerText = cityName + ' Room #' + currentRoom;
+          document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + currentRoom + ' Q&A';
+          document.getElementById('chatNoticeSub').innerText = t.noticeSub;
+        }
+      }
+
+      renderCityList(document.getElementById('citySearch').value);
+      if (currentCity && currentView === 'chat') renderMessages();
+    }
+
+    function filterCities() {
+      var query = document.getElementById('citySearch').value;
+      renderCityList(query);
+    }
+
+    // 메인 실행
+    renderCityList('');
+  </script>
+</body>
+</html>
