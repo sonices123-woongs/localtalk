@@ -7,9 +7,8 @@
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- 오픈소스 지도 Leaflet CSS & JS (무료 / API Key 불필요) -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- 네이버 지도 v3 API 스크립트 정석 로드 (Client ID: e02il5rppk) -->
+  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -170,9 +169,9 @@
       </footer>
     </div>
 
-    <!-- [화면 5] 오픈소스 라이브 지도 화면 -->
+    <!-- [화면 5] 네이버 지도 실시간 연동 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
-      <div id="leafletMap" class="w-full h-full min-h-[300px] z-0"></div>
+      <div id="naverMap" class="w-full h-full min-h-[300px]"></div>
     </main>
 
     <!-- 하단 탭 바 (Bottom Navigation) -->
@@ -199,8 +198,8 @@
     var currentRoom = null;
     var currentView = 'home';
 
-    var leafletMapInstance = null;
-    var leafletMarkers = [];
+    var naverMapInstance = null;
+    var naverMapMarkers = [];
 
     var localStore = {};
 
@@ -226,7 +225,10 @@
         roomFull: '정원 초과',
         roomEnter: '입장하기',
         roomNoticeTitle: '실시간 Q&A 대화방 선택',
-        roomNoticeSub: '쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.'
+        roomNoticeSub: '쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.',
+        mapTitle: '대한민국 지역지도',
+        mapSub: '네이버 지도 실시간 위치 및 도시 마커',
+        mapQaLink: '[실시간 Q&A 보러가기]'
       },
       en: {
         appSub: 'Korea Real-time Local Q&A',
@@ -249,7 +251,10 @@
         roomFull: 'Full',
         roomEnter: 'Enter',
         roomNoticeTitle: 'Select Live Chat Room',
-        roomNoticeSub: 'Max 4 people allowed per room for comfortable chatting.'
+        roomNoticeSub: 'Max 4 people allowed per room for comfortable chatting.',
+        mapTitle: 'Korea Naver Map',
+        mapSub: 'Check real-time locations & city markers',
+        mapQaLink: '[Go to Live Q&A]'
       },
       ja: {
         appSub: '韓国 リアルタイム現地人 Q&A',
@@ -272,7 +277,10 @@
         roomFull: '満員',
         roomEnter: '入室する',
         roomNoticeTitle: 'リアルタイムチャットルーム選択',
-        roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。'
+        roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。',
+        mapTitle: '韓国 NAVER地図',
+        mapSub: 'リアルタイム位置および都市マーカー確認',
+        mapQaLink: '[リアルタイム Q&Aへ]'
       },
       'zh-CN': {
         appSub: '韩国 实时当地人 Q&A',
@@ -295,7 +303,10 @@
         roomFull: '已满',
         roomEnter: '进入',
         roomNoticeTitle: '选择实时聊天室',
-        roomNoticeSub: '为了保持良好的沟通体验，每个聊天室限额4人。'
+        roomNoticeSub: '为了保持良好的沟通体验，每个聊天室限额4人。',
+        mapTitle: '韩国 NAVER 地图',
+        mapSub: '实时位置及城市标记查看',
+        mapQaLink: '[前往实时 Q&A]'
       }
     };
 
@@ -618,48 +629,69 @@
       renderMessages();
     }
 
-    // 오픈소스 지도(Leaflet.js) 렌더링
-    function renderLeafletMap() {
+    // 네이버 지도 라이브 렌더링 함수
+    function renderNaverMap() {
+      if (typeof naver === 'undefined' || !naver.maps) {
+        return;
+      }
+
       var centerLat = currentCity ? currentCity.lat : 36.3;
       var centerLng = currentCity ? currentCity.lng : 127.8;
       var zoomLevel = currentCity ? 10 : 7;
+      var t = I18N[currentLang] || I18N['ko'];
 
-      if (!leafletMapInstance) {
-        leafletMapInstance = L.map('leafletMap').setView([centerLat, centerLng], zoomLevel);
+      var mapOptions = {
+        center: new naver.maps.LatLng(centerLat, centerLng),
+        zoom: zoomLevel,
+        zoomControl: true,
+        zoomControlOptions: {
+          style: naver.maps.ZoomControlStyle.SMALL,
+          position: naver.maps.Position.TOP_RIGHT
+        }
+      };
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 18,
-          attribution: '&copy; OpenStreetMap'
-        }).addTo(leafletMapInstance);
+      if (!naverMapInstance) {
+        naverMapInstance = new naver.maps.Map('naverMap', mapOptions);
       } else {
-        leafletMapInstance.setView([centerLat, centerLng], zoomLevel);
+        naverMapInstance.setCenter(new naver.maps.LatLng(centerLat, centerLng));
+        naverMapInstance.setZoom(zoomLevel);
       }
 
-      // 기존 마커 초기화
-      for (var i = 0; i < leafletMarkers.length; i++) {
-        leafletMapInstance.removeLayer(leafletMarkers[i]);
+      // 기존 마커 정리
+      for (var i = 0; i < naverMapMarkers.length; i++) {
+        naverMapMarkers[i].setMap(null);
       }
-      leafletMarkers = [];
+      naverMapMarkers = [];
 
-      // 도시별 핀 마커 생성
+      // 대한민국 주요 도시 핀 마커 및 언어별 팝업 렌더링
       for (var j = 0; j < CITIES.length; j++) {
         var c = CITIES[j];
         var cName = getCityName(c);
 
-        var marker = L.marker([c.lat, c.lng]).addTo(leafletMapInstance);
-        
-        var popupContent = '<div style="padding:4px; font-size:11px; font-weight:bold; text-align:center;">' +
-          cName + '<br><a href="#" onclick="openCityBoard(\'' + c.id + '\'); return false;" style="color:#4f46e5; text-decoration:underline; font-size:10px;">[실시간 Q&A 보러가기]</a>' +
-        '</div>';
+        var marker = new naver.maps.Marker({
+          position: new naver.maps.LatLng(c.lat, c.lng),
+          map: naverMapInstance,
+          title: cName
+        });
 
-        marker.bindPopup(popupContent);
-        leafletMarkers.push(marker);
+        var infoWindow = new naver.maps.InfoWindow({
+          content: '<div style="padding:8px 12px; font-size:11px; font-weight:bold; text-align:center; border-radius:8px;">' +
+            cName + '<br><span style="font-size:10px; color:#4f46e5; cursor:pointer;" onclick="openCityBoard(\'' + c.id + '\')">' + t.mapQaLink + '</span>' +
+          '</div>'
+        });
+
+        (function(m, iw) {
+          naver.maps.Event.addListener(m, "click", function(e) {
+            if (iw.getMap()) {
+              iw.close();
+            } else {
+              iw.open(naverMapInstance, m);
+            }
+          });
+        })(marker, infoWindow);
+
+        naverMapMarkers.push(marker);
       }
-
-      // 지도 사이즈 동적 재계산
-      setTimeout(function() {
-        if (leafletMapInstance) leafletMapInstance.invalidateSize();
-      }, 200);
     }
 
     function goBack() {
@@ -715,10 +747,12 @@
         document.getElementById('refreshBtn').classList.add('hidden');
 
         var t = I18N[currentLang] || I18N['ko'];
-        document.getElementById('headerTitle').innerText = '대한민국 지역지도';
-        document.getElementById('headerSub').innerText = '실시간 위치 및 도시 마커 확인';
+        document.getElementById('headerTitle').innerText = t.mapTitle;
+        document.getElementById('headerSub').innerText = t.mapSub;
 
-        renderLeafletMap();
+        setTimeout(function() {
+          renderNaverMap();
+        }, 100);
       } else if (tabName === 'my') {
         tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
@@ -865,6 +899,12 @@
           document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + currentRoom + ' Q&A';
           document.getElementById('chatNoticeSub').innerText = t.noticeSub;
         }
+      }
+
+      if (currentView === 'map') {
+        document.getElementById('headerTitle').innerText = t.mapTitle;
+        document.getElementById('headerSub').innerText = t.mapSub;
+        renderNaverMap();
       }
 
       renderCityList(document.getElementById('citySearch').value);
