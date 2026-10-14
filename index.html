@@ -234,69 +234,69 @@
       }
     };
 
-    // 각 도시의 특색을 살린 커스텀 아이콘 렌더링
+    // 도시별 아이콘 정밀 재디자인
     var CITIES = [
       { 
         id: 'seoul', 
         name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
-        // 서울: 숭례문 전통 기와문 형태
-        iconTag: '<div class="w-7 h-7 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 text-xs shadow-sm"><i class="fas fa-torii-gate"></i></div>', 
+        // 서울: 석축 성문 위에 솟은 전통 기와 지붕 (남대문/숭례문 형상화)
+        iconTag: '<div class="w-8 h-8 rounded-full bg-stone-100 border border-stone-200 flex flex-col items-center justify-center text-amber-800 text-[10px] shadow-sm"><i class="fas fa-synagogue text-[11px] text-amber-900 -mb-1"></i><i class="fas fa-archway text-[10px] text-stone-600"></i></div>', 
         desc: { ko: '명동, 홍대, 핫플레이스 실시간 정보', en: 'Myeongdong, Hongdae & Hotspots', ja: '明洞、弘大、人気スポット情報', 'zh-CN': '明洞、弘大、热门景点实时资讯' }, 
         users: 340 
       },
       { 
         id: 'jeju', 
         name: { ko: '대한민국 제주', en: 'Jeju Island', ja: '済州島', 'zh-CN': '济州岛' },
-        // 제주: 작은 섬 위에 야자수 한 그루
-        iconTag: '<div class="w-7 h-7 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-xs shadow-sm"><i class="fas fa-tree-city"></i></div>', 
+        // 제주: 가로로 살짝 길쭉한 타원형 섬 배경 + 중앙의 푸른 야자수
+        iconTag: '<div class="w-9 h-6 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-700 text-xs shadow-sm"><i class="fas fa-tree-city text-[12px]"></i></div>', 
         desc: { ko: '렌터카, 날씨, 흑돼지/카페 질문', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚/カフェ質問', 'zh-CN': '租车、天气、黑猪肉/咖啡馆咨询' }, 
         users: 189 
       },
       { 
         id: 'busan', 
         name: { ko: '대한민국 부산', en: 'Busan, Korea', ja: '釜山, 韓国', 'zh-CN': '釜山, 韩国' },
-        // 부산: 시원한 파도와 갈매기
-        iconTag: '<div class="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 text-xs shadow-sm"><div class="flex items-center gap-0.5"><i class="fas fa-water"></i><i class="fas fa-crow text-[9px] -mt-1"></i></div></div>', 
+        // 부산: 시원한 파도 바로 위에 나는 갈매기
+        iconTag: '<div class="w-8 h-8 rounded-full bg-sky-100 border border-sky-200 flex flex-col items-center justify-center text-blue-600 shadow-sm"><i class="fas fa-dove text-[9px] text-sky-800 -mb-0.5"></i><i class="fas fa-water text-[11px] text-blue-600"></i></div>', 
         desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
         users: 215 
       },
       { 
         id: 'daegu', 
         name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
-        // 대구: 근대 문화 건축물과 도심
-        iconTag: '<div class="w-7 h-7 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 text-xs shadow-sm"><i class="fas fa-building-columns"></i></div>', 
+        // 대구: 근대 골목 건물 및 도심 기둥
+        iconTag: '<div class="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-xs shadow-sm"><i class="fas fa-building-columns"></i></div>', 
         desc: { ko: '동성로, 서문시장, 현지 맛집 질문', en: 'Dongseong-ro, Seomun Market & Local Eats', ja: '東城路、西門市場、グルメ質問', 'zh-CN': '东城路、西门市场、美食品鉴' }, 
         users: 128 
       },
       { 
         id: 'incheon', 
         name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
-        // 인천: 비행기와 하늘
-        iconTag: '<div class="w-7 h-7 rounded-full bg-sky-50 flex items-center justify-center text-sky-600 text-xs shadow-sm"><i class="fas fa-plane-departure"></i></div>', 
+        // 인천: 비행기 이륙 모습
+        iconTag: '<div class="w-8 h-8 rounded-full bg-sky-50 border border-sky-100 flex items-center justify-center text-sky-600 text-xs shadow-sm"><i class="fas fa-plane-departure"></i></div>', 
         desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
         users: 162 
       },
       { 
         id: 'gyeongju', 
         name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
-        // 경주: 첨성대 석조 탑
-        iconTag: '<div class="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center text-amber-700 text-xs shadow-sm"><i class="fas fa-monument"></i></div>', 
+        // 경주: 첨성대 석탑 느낌의 모뉴먼트
+        iconTag: '<div class="w-8 h-8 rounded-full bg-amber-100/70 border border-amber-200 flex items-center justify-center text-amber-800 text-xs shadow-sm"><i class="fas fa-monument"></i></div>', 
         desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
         users: 145 
       },
       { 
         id: 'jeonju', 
         name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
-        // 전주: 전주비빔밥 + 숟가락/젓가락 수저 세트
-        iconTag: '<div class="w-7 h-7 rounded-full bg-rose-50 flex items-center justify-center text-rose-600 text-xs shadow-sm"><div class="flex items-center gap-0.5"><i class="fas fa-bowl-rice"></i><i class="fas fa-utensils text-[9px]"></i></div></div>', 
+        // 전주: 놋그릇 황동색 감성의 비빔밥과 한식 수저
+        iconTag: '<div class="w-8 h-8 rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shadow-sm"><div class="flex items-center gap-0.5"><i class="fas fa-bowl-rice text-xs text-amber-800"></i><i class="fas fa-utensils text-[9px] text-amber-600"></i></div></div>', 
         desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
         users: 110 
       },
       { 
         id: 'gangneung', 
         name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
-        // 강릉: 안목해변 파라솔 + 태양
-        iconTag: '<div class="w-7 h-7 rounded-full bg-teal-50 flex items-center justify-center text-teal-600 text-xs shadow-sm"><div class="flex items-center gap-0.5"><i class="fas fa-umbrella-beach"></i><i class="fas fa-sun text-[9px] text-amber-500"></i></div></div>', 
+        // 강릉: 바닷가 파라솔과 반짝이는 태양
+        iconTag: '<div class="w-8 h-8 rounded-full bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-600 shadow-sm"><div class="flex items-center gap-0.5"><i class="fas fa-umbrella-beach text-xs"></i><i class="fas fa-sun text-[9px] text-amber-500"></i></div></div>', 
         desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
         users: 178 
       }
