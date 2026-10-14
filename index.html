@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>LocalTalk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -234,61 +234,61 @@
       }
     };
 
-    // 4개국어 도시 명칭 및 설명 지원
+    // 연관된 도시별 아이콘 업데이트
     var CITIES = [
       { 
         id: 'seoul', 
         name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
-        iconTag: '<i class="fas fa-tower-broadcast text-blue-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-landmark-dome text-rose-500 text-sm"></i>', // 서울: 남대문/숭례문 느낌 기와문
         desc: { ko: '명동, 홍대, 핫플레이스 실시간 정보', en: 'Myeongdong, Hongdae & Hotspots', ja: '明洞、弘大、人気スポット情報', 'zh-CN': '明洞、弘大、热门景点实时资讯' }, 
         users: 340 
       },
       { 
         id: 'jeju', 
         name: { ko: '대한민국 제주', en: 'Jeju Island', ja: '済州島', 'zh-CN': '济州岛' },
-        iconTag: '<i class="fas fa-mountain text-emerald-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-tree-city text-emerald-500 text-sm"></i>', // 제주: 섬/자연/야자수 느낌
         desc: { ko: '렌터카, 날씨, 흑돼지/카페 질문', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚/カフェ質問', 'zh-CN': '租车、天气、黑猪肉/咖啡馆咨询' }, 
         users: 189 
       },
       { 
         id: 'busan', 
         name: { ko: '대한민국 부산', en: 'Busan, Korea', ja: '釜山, 韓国', 'zh-CN': '釜山, 韩国' },
-        iconTag: '<i class="fas fa-water text-cyan-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-water text-blue-500 text-sm"></i>', // 부산: 바다/갈매기/파도
         desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
         users: 215 
       },
       { 
         id: 'daegu', 
         name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
-        iconTag: '<i class="fas fa-building text-indigo-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-building-columns text-indigo-500 text-sm"></i>', // 대구: 근대도시/건축
         desc: { ko: '동성로, 서문시장, 현지 맛집 질문', en: 'Dongseong-ro, Seomun Market & Local Eats', ja: '東城路、西門市場、グルメ質問', 'zh-CN': '东城路、西门市场、美食品鉴' }, 
         users: 128 
       },
       { 
         id: 'incheon', 
         name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
-        iconTag: '<i class="fas fa-plane-departure text-sky-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-plane-departure text-sky-500 text-sm"></i>', // 인천: 공항/비행기 (유지)
         desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
         users: 162 
       },
       { 
         id: 'gyeongju', 
         name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
-        iconTag: '<i class="fas fa-landmark text-amber-600 text-sm"></i>', 
+        iconTag: '<i class="fas fa-gopuram text-amber-600 text-sm"></i>', // 경주: 불국사/사찰/문화재
         desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
         users: 145 
       },
       { 
         id: 'jeonju', 
         name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
-        iconTag: '<i class="fas fa-utensils text-rose-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-bowl-rice text-rose-600 text-sm"></i>', // 전주: 전주비빔밥/한식
         desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
         users: 110 
       },
       { 
         id: 'gangneung', 
         name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
-        iconTag: '<i class="fas fa-umbrella-beach text-teal-500 text-sm"></i>', 
+        iconTag: '<i class="fas fa-umbrella-beach text-teal-500 text-sm"></i>', // 강릉: 안목해변/동해 바닷가
         desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
         users: 178 
       }
