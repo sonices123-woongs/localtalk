@@ -75,17 +75,16 @@
           <h1 id="headerTitle" class="text-sm sm:text-base font-bold flex items-center gap-1.5 truncate">
             <i class="fas fa-globe-asia text-indigo-200 shrink-0"></i> <span class="truncate">LocalTalk</span>
           </h1>
-          <!-- 서브 타이틀 수정 -->
           <p id="headerSub" class="text-[10px] text-indigo-100 truncate">대한민국 실시간 현지인 Q&A</p>
         </div>
       </div>
       
-      <!-- 언어 선택 라벨 및 드롭다운 (일본어, 중국어 추가) -->
+      <!-- Language 라벨 고정 및 4개국어 지원 -->
       <div class="flex items-center gap-1 shrink-0 ml-1">
         <button id="refreshBtn" onclick="loadMessages()" class="hidden bg-indigo-700 hover:bg-indigo-800 text-white p-1.5 rounded-full text-xs font-bold items-center justify-center mr-0.5">
           <i class="fas fa-sync-alt text-[10px]" id="refreshIcon"></i>
         </button>
-        <span class="text-[10px] text-indigo-200 font-bold">언어:</span>
+        <span class="text-[10px] text-indigo-200 font-bold">Language:</span>
         <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-[10px] font-bold py-1 px-1.5 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
           <option value="ko">한국어</option>
           <option value="en">English</option>
@@ -114,7 +113,7 @@
         <div>
           <span class="bg-white/20 text-[10px] px-2 py-0.5 rounded-full font-bold">LIVE Q&A</span>
           <h3 id="boardBannerTitle" class="font-bold text-sm mt-1">서울 실시간 대화방 입장하기</h3>
-          <p class="text-[11px] text-indigo-100 mt-0.5">현지 주민들과 실시간 질문/답변 나누기</p>
+          <p id="boardBannerSub" class="text-[11px] text-indigo-100 mt-0.5">현지 주민들과 실시간 질문/답변 나누기</p>
         </div>
         <div class="bg-white text-indigo-600 w-9 h-9 rounded-full flex items-center justify-center text-sm shadow shrink-0">
           <i class="fas fa-comments"></i>
@@ -122,7 +121,7 @@
       </div>
 
       <div>
-        <h3 class="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
+        <h3 id="boardPostsTitle" class="text-xs font-bold text-slate-600 mb-2 flex items-center gap-1">
           <i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁
         </h3>
         <div id="boardPosts" class="space-y-2"></div>
@@ -170,7 +169,14 @@
         noticeSub: '여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.',
         inputPlaceholder: '질문이나 답변을 입력하세요...',
         noMsg: '아직 등록된 메시지가 없습니다. 첫 질문을 남겨보세요!',
-        mySender: '나 (User)'
+        mySender: '나 (User)',
+        boardTitleSuffix: ' 게시판',
+        boardSub: '지역 정보 & 실시간 Q&A',
+        chatSuffix: ' 실시간 톡',
+        boardBannerSuffix: ' 실시간 대화방 입장하기',
+        boardBannerSub: '현지 주민들과 실시간 질문/답변 나누기',
+        boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁',
+        send: '전송'
       },
       en: {
         appSub: 'Korea Real-time Local Q&A',
@@ -181,18 +187,32 @@
         noticeSub: 'Ask local residents anything about your trip!',
         inputPlaceholder: 'Ask a question or share local tips...',
         noMsg: 'No messages yet. Be the first to ask!',
-        mySender: 'Me (User)'
+        mySender: 'Me (User)',
+        boardTitleSuffix: ' Board',
+        boardSub: 'Local Info & Real-time Q&A',
+        chatSuffix: ' Live Chat',
+        boardBannerSuffix: ' Join Live Chat Room',
+        boardBannerSub: 'Real-time Q&A with local residents',
+        boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> Essential Info & Tips',
+        send: 'Send'
       },
       ja: {
         appSub: '韓国 リアルタイム現地人 Q&A',
         searchPlaceholder: '都市を検索 (例: ソウル, 済州, 釜山)',
-        popularTitle: '韓国の 주요 都市',
+        popularTitle: '韓国の主要都市',
         online: '人オンライン',
         enterBoard: '掲示板を見る',
         noticeSub: '旅行中の疑問を現地の人に質問してみましょう！',
         inputPlaceholder: '質問や回答を入力してください...',
-        noMsg: 'メッセージ는 아직 없습니다. 첫 질문을 남겨보세요!',
-        mySender: '私 (User)'
+        noMsg: 'メッセージはまだありません。最初の質問を残してみましょう！',
+        mySender: '私 (User)',
+        boardTitleSuffix: ' 掲示板',
+        boardSub: '地域情報 & リアルタイム Q&A',
+        chatSuffix: ' リアルタイムトーク',
+        boardBannerSuffix: ' リアルタイムチャットに入る',
+        boardBannerSub: '現地住民とリアルタイムで質疑応答',
+        boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 必読情報 & 地元のコツ',
+        send: '送信'
       },
       'zh-CN': {
         appSub: '韩国 实时当地人 Q&A',
@@ -203,20 +223,75 @@
         noticeSub: '提出您在旅行中的疑问！当地人为您解答。',
         inputPlaceholder: '请输入问题或回答...',
         noMsg: '暂无消息，快来发布第一个问题吧！',
-        mySender: '我 (User)'
+        mySender: '我 (User)',
+        boardTitleSuffix: ' 论坛',
+        boardSub: '本地资讯 & 实时 Q&A',
+        chatSuffix: ' 实时聊天',
+        boardBannerSuffix: ' 进入实时聊天室',
+        boardBannerSub: '与当地居民实时问答',
+        boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 必读资讯 & 本地攻略',
+        send: '发送'
       }
     };
 
-    // 요청하신 순서: 서울 -> 제주 -> 부산 -> 대구 -> 인천 -> 경주 -> 전주 -> 강릉
+    // 4개국어 도시 명칭 및 설명 지원
     var CITIES = [
-      { id: 'seoul', name_ko: '대한민국 서울', name_en: 'Seoul, Korea', iconTag: '<i class="fas fa-tower-broadcast text-blue-500 text-sm"></i>', desc_ko: '명동, 홍대, 핫플레이스 실시간 정보', desc_en: 'Myeongdong, Hongdae & Hotspots', users: 340 },
-      { id: 'jeju', name_ko: '대한민국 제주', name_en: 'Jeju Island', iconTag: '<i class="fas fa-mountain text-emerald-500 text-sm"></i>', desc_ko: '렌터카, 날씨, 흑돼지/카페 질문', desc_en: 'Rental Cars, Weather & Black Pork', users: 189 },
-      { id: 'busan', name_ko: '대한민국 부산', name_en: 'Busan, Korea', iconTag: '<i class="fas fa-water text-cyan-500 text-sm"></i>', desc_ko: '해운대, 광안리, 국밥/해산물 추천', desc_en: 'Haeundae, Gwangalli & Seafood Spots', users: 215 },
-      { id: 'daegu', name_ko: '대한민국 대구', name_en: 'Daegu, Korea', iconTag: '<i class="fas fa-building text-indigo-500 text-sm"></i>', desc_ko: '동성로, 서문시장, 현지 맛집 질문', desc_en: 'Dongseong-ro, Seomun Market & Local Eats', users: 128 },
-      { id: 'incheon', name_ko: '대한민국 인천', name_en: 'Incheon, Korea', iconTag: '<i class="fas fa-plane-departure text-sky-500 text-sm"></i>', desc_ko: '공항 꿀팁, 송도, 차이나타운 정보', desc_en: 'Airport Tips, Songdo & Chinatown', users: 162 },
-      { id: 'gyeongju', name_ko: '대한민국 경주', name_en: 'Gyeongju, Korea', iconTag: '<i class="fas fa-landmark text-amber-600 text-sm"></i>', desc_ko: '황리단길, 첨성대, 야경 코스 추천', desc_en: 'Hwangnidan-gil & Historic Sites', users: 145 },
-      { id: 'jeonju', name_ko: '대한민국 전주', name_en: 'Jeonju, Korea', iconTag: '<i class="fas fa-utensils text-rose-500 text-sm"></i>', desc_ko: '한옥마을, 전주비빔밥, 야시장 팁', desc_en: 'Hanok Village & Local Delicacies', users: 110 },
-      { id: 'gangneung', name_ko: '대한민국 강릉', name_en: 'Gangneung, Korea', iconTag: '<i class="fas fa-umbrella-beach text-teal-500 text-sm"></i>', desc_ko: '안목해변 커피거리, 경포대, 짬뽕순두부', desc_en: 'Anmok Coffee Street & Beach Views', users: 178 }
+      { 
+        id: 'seoul', 
+        name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
+        iconTag: '<i class="fas fa-tower-broadcast text-blue-500 text-sm"></i>', 
+        desc: { ko: '명동, 홍대, 핫플레이스 실시간 정보', en: 'Myeongdong, Hongdae & Hotspots', ja: '明洞、弘大、人気スポット情報', 'zh-CN': '明洞、弘大、热门景点实时资讯' }, 
+        users: 340 
+      },
+      { 
+        id: 'jeju', 
+        name: { ko: '대한민국 제주', en: 'Jeju Island', ja: '済州島', 'zh-CN': '济州岛' },
+        iconTag: '<i class="fas fa-mountain text-emerald-500 text-sm"></i>', 
+        desc: { ko: '렌터카, 날씨, 흑돼지/카페 질문', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚/カフェ質問', 'zh-CN': '租车、天气、黑猪肉/咖啡馆咨询' }, 
+        users: 189 
+      },
+      { 
+        id: 'busan', 
+        name: { ko: '대한민국 부산', en: 'Busan, Korea', ja: '釜山, 韓国', 'zh-CN': '釜山, 韩国' },
+        iconTag: '<i class="fas fa-water text-cyan-500 text-sm"></i>', 
+        desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
+        users: 215 
+      },
+      { 
+        id: 'daegu', 
+        name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
+        iconTag: '<i class="fas fa-building text-indigo-500 text-sm"></i>', 
+        desc: { ko: '동성로, 서문시장, 현지 맛집 질문', en: 'Dongseong-ro, Seomun Market & Local Eats', ja: '東城路、西門市場、グルメ質問', 'zh-CN': '东城路、西门市场、美食品鉴' }, 
+        users: 128 
+      },
+      { 
+        id: 'incheon', 
+        name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
+        iconTag: '<i class="fas fa-plane-departure text-sky-500 text-sm"></i>', 
+        desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
+        users: 162 
+      },
+      { 
+        id: 'gyeongju', 
+        name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
+        iconTag: '<i class="fas fa-landmark text-amber-600 text-sm"></i>', 
+        desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
+        users: 145 
+      },
+      { 
+        id: 'jeonju', 
+        name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
+        iconTag: '<i class="fas fa-utensils text-rose-500 text-sm"></i>', 
+        desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
+        users: 110 
+      },
+      { 
+        id: 'gangneung', 
+        name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
+        iconTag: '<i class="fas fa-umbrella-beach text-teal-500 text-sm"></i>', 
+        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
+        users: 178 
+      }
     ];
 
     var BOARD_DATA = {
@@ -250,6 +325,16 @@
       ]
     };
 
+    function getCityName(city) {
+      if (!city) return '';
+      return city.name[currentLang] || city.name['ko'];
+    }
+
+    function getCityDesc(city) {
+      if (!city) return '';
+      return city.desc[currentLang] || city.desc['ko'];
+    }
+
     function renderCityList(filterKeyword) {
       var filter = filterKeyword || '';
       var listContainer = document.getElementById('cityList');
@@ -260,8 +345,8 @@
 
       for (var i = 0; i < CITIES.length; i++) {
         var city = CITIES[i];
-        var name = (currentLang === 'en') ? city.name_en : city.name_ko;
-        var desc = (currentLang === 'en') ? city.desc_en : city.desc_ko;
+        var name = getCityName(city);
+        var desc = getCityDesc(city);
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
           var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex flex-col justify-between space-y-1.5 w-full min-w-0">' +
@@ -298,10 +383,14 @@
       document.getElementById('backBtn').classList.remove('hidden');
       document.getElementById('refreshBtn').classList.add('hidden');
 
-      var cityName = (currentLang === 'en') ? currentCity.name_en : currentCity.name_ko;
-      document.getElementById('headerTitle').innerText = cityName + ' 게시판';
-      document.getElementById('headerSub').innerText = '지역 정보 & 실시간 Q&A';
-      document.getElementById('boardBannerTitle').innerText = cityName + ' 실시간 대화방 입장하기';
+      var cityName = getCityName(currentCity);
+      var t = I18N[currentLang] || I18N['ko'];
+
+      document.getElementById('headerTitle').innerText = cityName + t.boardTitleSuffix;
+      document.getElementById('headerSub').innerText = t.boardSub;
+      document.getElementById('boardBannerTitle').innerText = cityName + t.boardBannerSuffix;
+      document.getElementById('boardBannerSub').innerText = t.boardBannerSub;
+      document.getElementById('boardPostsTitle').innerHTML = t.boardPostsTitle;
 
       renderBoardPosts();
     }
@@ -311,7 +400,7 @@
       container.innerHTML = '';
       
       var posts = BOARD_DATA[currentCity.id] || [
-        { title: '이 지역의 추천 여행 코스 공유합니다.', author: '현지인', date: '오늘', views: 50, tag: '추천' },
+        { title: '추천 여행 코스 공유합니다.', author: '현지인', date: '오늘', views: 50, tag: '추천' },
         { title: '대중교통 이용 안내', author: '운영자', date: '어제', views: 82, tag: '공지' }
       ];
 
@@ -342,12 +431,13 @@
       document.getElementById('refreshBtn').classList.remove('hidden');
       document.getElementById('refreshBtn').classList.add('flex');
 
-      var cityName = (currentLang === 'en') ? currentCity.name_en : currentCity.name_ko;
+      var cityName = getCityName(currentCity);
       var t = I18N[currentLang] || I18N['ko'];
 
-      document.getElementById('headerTitle').innerText = cityName + ' 실시간 톡';
+      document.getElementById('headerTitle').innerText = cityName + t.chatSuffix;
       document.getElementById('headerSub').innerText = cityName + ' (' + currentCity.users + ' ' + t.online + ')';
-      document.getElementById('chatNoticeTitle').innerText = (currentLang === 'en') ? (cityName + ' Local Q&A') : (cityName + ' 현지인 Q&A 방');
+      document.getElementById('chatNoticeTitle').innerText = cityName + ' Local Q&A';
+      document.getElementById('chatNoticeSub').innerText = t.noticeSub;
 
       if (!localStore[currentCity.id]) {
         localStore[currentCity.id] = [
@@ -427,8 +517,6 @@
       if (!msgObj) return;
 
       var text = msgObj.text;
-      
-      // 현재 선택된 언어로 맞춤 번역 (기본값: 한국어/영어)
       var targetLang = currentLang;
       if (currentLang === 'ko') {
         var hasKorean = /[가-힣]/.test(text);
@@ -499,17 +587,22 @@
       document.getElementById('headerSub').innerText = t.appSub;
       document.getElementById('citySearch').placeholder = t.searchPlaceholder;
       document.getElementById('popularTitle').innerText = t.popularTitle;
-      document.getElementById('chatNoticeSub').innerText = t.noticeSub;
       document.getElementById('msgInput').placeholder = t.inputPlaceholder;
+      document.getElementById('sendBtn').innerText = t.send;
 
       if (currentCity) {
-        var cityName = (currentLang === 'en') ? currentCity.name_en : currentCity.name_ko;
+        var cityName = getCityName(currentCity);
         if (currentView === 'board') {
-          document.getElementById('headerTitle').innerText = cityName + ' 게시판';
-          document.getElementById('boardBannerTitle').innerText = cityName + ' 실시간 대화방 입장하기';
+          document.getElementById('headerTitle').innerText = cityName + t.boardTitleSuffix;
+          document.getElementById('headerSub').innerText = t.boardSub;
+          document.getElementById('boardBannerTitle').innerText = cityName + t.boardBannerSuffix;
+          document.getElementById('boardBannerSub').innerText = t.boardBannerSub;
+          document.getElementById('boardPostsTitle').innerHTML = t.boardPostsTitle;
         } else if (currentView === 'chat') {
-          document.getElementById('headerTitle').innerText = cityName + ' 실시간 톡';
-          document.getElementById('chatNoticeTitle').innerText = (currentLang === 'en') ? (cityName + ' Local Q&A') : (cityName + ' 현지인 Q&A 방');
+          document.getElementById('headerTitle').innerText = cityName + t.chatSuffix;
+          document.getElementById('headerSub').innerText = cityName + ' (' + currentCity.users + ' ' + t.online + ')';
+          document.getElementById('chatNoticeTitle').innerText = cityName + ' Local Q&A';
+          document.getElementById('chatNoticeSub').innerText = t.noticeSub;
         }
       }
 
