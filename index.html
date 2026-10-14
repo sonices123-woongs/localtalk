@@ -15,17 +15,44 @@
       -webkit-tap-highlight-color: transparent;
     }
     
+    /* PC 환경 배경화면 및 모바일 프레임 중앙 정렬 */
     html, body {
-      width: 100% !important;
-      height: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      overflow: hidden !important; /* 전체 화면 삐져나감 완벽 차단 */
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
       font-family: 'Pretendard', -apple-system, sans-serif;
-      background-color: #f8fafc;
+      background-color: #0f172a; /* PC 브라우저 배경: 어두운 슬레이트 톤 */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
     }
 
-    /* 채팅 영역만 내부에서 세로 스크롤 가능하도록 지정 */
+    /* 앱 메인 프레임 (PC에서는 모바일 폰 모양, 모바일 기기에서는 100% 가득 참) */
+    .app-container {
+      width: 100%;
+      max-width: 430px; /* 스마트폰 폭 고정 */
+      height: 100%;
+      max-height: 900px; /* PC에서 모바일 높이 감싸기 */
+      background-color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 모바일 기기 접속 시 풀스크린 처리 */
+    @media (max-width: 640px) {
+      .app-container {
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+
     .scroll-area {
       overflow-y: auto !important;
       -webkit-overflow-scrolling: touch;
@@ -37,69 +64,73 @@
     }
   </style>
 </head>
-<body class="w-full h-full flex flex-col relative">
+<body>
 
-  <!-- 1. 상단 헤더 (무조건 최상단 고정) -->
-  <header class="bg-indigo-600 text-white px-3 py-3 shrink-0 flex justify-between items-center shadow-md w-full z-50">
-    <div class="flex items-center gap-2 min-w-0 flex-1">
-      <!-- 뒤로 가기 버튼 (항상 잘 보이도록 크기 및 여백 확보) -->
-      <button id="backBtn" onclick="goHome()" class="hidden text-white hover:text-indigo-200 text-lg px-1.5 py-0.5 shrink-0">
-        <i class="fas fa-arrow-left"></i>
-      </button>
-      <div class="min-w-0 flex-1">
-        <h1 id="headerTitle" class="text-sm sm:text-base font-bold flex items-center gap-1.5 truncate">
-          <i class="fas fa-globe-asia text-indigo-200 shrink-0"></i> <span class="truncate">LocalTalk</span>
-        </h1>
-        <p id="headerSub" class="text-[10px] text-indigo-100 truncate">전 세계 도시 실시간 현지인 Q&A</p>
-      </div>
-    </div>
-    
-    <div class="flex items-center gap-1.5 shrink-0 ml-1">
-      <button id="refreshBtn" onclick="loadMessages()" class="hidden bg-indigo-700 hover:bg-indigo-800 text-white p-1.5 rounded-full text-xs font-bold items-center justify-center">
-        <i class="fas fa-sync-alt text-[10px]" id="refreshIcon"></i>
-      </button>
-      <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-[11px] font-bold py-1 px-1.5 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
-        <option value="ko">한국어</option>
-        <option value="en">English</option>
-      </select>
-    </div>
-  </header>
+  <!-- 앱 전체를 감싸는 모바일 규격 컨테이너 -->
+  <div class="app-container sm:rounded-[36px] border-slate-700 sm:border-[8px]">
 
-  <!-- 2. 도시 선택 메인 화면 -->
-  <main id="homeView" class="p-3.5 space-y-3 flex-1 scroll-area w-full pb-16">
-    <div class="relative w-full">
-      <i class="fas fa-search absolute left-3 top-3 text-slate-400 text-xs"></i>
-      <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 대구, 서울)" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
-    </div>
-
-    <div class="w-full">
-      <h2 id="popularTitle" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">인기 도시 채팅방</h2>
-      <div id="cityList" class="grid grid-cols-2 gap-2 w-full"></div>
-    </div>
-  </main>
-
-  <!-- 3. 도시별 채팅 화면 영역 -->
-  <div id="chatView" class="hidden flex-1 flex-col overflow-hidden w-full relative">
-    <!-- 메시지 목록 영역 (독립 스크롤 적용) -->
-    <main class="flex-1 p-3 space-y-3 scroll-area w-full pb-6" id="chatScrollArea">
-      <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-2.5 text-xs text-indigo-800 flex items-start gap-1.5 w-full">
-        <i class="fas fa-info-circle text-indigo-500 mt-0.5 shrink-0 text-xs"></i>
+    <!-- 1. 상단 헤더 -->
+    <header class="bg-indigo-600 text-white px-4 py-3 shrink-0 flex justify-between items-center shadow-md w-full z-50">
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <button id="backBtn" onclick="goHome()" class="hidden text-white hover:text-indigo-200 text-lg pr-1 shrink-0">
+          <i class="fas fa-arrow-left"></i>
+        </button>
         <div class="min-w-0 flex-1">
-          <strong id="chatNoticeTitle" class="text-xs">대구 현지인 Q&A 방</strong><br>
-          <span id="chatNoticeSub" class="text-[11px]">여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.</span>
+          <h1 id="headerTitle" class="text-sm sm:text-base font-bold flex items-center gap-1.5 truncate">
+            <i class="fas fa-globe-asia text-indigo-200 shrink-0"></i> <span class="truncate">LocalTalk</span>
+          </h1>
+          <p id="headerSub" class="text-[10px] text-indigo-100 truncate">전 세계 도시 실시간 현지인 Q&A</p>
         </div>
       </div>
+      
+      <div class="flex items-center gap-1.5 shrink-0 ml-1">
+        <button id="refreshBtn" onclick="loadMessages()" class="hidden bg-indigo-700 hover:bg-indigo-800 text-white p-1.5 rounded-full text-xs font-bold items-center justify-center">
+          <i class="fas fa-sync-alt text-[10px]" id="refreshIcon"></i>
+        </button>
+        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-[11px] font-bold py-1 px-2 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
+          <option value="ko">한국어</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </header>
 
-      <div id="messageList" class="space-y-3 w-full"></div>
+    <!-- 2. 도시 선택 메인 화면 -->
+    <main id="homeView" class="p-4 space-y-3.5 flex-1 scroll-area w-full pb-8">
+      <div class="relative w-full">
+        <i class="fas fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 대구, 서울)" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+      </div>
+
+      <div class="w-full">
+        <h2 id="popularTitle" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">인기 도시 채팅방</h2>
+        <div id="cityList" class="grid grid-cols-2 gap-2.5 w-full"></div>
+      </div>
     </main>
 
-    <!-- 하단 메시지 입력창 (하단 배너 위 공간 확보 및 전송 버튼 안쪽 안착) -->
-    <footer id="chatInputBar" class="bg-white border-t border-slate-200 px-3 py-2.5 flex gap-2 items-center shrink-0 z-40 mb-10 w-full">
-      <input type="text" id="msgInput" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="질문이나 답변을 입력하세요..." class="flex-1 min-w-0 bg-slate-100 border-none rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-      <button id="sendBtn" onclick="sendMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center justify-center transition shadow-sm whitespace-nowrap shrink-0">
-        전송
-      </button>
-    </footer>
+    <!-- 3. 도시별 채팅 화면 영역 -->
+    <div id="chatView" class="hidden flex-1 flex-col overflow-hidden w-full relative bg-slate-50">
+      <!-- 메시지 목록 영역 -->
+      <main class="flex-1 p-3.5 space-y-3 scroll-area w-full pb-4" id="chatScrollArea">
+        <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800 flex items-start gap-2 w-full">
+          <i class="fas fa-info-circle text-indigo-500 mt-0.5 shrink-0 text-xs"></i>
+          <div class="min-w-0 flex-1">
+            <strong id="chatNoticeTitle" class="text-xs">대구 현지인 Q&A 방</strong><br>
+            <span id="chatNoticeSub" class="text-[11px]">여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.</span>
+          </div>
+        </div>
+
+        <div id="messageList" class="space-y-3 w-full"></div>
+      </main>
+
+      <!-- 하단 메시지 입력창 -->
+      <footer id="chatInputBar" class="bg-white border-t border-slate-200 px-3 py-2.5 flex gap-2 items-center shrink-0 z-40 w-full">
+        <input type="text" id="msgInput" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="질문이나 답변을 입력하세요..." class="flex-1 min-w-0 bg-slate-100 border-none rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <button id="sendBtn" onclick="sendMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl font-bold text-xs flex items-center justify-center transition shadow-sm whitespace-nowrap shrink-0">
+          전송
+        </button>
+      </footer>
+    </div>
+
   </div>
 
   <script>
@@ -185,7 +216,6 @@
       document.getElementById('chatView').classList.remove('hidden');
       document.getElementById('chatView').classList.add('flex');
       
-      // 뒤로가기 및 새로고침 버튼 활성화
       document.getElementById('backBtn').classList.remove('hidden');
       document.getElementById('refreshBtn').classList.remove('hidden');
       document.getElementById('refreshBtn').classList.add('flex');
@@ -213,7 +243,6 @@
       document.getElementById('chatView').classList.add('hidden');
       document.getElementById('chatView').classList.remove('flex');
       
-      // 뒤로가기 버튼 숨기기
       document.getElementById('backBtn').classList.add('hidden');
       document.getElementById('refreshBtn').classList.add('hidden');
       document.getElementById('refreshBtn').classList.remove('flex');
@@ -252,7 +281,7 @@
 
         var msgCard = '<div class="flex flex-col w-full ' + (isMyMsg ? 'items-end' : 'items-start') + '">' +
           '<span class="text-[10px] text-slate-400 px-1 mb-0.5">' + m.sender + '</span>' +
-          '<div class="max-w-[75%] rounded-2xl p-2.5 text-xs leading-relaxed chat-bubble ' + (isMyMsg ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none') + '">' +
+          '<div class="max-w-[80%] rounded-2xl p-2.5 text-xs leading-relaxed chat-bubble ' + (isMyMsg ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none') + '">' +
             m.text + transBoxHtml +
           '</div>' +
           transBtnHtml +
