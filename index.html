@@ -94,11 +94,11 @@
     <main id="homeView" class="p-4 space-y-3.5 flex-1 scroll-area w-full pb-8">
       <div class="relative w-full">
         <i class="fas fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 대구, 서울)" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 대구, 경주, 강릉)" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
       </div>
 
       <div class="w-full">
-        <h2 id="popularTitle" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">인기 도시 목록</h2>
+        <h2 id="popularTitle" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">대한민국 주요 도시 목록</h2>
         <div id="cityList" class="grid grid-cols-2 gap-2.5 w-full"></div>
       </div>
     </main>
@@ -153,15 +153,15 @@
   <script>
     var currentLang = 'ko';
     var currentCity = null;
-    var currentView = 'home'; // 'home', 'board', 'chat'
+    var currentView = 'home';
 
     var localStore = {};
 
     var I18N = {
       ko: {
         appSub: '전 세계 도시 실시간 현지인 Q&A',
-        searchPlaceholder: '궁금한 도시를 검색하세요 (예: 대구, 서울)',
-        popularTitle: '인기 도시 목록',
+        searchPlaceholder: '궁금한 도시를 검색하세요 (예: 대구, 경주, 강릉)',
+        popularTitle: '대한민국 주요 도시 목록',
         online: '명 접속 중',
         enterBoard: '지역 게시판 입장',
         noticeSub: '여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.',
@@ -171,8 +171,8 @@
       },
       en: {
         appSub: 'Real-time Local Q&A for Cities Worldwide',
-        searchPlaceholder: 'Search city (e.g. Daegu, Seoul)',
-        popularTitle: 'Popular City List',
+        searchPlaceholder: 'Search city (e.g. Daegu, Gyeongju, Gangneung)',
+        popularTitle: 'Korea Popular Cities',
         online: 'online',
         enterBoard: 'View Board',
         noticeSub: 'Ask local residents anything about your trip!',
@@ -182,16 +182,19 @@
       }
     };
 
+    // 한국 위주 8대 주요 도시 목록
     var CITIES = [
       { id: 'daegu', name_ko: '대한민국 대구', name_en: 'Daegu, Korea', iconTag: '<i class="fas fa-building text-indigo-500 text-sm"></i>', desc_ko: '동성로, 서문시장, 현지 맛집 질문', desc_en: 'Dongseong-ro, Seomun Market & Local Eats', users: 128 },
       { id: 'seoul', name_ko: '대한민국 서울', name_en: 'Seoul, Korea', iconTag: '<i class="fas fa-tower-broadcast text-blue-500 text-sm"></i>', desc_ko: '명동, 홍대, 핫플레이스 실시간 정보', desc_en: 'Myeongdong, Hongdae & Hotspots', users: 340 },
       { id: 'busan', name_ko: '대한민국 부산', name_en: 'Busan, Korea', iconTag: '<i class="fas fa-water text-cyan-500 text-sm"></i>', desc_ko: '해운대, 광안리, 국밥/해산물 추천', desc_en: 'Haeundae, Gwangalli & Seafood Spots', users: 215 },
       { id: 'jeju', name_ko: '대한민국 제주', name_en: 'Jeju Island', iconTag: '<i class="fas fa-mountain text-emerald-500 text-sm"></i>', desc_ko: '렌터카, 날씨, 흑돼지/카페 질문', desc_en: 'Rental Cars, Weather & Black Pork', users: 189 },
-      { id: 'tokyo', name_ko: '일본 도쿄', name_en: 'Tokyo, Japan', iconTag: '<i class="fas fa-torii-gate text-red-500 text-sm"></i>', desc_ko: '신주쿠, 시부야, 맛집 및 라멘 추천', desc_en: 'Shinjuku, Shibuya & Ramen Guides', users: 412 },
-      { id: 'danang', name_ko: '베트남 다낭', name_en: 'Da Nang, Vietnam', iconTag: '<i class="fas fa-umbrella-beach text-amber-500 text-sm"></i>', desc_ko: '바나힐, 미케비치, 환전 및 마사지', desc_en: 'Bana Hills, My Khe Beach & Currency', users: 156 }
+      { id: 'incheon', name_ko: '대한민국 인천', name_en: 'Incheon, Korea', iconTag: '<i class="fas fa-plane-departure text-sky-500 text-sm"></i>', desc_ko: '공항 꿀팁, 송도, 차이나타운 정보', desc_en: 'Airport Tips, Songdo & Chinatown', users: 162 },
+      { id: 'gyeongju', name_ko: '대한민국 경주', name_en: 'Gyeongju, Korea', iconTag: '<i class="fas fa-landmark text-amber-600 text-sm"></i>', desc_ko: '황리단길, 첨성대, 야경 코스 추천', desc_en: 'Hwangnidan-gil & Historic Sites', users: 145 },
+      { id: 'jeonju', name_ko: '대한민국 전주', name_en: 'Jeonju, Korea', iconTag: '<i class="fas fa-utensils text-rose-500 text-sm"></i>', desc_ko: '한옥마을, 전주비빔밥, 야시장 팁', desc_en: 'Hanok Village & Local Delicacies', users: 110 },
+      { id: 'gangneung', name_ko: '대한민국 강릉', name_en: 'Gangneung, Korea', iconTag: '<i class="fas fa-umbrella-beach text-teal-500 text-sm"></i>', desc_ko: '안목해변 커피거리, 경포대, 짬뽕순두부', desc_en: 'Anmok Coffee Street & Beach Views', users: 178 }
     ];
 
-    // 도시별 게시판 샘플 데이터
+    // 도시별 게시판 데이터
     var BOARD_DATA = {
       daegu: [
         { title: '[공지] 서문시장 야시장 운영시간 및 주차 안내', author: '대구시 가이드', date: '오늘', views: 420, tag: '공지' },
@@ -201,6 +204,22 @@
       seoul: [
         { title: '[공지] 성수동/홍대 최신 팝업스토어 스케줄', author: '서울나들이', date: '오늘', views: 890, tag: '공지' },
         { title: '명동 실시간 환전율 가장 높은 곳 추천', author: '명동지킴이', date: '어제', views: 650, tag: '팁' }
+      ],
+      incheon: [
+        { title: '[팁] 인천공항 심야버스 타는 위치 및 시간표', author: '공항러', date: '오늘', views: 320, tag: '팁' },
+        { title: '송도 센트럴파크 문보트 예약 및 노을 명소', author: '송도자이', date: '어제', views: 210, tag: '추천' }
+      ],
+      gyeongju: [
+        { title: '[추천] 동궁과 월지 야경 인생샷 찍는 동선', author: '경주여행가', date: '오늘', views: 510, tag: '추천' },
+        { title: '황리단길 줄 안 서고 먹는 한옥 카페 모음', author: '경주현지인', date: '어제', views: 430, tag: '맛집' }
+      ],
+      jeonju: [
+        { title: '[팁] 전주 한옥마을 한복 대여 시 할인받는 법', author: '한옥마을돌이', date: '오늘', views: 290, tag: '팁' },
+        { title: '남부시장 야시장 꼭 먹어야 할 길거리 음식', author: '전주식객', date: '어제', views: 380, tag: '맛집' }
+      ],
+      gangneung: [
+        { title: '[추천] 안목해변 커피거리 오션뷰 카페 BEST 4', author: '강릉바다', date: '오늘', views: 620, tag: '추천' },
+        { title: '초당순두부마을 짬뽕순두부 대기 시간 줄이기', author: '강릉솔향', date: '어제', views: 470, tag: '팁' }
       ]
     };
 
@@ -234,7 +253,6 @@
       }
     }
 
-    // 1단계: 도시 게시판 열기
     function openCityBoard(cityId) {
       for (var i = 0; i < CITIES.length; i++) {
         if (CITIES[i].id === cityId) {
@@ -261,7 +279,6 @@
       renderBoardPosts();
     }
 
-    // 게시판 포스트 출력
     function renderBoardPosts() {
       var container = document.getElementById('boardPosts');
       container.innerHTML = '';
@@ -287,7 +304,6 @@
       }
     }
 
-    // 2단계: 게시판 안에서 대화방 입장 버튼 누를 때
     function openCityChatDirect() {
       if (!currentCity) return;
       currentView = 'chat';
@@ -308,21 +324,18 @@
 
       if (!localStore[currentCity.id]) {
         localStore[currentCity.id] = [
-          { id: 1, sender: 'Alex (Tourist)', text: 'Is Seomun Market open tonight? What food should I try?', time: '8:12 PM', isMe: false },
-          { id: 2, sender: '대구 현지인', text: '네! 서문시장 야시장 밤 10시까지 합니다. 납작만두 추천해요!', time: '8:15 PM', isMe: false }
+          { id: 1, sender: 'Alex (Tourist)', text: 'Hello! I need some local recommendations for ' + cityName + '.', time: '8:12 PM', isMe: false },
+          { id: 2, sender: '현지 가이드', text: '안녕하세요! ' + cityName + ' 여행 중 궁금하신 점을 언제든 물어보세요.', time: '8:15 PM', isMe: false }
         ];
       }
 
       renderMessages();
     }
 
-    // 뒤로가기 동작 처리
     function goBack() {
       if (currentView === 'chat') {
-        // 대화방 -> 게시판으로 뒤로가기
         openCityBoard(currentCity.id);
       } else {
-        // 게시판 -> 메인 화면으로 뒤로가기
         currentCity = null;
         currentView = 'home';
 
