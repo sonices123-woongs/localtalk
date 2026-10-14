@@ -72,12 +72,11 @@
           <i class="fas fa-arrow-left"></i>
         </button>
         <div class="min-w-0 flex-1">
-          <!-- 브랜드명 Korea Local Talk & 한반도 SVG 아이콘 -->
           <h1 id="headerTitle" class="text-sm sm:text-base font-bold flex items-center gap-1.5 truncate">
             <svg class="w-4 h-5 fill-indigo-200 shrink-0" viewBox="0 0 100 140">
               <path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/>
-              <circle cx="82" cy="118" r="5"/> <!-- 제주도 -->
-              <circle cx="92" cy="55" r="3"/>  <!-- 울릉도/독도 -->
+              <circle cx="82" cy="118" r="5"/>
+              <circle cx="92" cy="55" r="3"/>
             </svg>
             <span class="truncate">Korea Local Talk</span>
           </h1>
@@ -85,7 +84,6 @@
         </div>
       </div>
       
-      <!-- 언어 선택 라벨 고정 -->
       <div class="flex items-center gap-1 shrink-0 ml-1">
         <button id="refreshBtn" onclick="loadMessages()" class="hidden bg-indigo-700 hover:bg-indigo-800 text-white p-1.5 rounded-full text-xs font-bold items-center justify-center mr-0.5">
           <i class="fas fa-sync-alt text-[10px]" id="refreshIcon"></i>
@@ -115,11 +113,12 @@
 
     <!-- [화면 2] 지역 게시판 메인 화면 -->
     <main id="boardView" class="hidden p-4 space-y-3.5 flex-1 scroll-area w-full pb-16">
-      <div onclick="openCityChatDirect()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-3.5 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
+      <!-- 실시간 대화방 바로가기 배너 -->
+      <div onclick="openChatRoomList()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-3.5 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
         <div>
-          <span class="bg-white/20 text-[10px] px-2 py-0.5 rounded-full font-bold">LIVE Q&A</span>
-          <h3 id="boardBannerTitle" class="font-bold text-sm mt-1">서울 실시간 대화방 입장하기</h3>
-          <p id="boardBannerSub" class="text-[11px] text-indigo-100 mt-0.5">현지 주민들과 실시간 질문/답변 나누기</p>
+          <span class="bg-white/20 text-[10px] px-2 py-0.5 rounded-full font-bold">LIVE Q&A (Max 4명)</span>
+          <h3 id="boardBannerTitle" class="font-bold text-sm mt-1">서울 실시간 대화방 목록</h3>
+          <p id="boardBannerSub" class="text-[11px] text-indigo-100 mt-0.5">원하는 채팅방을 선택하여 소통해보세요</p>
         </div>
         <div class="bg-white text-indigo-600 w-9 h-9 rounded-full flex items-center justify-center text-sm shadow shrink-0">
           <i class="fas fa-comments"></i>
@@ -134,7 +133,20 @@
       </div>
     </main>
 
-    <!-- [화면 3] 도시별 실시간 대화방 화면 -->
+    <!-- [화면 3] 도시별 5개 채팅방 선택 화면 -->
+    <main id="roomListView" class="hidden p-4 space-y-3.5 flex-1 scroll-area w-full pb-16">
+      <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800 flex items-center gap-2">
+        <i class="fas fa-users text-indigo-500"></i>
+        <div>
+          <strong id="roomListNoticeTitle">실시간 Q&A 대화방 선택</strong>
+          <p id="roomListNoticeSub" class="text-[10px] text-indigo-600">쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.</p>
+        </div>
+      </div>
+
+      <div id="chatRoomsContainer" class="space-y-2.5 w-full"></div>
+    </main>
+
+    <!-- [화면 4] 개별 채팅방 화면 -->
     <div id="chatView" class="hidden flex-1 flex-col overflow-hidden w-full relative bg-slate-50 pb-12">
       <main class="flex-1 p-3.5 space-y-3 scroll-area w-full pb-4" id="chatScrollArea">
         <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800 flex items-start gap-2 w-full">
@@ -156,7 +168,7 @@
       </footer>
     </div>
 
-    <!-- 하단 탭 바 (Bottom Navigation: 홈 / 지역지도 / My) -->
+    <!-- 하단 탭 바 (Bottom Navigation) -->
     <nav class="bg-white border-t border-slate-200 px-6 py-2 flex justify-between items-center shrink-0 z-50 w-full">
       <button onclick="switchTab('home')" id="tabHome" class="flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition">
         <i class="fas fa-house text-base"></i>
@@ -177,7 +189,8 @@
   <script>
     var currentLang = 'ko';
     var currentCity = null;
-    var currentView = 'home';
+    var currentRoom = null; // 선택된 방 번호
+    var currentView = 'home'; // 'home', 'board', 'roomList', 'chat'
 
     var localStore = {};
 
@@ -195,10 +208,15 @@
         boardTitleSuffix: ' 게시판',
         boardSub: '지역 정보 & 실시간 Q&A',
         chatSuffix: ' 실시간 톡',
-        boardBannerSuffix: ' 실시간 대화방 입장하기',
-        boardBannerSub: '현지 주민들과 실시간 질문/답변 나누기',
+        boardBannerSuffix: ' 실시간 대화방 목록',
+        boardBannerSub: '원하는 채팅방을 선택하여 소통해보세요',
         boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁',
-        send: '전송'
+        send: '전송',
+        roomListTitle: ' 실시간 대화방 선택',
+        roomFull: '정원 초과 (입장 불가)',
+        roomEnter: '입장하기',
+        roomNoticeTitle: '실시간 Q&A 대화방 선택',
+        roomNoticeSub: '쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.'
       },
       en: {
         appSub: 'Korea Real-time Local Q&A',
@@ -213,10 +231,15 @@
         boardTitleSuffix: ' Board',
         boardSub: 'Local Info & Real-time Q&A',
         chatSuffix: ' Live Chat',
-        boardBannerSuffix: ' Join Live Chat Room',
-        boardBannerSub: 'Real-time Q&A with local residents',
+        boardBannerSuffix: ' Chat Room List',
+        boardBannerSub: 'Choose a room to start talking',
         boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> Essential Info & Tips',
-        send: 'Send'
+        send: 'Send',
+        roomListTitle: ' Select Live Chat Room',
+        roomFull: 'Full (Cannot Enter)',
+        roomEnter: 'Enter',
+        roomNoticeTitle: 'Select Live Chat Room',
+        roomNoticeSub: 'Max 4 people allowed per room for comfortable chatting.'
       },
       ja: {
         appSub: '韓国 リアルタイム現地人 Q&A',
@@ -231,10 +254,15 @@
         boardTitleSuffix: ' 掲示板',
         boardSub: '地域情報 & リアルタイム Q&A',
         chatSuffix: ' リアルタイムトーク',
-        boardBannerSuffix: ' リアルタイムチャットに入る',
-        boardBannerSub: '現地住民とリアルタイムで質疑応答',
+        boardBannerSuffix: ' リアルタイムチャット一覧',
+        boardBannerSub: 'お好きな部屋を選んで会話を始めましょう',
         boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 必読情報 & 地元のコツ',
-        send: '送信'
+        send: '送信',
+        roomListTitle: ' チャットルーム選択',
+        roomFull: '満員 (入場不可)',
+        roomEnter: '入室する',
+        roomNoticeTitle: 'リアルタイムチャットルーム選択',
+        roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。'
       },
       'zh-CN': {
         appSub: '韩国 实时当地人 Q&A',
@@ -249,10 +277,15 @@
         boardTitleSuffix: ' 论坛',
         boardSub: '本地资讯 & 实时 Q&A',
         chatSuffix: ' 实时聊天',
-        boardBannerSuffix: ' 进入实时聊天室',
-        boardBannerSub: '与当地居民实时问答',
+        boardBannerSuffix: ' 实时聊天室列表',
+        boardBannerSub: '选择您想加入的聊天室',
         boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 必读资讯 & 本地攻略',
-        send: '发送'
+        send: '发送',
+        roomListTitle: ' 选择实时聊天室',
+        roomFull: '已满 (无法进入)',
+        roomEnter: '进入',
+        roomNoticeTitle: '选择实时聊天室',
+        roomNoticeSub: '为了保持良好的沟通体验，每个聊天室限额4人。'
       }
     };
 
@@ -282,7 +315,7 @@
         id: 'daegu', 
         name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
-        desc: { ko: '동성로, 서문시장, 현지 맛집 질문', en: 'Dongseong-ro, Seomun Market & Local Eats', ja: '東城路、西門市場、グルメ質問', 'zh-CN': '东城路、西门시장, 美食品鉴' }, 
+        desc: { ko: '동성로, 서문시장, 현지 맛집 질문', en: 'Dongseong-ro, Seomun Market & Local Eats', ja: '東城路、西門市場、グルメ質問', 'zh-CN': '东城路、西门市场、美食品鉴' }, 
         users: 128 
       },
       { 
@@ -315,34 +348,56 @@
       }
     ];
 
+    // 다국어 게시판 예시 데이터
     var BOARD_DATA = {
       seoul: [
-        { title: '[공지] 성수동/홍대 최신 팝업스토어 스케줄', author: '서울나들이', date: '오늘', views: 890, tag: '공지' },
-        { title: '명동 실시간 환전율 가장 높은 곳 추천', author: '명동지킴이', date: '어제', views: 650, tag: '팁' }
+        { 
+          title: { ko: '[공지] 성수동/홍대 최신 팝업스토어 스케줄', en: '[Notice] Seongsu/Hongdae Pop-up Store Schedule', ja: '[お知らせ] 聖水/弘大 ポップアップストア日程', 'zh-CN': '[公告] 圣水洞/弘大最新快闪店日程' }, 
+          author: '서울나들이', date: '오늘', views: 890, 
+          tag: { ko: '공지', en: 'Notice', ja: 'お知らせ', 'zh-CN': '公告' }
+        },
+        { 
+          title: { ko: '명동 실시간 환전율 가장 높은 곳 추천', en: 'Best Money Exchange Rates in Myeongdong', ja: '明洞でリアルタイム換算レートが最も高い場所', 'zh-CN': '明洞实时汇率最高的兑换所推荐' }, 
+          author: '명동지킴이', date: '어제', views: 650, 
+          tag: { ko: '팁', en: 'Tip', ja: 'コツ', 'zh-CN': '攻略' }
+        }
       ],
       jeju: [
-        { title: '[팁] 제주 렌터카 환불 및 사고 처리 가이드', author: '제주돌이', date: '오늘', views: 540, tag: '팁' },
-        { title: '애월읍 일몰 보기 가장 예쁜 감성 카페 TOP 3', author: '제주해녀', date: '어제', views: 420, tag: '추천' }
+        { 
+          title: { ko: '[팁] 제주 렌터카 환불 및 사고 처리 가이드', en: '[Tip] Jeju Car Rental Refund & Accident Guide', ja: '[コツ] 済州レンタカー返金・事故処理ガイド', 'zh-CN': '[攻略] 济州租车退款及事故处理指南' }, 
+          author: '제주돌이', date: '오늘', views: 540, 
+          tag: { ko: '팁', en: 'Tip', ja: 'コツ', 'zh-CN': '攻略' }
+        },
+        { 
+          title: { ko: '애월읍 일몰 보기 가장 예쁜 감성 카페 TOP 3', en: 'Top 3 Sunset View Cafes in Aewol', ja: '涯月邑の夕日を見るのに一番綺麗なカフェTOP3', 'zh-CN': '涯月邑看日落最美的感性咖啡馆 TOP 3' }, 
+          author: '제주해녀', date: '어제', views: 420, 
+          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' }
+        }
       ],
       busan: [
-        { title: '[추천] 광안리 드론쇼 명당 및 주차 꿀팁', author: '부산갈매기', date: '오늘', views: 780, tag: '추천' },
-        { title: '해운대 국밥거리 진짜 현지인 맛집 비교', author: '부산사나이', date: '어제', views: 610, tag: '맛집' }
+        { 
+          title: { ko: '[추천] 광안리 드론쇼 명당 및 주차 꿀팁', en: '[Rec] Gwangalli Drone Show Best Spots & Parking', ja: '[推薦] 広安里ドローンショーの名所と駐車のコツ', 'zh-CN': '[推荐] 广安里无人机秀最佳观赏点及停车攻略' }, 
+          author: '부산갈매기', date: '오늘', views: 780, 
+          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' }
+        }
+      ]
+    };
+
+    // 도시별 5개 개별 채팅방 상태 (정원 최대 4명 설정)
+    var ROOM_STATES = {
+      seoul: [
+        { id: 1, name: 'Room #1 (명동/홍대 Q&A)', count: 3, max: 4 },
+        { id: 2, name: 'Room #2 (강남/성수 핫플)', count: 4, max: 4 }, // 정원 초과 예시
+        { id: 3, name: 'Room #3 (서울 맛집 공유)', count: 2, max: 4 },
+        { id: 4, name: 'Room #4 (교통 & 숙소 질문)', count: 1, max: 4 },
+        { id: 5, name: 'Room #5 (자유 수다방)', count: 2, max: 4 }
       ],
-      daegu: [
-        { title: '[공지] 서문시장 야시장 운영시간 및 주차 안내', author: '대구시 가이드', date: '오늘', views: 420, tag: '공지' },
-        { title: '동성로 현지인만 아는 납작만두 맛집 TOP 3', author: '동성로주민', date: '어제', views: 312, tag: '맛집' }
-      ],
-      incheon: [
-        { title: '[팁] 인천공항 심야버스 타는 위치 및 시간표', author: '공항러', date: '오늘', views: 320, tag: '팁' }
-      ],
-      gyeongju: [
-        { title: '[추천] 동궁과 월지 야경 인생샷 찍는 동선', author: '경주여행가', date: '오늘', views: 510, tag: '추천' }
-      ],
-      jeonju: [
-        { title: '[팁] 전주 한옥마을 한복 대여 시 할인받는 법', author: '한옥마을돌이', date: '오늘', views: 290, tag: '팁' }
-      ],
-      gangneung: [
-        { title: '[추천] 안목해변 커피거리 오션뷰 카페 BEST 4', author: '강릉바다', date: '오늘', views: 620, tag: '추천' }
+      default: [
+        { id: 1, name: 'Room #1 (실시간 Q&A)', count: 2, max: 4 },
+        { id: 2, name: 'Room #2 (현지 맛집 추천)', count: 3, max: 4 },
+        { id: 3, name: 'Room #3 (여행 코스 공유)', count: 1, max: 4 },
+        { id: 4, name: 'Room #4 (교통/날씨 정보)', count: 4, max: 4 },
+        { id: 5, name: 'Room #5 (자유 수다방)', count: 2, max: 4 }
       ]
     };
 
@@ -398,6 +453,7 @@
       currentView = 'board';
 
       document.getElementById('homeView').classList.add('hidden');
+      document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('chatView').classList.add('hidden');
       document.getElementById('boardView').classList.remove('hidden');
       
@@ -416,21 +472,33 @@
       renderBoardPosts();
     }
 
+    // 게시판 예시 다국어 자동 변환 출력
     function renderBoardPosts() {
       var container = document.getElementById('boardPosts');
       container.innerHTML = '';
       
       var posts = BOARD_DATA[currentCity.id] || [
-        { title: '추천 여행 코스 공유합니다.', author: '현지인', date: '오늘', views: 50, tag: '추천' },
-        { title: '대중교통 이용 안내', author: '운영자', date: '어제', views: 82, tag: '공지' }
+        { 
+          title: { ko: '이 지역 추천 여행 코스 공유합니다.', en: 'Sharing recommended travel itinerary for this city.', ja: 'この地域のオススメ旅行コースを共有します。', 'zh-CN': '分享本区域推荐旅游路线。' }, 
+          author: '현지인', date: '오늘', views: 50, 
+          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' }
+        },
+        { 
+          title: { ko: '대중교통 이용 및 환승 이용 방법', en: 'Public transportation and transfer guide', ja: '公共交通機関の利用および乗り換え方法', 'zh-CN': '公共交通乘车及换乘指南' }, 
+          author: '운영자', date: '어제', views: 82, 
+          tag: { ko: '공지', en: 'Notice', ja: 'お知らせ', 'zh-CN': '公告' }
+        }
       ];
 
       for (var i = 0; i < posts.length; i++) {
         var p = posts[i];
+        var pTitle = p.title[currentLang] || p.title['ko'];
+        var pTag = p.tag[currentLang] || p.tag['ko'];
+
         var item = '<div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col space-y-1 hover:border-indigo-300 cursor-pointer">' +
           '<div class="flex items-center gap-1.5">' +
-            '<span class="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">' + p.tag + '</span>' +
-            '<h4 class="text-xs font-bold text-slate-800 truncate flex-1">' + p.title + '</h4>' +
+            '<span class="text-[9px] bg-indigo-50 text-indigo-600 font-bold px-1.5 py-0.5 rounded">' + pTag + '</span>' +
+            '<h4 class="text-xs font-bold text-slate-800 truncate flex-1">' + pTitle + '</h4>' +
           '</div>' +
           '<div class="flex justify-between items-center text-[10px] text-slate-400 mt-1">' +
             '<span>' + p.author + ' · ' + p.date + '</span>' +
@@ -441,11 +509,67 @@
       }
     }
 
-    function openCityChatDirect() {
+    // 단계: 도시별 5개 채팅방 목록 열기
+    function openChatRoomList() {
       if (!currentCity) return;
-      currentView = 'chat';
+      currentView = 'roomList';
 
       document.getElementById('boardView').classList.add('hidden');
+      document.getElementById('chatView').classList.add('hidden');
+      document.getElementById('roomListView').classList.remove('hidden');
+
+      var cityName = getCityName(currentCity);
+      var t = I18N[currentLang] || I18N['ko'];
+
+      document.getElementById('headerTitle').innerText = cityName + t.roomListTitle;
+      document.getElementById('headerSub').innerText = 'Max 4명 정원 개별 채팅방';
+      document.getElementById('roomListNoticeTitle').innerText = t.roomNoticeTitle;
+      document.getElementById('roomListNoticeSub').innerText = t.roomNoticeSub;
+
+      renderChatRooms();
+    }
+
+    // 5개 채팅방 렌더링 (정원 4명 제한)
+    function renderChatRooms() {
+      var container = document.getElementById('chatRoomsContainer');
+      container.innerHTML = '';
+      var t = I18N[currentLang] || I18N['ko'];
+
+      var rooms = ROOM_STATES[currentCity.id] || ROOM_STATES['default'];
+
+      for (var i = 0; i < rooms.length; i++) {
+        var r = rooms[i];
+        var isFull = r.count >= r.max;
+
+        var statusBadge = isFull 
+          ? '<span class="text-[10px] bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full border border-rose-100">' + r.count + '/' + r.max + ' ' + t.roomFull + '</span>'
+          : '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100">' + r.count + '/' + r.max + '명 참여 중</span>';
+
+        var btnHtml = isFull
+          ? '<button disabled class="bg-slate-200 text-slate-400 px-3 py-1.5 rounded-xl font-bold text-xs cursor-not-allowed">꽉참</button>'
+          : '<button onclick="enterSpecificChatRoom(' + r.id + ')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl font-bold text-xs transition shadow-sm">' + t.roomEnter + '</button>';
+
+        var card = '<div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center w-full min-w-0">' +
+          '<div class="min-w-0 flex-1 pr-2">' +
+            '<div class="flex items-center gap-2">' +
+              '<h4 class="font-bold text-slate-800 text-xs truncate">' + r.name + '</h4>' +
+              statusBadge +
+            '</div>' +
+            '<p class="text-[10px] text-slate-400 mt-1">실시간 질문 및 답변 나누기 (정원 4명)</p>' +
+          '</div>' +
+          btnHtml +
+        '</div>';
+
+        container.innerHTML += card;
+      }
+    }
+
+    // 특정 개별 채팅방 입장
+    function enterSpecificChatRoom(roomId) {
+      currentRoom = roomId;
+      currentView = 'chat';
+
+      document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('chatView').classList.remove('hidden');
       document.getElementById('chatView').classList.add('flex');
       
@@ -455,15 +579,16 @@
       var cityName = getCityName(currentCity);
       var t = I18N[currentLang] || I18N['ko'];
 
-      document.getElementById('headerTitle').innerText = cityName + t.chatSuffix;
-      document.getElementById('headerSub').innerText = cityName + ' (' + currentCity.users + ' ' + t.online + ')';
-      document.getElementById('chatNoticeTitle').innerText = cityName + ' Local Q&A';
+      document.getElementById('headerTitle').innerText = cityName + ' Room #' + roomId;
+      document.getElementById('headerSub').innerText = 'Room #' + roomId + ' (최대 4명 소수 정예 톡방)';
+      document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + roomId + ' Q&A';
       document.getElementById('chatNoticeSub').innerText = t.noticeSub;
 
-      if (!localStore[currentCity.id]) {
-        localStore[currentCity.id] = [
-          { id: 1, sender: 'Alex (Tourist)', text: 'Hello! I need some local recommendations for ' + cityName + '.', time: '8:12 PM', isMe: false },
-          { id: 2, sender: '현지 가이드', text: '안녕하세요! ' + cityName + ' 여행 중 궁금하신 점을 언제든 물어보세요.', time: '8:15 PM', isMe: false }
+      var storeKey = currentCity.id + '_room_' + roomId;
+      if (!localStore[storeKey]) {
+        localStore[storeKey] = [
+          { id: 1, sender: 'Alex (Tourist)', text: 'Hello! Welcome to Room #' + roomId + ' in ' + cityName + '!', time: '8:12 PM', isMe: false },
+          { id: 2, sender: '현지 가이드', text: '안녕하세요! ' + roomId + '번 방에 오신 것을 환영합니다.', time: '8:15 PM', isMe: false }
         ];
       }
 
@@ -472,13 +597,17 @@
 
     function goBack() {
       if (currentView === 'chat') {
+        openChatRoomList();
+      } else if (currentView === 'roomList') {
         openCityBoard(currentCity.id);
       } else {
         currentCity = null;
+        currentRoom = null;
         currentView = 'home';
 
         document.getElementById('homeView').classList.remove('hidden');
         document.getElementById('boardView').classList.add('hidden');
+        document.getElementById('roomListView').classList.add('hidden');
         document.getElementById('chatView').classList.add('hidden');
         document.getElementById('chatView').classList.remove('flex');
         
@@ -487,26 +616,23 @@
 
         var t = I18N[currentLang] || I18N['ko'];
         
-        // 헤더 브랜드명 복원
         document.getElementById('headerTitle').innerHTML = '<svg class="w-4 h-5 fill-indigo-200 shrink-0" viewBox="0 0 100 140"><path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/><circle cx="82" cy="118" r="5"/><circle cx="92" cy="55" r="3"/></svg><span class="truncate">Korea Local Talk</span>';
         document.getElementById('headerSub').innerText = t.appSub;
       }
     }
 
-    // 하단 탭 바 탭 전환 함수
     function switchTab(tabName) {
       var tHome = document.getElementById('tabHome');
       var tMap = document.getElementById('tabMap');
       var tMy = document.getElementById('tabMy');
 
-      // 탭 스타일 초기화
       tHome.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
       tMap.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
       tMy.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
 
       if (tabName === 'home') {
         tHome.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
-        goBack(); // 홈으로 이동
+        goBack();
       } else if (tabName === 'map') {
         tMap.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         alert('🗺️ [지역지도] 대한민국 주요 도시 지도 서비스 준비 중입니다!');
@@ -521,7 +647,8 @@
       container.innerHTML = '';
       var t = I18N[currentLang] || I18N['ko'];
 
-      var msgs = localStore[currentCity.id] || [];
+      var storeKey = currentCity.id + '_room_' + currentRoom;
+      var msgs = localStore[storeKey] || [];
 
       if (msgs.length === 0) {
         container.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">' + t.noMsg + '</div>';
@@ -559,7 +686,8 @@
     }
 
     function translateMsg(idx) {
-      var msgObj = localStore[currentCity.id][idx];
+      var storeKey = currentCity.id + '_room_' + currentRoom;
+      var msgObj = localStore[storeKey][idx];
       if (!msgObj) return;
 
       var text = msgObj.text;
@@ -592,15 +720,16 @@
       var input = document.getElementById('msgInput');
       var sendBtn = document.getElementById('sendBtn');
       var text = input.value.trim();
-      if (!text || !currentCity) return;
+      if (!text || !currentCity || !currentRoom) return;
 
+      var storeKey = currentCity.id + '_room_' + currentRoom;
       var t = I18N[currentLang] || I18N['ko'];
       var now = new Date();
       var hours = now.getHours();
       var minutes = now.getMinutes();
       var timeStr = (hours >= 12 ? 'PM' : 'AM') + ' ' + (hours % 12 || 12) + ':' + (minutes < 10 ? '0' : '') + minutes;
 
-      localStore[currentCity.id].push({
+      localStore[storeKey].push({
         id: Date.now(),
         sender: t.mySender,
         text: text,
@@ -644,10 +773,13 @@
           document.getElementById('boardBannerTitle').innerText = cityName + t.boardBannerSuffix;
           document.getElementById('boardBannerSub').innerText = t.boardBannerSub;
           document.getElementById('boardPostsTitle').innerHTML = t.boardPostsTitle;
+          renderBoardPosts();
+        } else if (currentView === 'roomList') {
+          document.getElementById('headerTitle').innerText = cityName + t.roomListTitle;
+          renderChatRooms();
         } else if (currentView === 'chat') {
-          document.getElementById('headerTitle').innerText = cityName + t.chatSuffix;
-          document.getElementById('headerSub').innerText = cityName + ' (' + currentCity.users + ' ' + t.online + ')';
-          document.getElementById('chatNoticeTitle').innerText = cityName + ' Local Q&A';
+          document.getElementById('headerTitle').innerText = cityName + ' Room #' + currentRoom;
+          document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + currentRoom + ' Q&A';
           document.getElementById('chatNoticeSub').innerText = t.noticeSub;
         }
       }
