@@ -7,8 +7,6 @@
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- 네이버 지도 API 스크립트 (Client ID: e02il5rppk 적용) -->
-  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -171,7 +169,7 @@
 
     <!-- [화면 5] 네이버 지도 실시간 연동 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
-      <div id="naverMap" class="w-full h-full"></div>
+      <div id="naverMap" class="w-full h-full min-h-[300px] flex items-center justify-center text-xs text-slate-400">지도를 로딩 중입니다...</div>
     </main>
 
     <!-- 하단 탭 바 (Bottom Navigation) -->
@@ -200,6 +198,7 @@
 
     var mapInstance = null;
     var mapMarkers = [];
+    var isMapScriptLoaded = false;
 
     var localStore = {};
 
@@ -298,7 +297,6 @@
       }
     };
 
-    // 도시 정보 (위도 lat, 경도 lng 포함)
     var CITIES = [
       { 
         id: 'seoul', 
@@ -342,7 +340,7 @@
       },
       { 
         id: 'gyeongju', 
-        name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '慶州, 韩国' },
+        name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 90" class="w-full h-full"><rect x="15" y="72" width="70" height="14" fill="#78350f" rx="1"/><rect x="25" y="58" width="50" height="14" fill="#92400e" rx="1"/><path d="M20,58 L80,58 L72,48 L28,48 Z" fill="#b45309"/><rect x="32" y="34" width="36" height="14" fill="#d97706"/><path d="M26,34 L74,34 L66,24 L34,24 Z" fill="#b45309"/><rect x="40" y="14" width="20" height="10" fill="#f59e0b"/><line x1="50" y1="2" x2="50" y2="14" stroke="#78350f" stroke-width="4"/><circle cx="50" cy="5" r="4" fill="#f59e0b"/></svg></div>', 
         desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
         users: 145,
@@ -374,7 +372,7 @@
           author: '서울나들이', date: '오늘', views: 890, 
           tag: { ko: '공지', en: 'Notice', ja: 'お知らせ', 'zh-CN': '公告' },
           content: {
-            ko: '📍 **성수동 핫플 팝업 스토어:**\n- 디저트 패션 브랜드 팝업 (10:00 ~ 20:00)\n- 캐릭터 캐릭터 스토어 (성수역 3번 출구 앞)\n\n📍 **홍대 팝업 스토어:**\n- 글로벌 애니메이션 콜라보 팝업 (상상마당 인근)\n- 미디어 아트 체험관 할인 이벤트 진행 중!',
+            ko: '📍 **성수동 핫플 팝업 스토어:**\n- 디저트 패션 브랜드 팝업 (10:00 ~ 20:00)\n- 캐릭터 스토어 (성수역 3번 출구 앞)\n\n📍 **홍대 팝업 스토어:**\n- 글로벌 애니메이션 콜라보 팝업 (상상마당 인근)\n- 미디어 아트 체험관 할인 이벤트 진행 중!',
             en: '📍 **Seongsu Pop-up Stores:**\n- Dessert & Fashion Brand Pop-up (10:00 ~ 20:00)\n- Character Goods Store (Near Seongsu Stn Exit 3)\n\n📍 **Hongdae Pop-up Stores:**\n- Global Anime Collab Pop-up (Near Sangsangmadang)\n- Media Art Exhibition Discount Event in progress!',
             ja: '📍 **聖水(ソンス)ポップアップ:**\n- デザートファッションブランド (10:00 ~ 20:00)\n- キャラクターグッズストア (聖水駅3番出口前)\n\n📍 **弘大(ホンデ)ポップアップ:**\n- グローバルアニメコラボポップアップ\n- メディアアート体験館割引イベント開催中！',
             'zh-CN': '📍 **圣水洞快闪店:**\n- 甜品时尚品牌快闪 (10:00 ~ 20:00)\n- 动漫周边店 (圣水站3号出口前)\n\n📍 **弘大快闪店:**\n- 联名动漫快闪店 (想像庭院附近)\n- 媒体艺术体验馆正在举办打折活动！'
@@ -386,4 +384,97 @@
           author: '명동지킴이', date: '어제', views: 650, 
           tag: { ko: '팁', en: 'Tip', ja: 'コツ', 'zh-CN': '攻略' },
           content: {
-            ko: '💡 **명동 주요 환전소 꿀팁:**\n1. **대사관
+            ko: '💡 **명동 주요 환전소 꿀팁:**\n1. **대사관 앞 환전소:** 명동에서 가장 우대율이 높기로 유명함.\n2. **일품향 환전소:** 대사관 바로 옆 위치, 엔화/달러/위안화 우대 최고 수준.\n\n*팁: 주말보다는 평일 낮 시간대에 방문하시면 가장 좋은 환율로 우대받으실 수 있습니다!*',
+            en: '💡 **Myeongdong Money Exchange Tips:**\n1. **Embassy Exchange:** Famous for having the best rates in Myeongdong.\n2. **Ilpumhyang Exchange:** Located right next to the Embassy, top rates for USD/JPY/CNY.\n\n*Tip: Visit during weekday daytime rather than weekends for better rates!*',
+            ja: '💡 **明洞両替所のコツ:**\n1. **大使館前両替所:** 明洞で一番レートが良いことで有名です。\n2. **一品香両替所:** 大使館のすぐ隣、円/ドル/元ともに最高水準。\n\n*コツ: 週末より平日昼間に訪問すると、より良いレートで両替できます！*',
+            'zh-CN': '💡 **明洞主要换钱所攻略:**\n1. **大使馆前换钱所:** 明洞公认汇率最划算的地方。\n2. **一品香换钱所:** 紧邻大使馆，日元/美元/人民币汇率极佳。\n\n*提示: 相比周末，建议工作日白天前往，换汇更划算！*'
+          }
+        }
+      ]
+    };
+
+    var ROOM_STATES = [
+      { id: 1, count: 3, max: 4 },
+      { id: 2, count: 4, max: 4 },
+      { id: 3, count: 2, max: 4 },
+      { id: 4, count: 1, max: 4 },
+      { id: 5, count: 2, max: 4 }
+    ];
+
+    function getCityName(city) {
+      if (!city) return '';
+      return city.name[currentLang] || city.name['ko'];
+    }
+
+    function getCityDesc(city) {
+      if (!city) return '';
+      return city.desc[currentLang] || city.desc['ko'];
+    }
+
+    function renderCityList(filterKeyword) {
+      var filter = filterKeyword || '';
+      var listContainer = document.getElementById('cityList');
+      if (!listContainer) return;
+
+      listContainer.innerHTML = '';
+      var t = I18N[currentLang] || I18N['ko'];
+
+      for (var i = 0; i < CITIES.length; i++) {
+        var city = CITIES[i];
+        var name = getCityName(city);
+        var desc = getCityDesc(city);
+
+        if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex flex-col justify-between space-y-1.5 w-full min-w-0">' +
+            '<div>' +
+              '<div class="flex justify-between items-center">' +
+                '<span>' + city.iconTag + '</span>' +
+                '<span class="text-[9px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100">' + city.users + ' ' + t.online + '</span>' +
+              '</div>' +
+              '<h3 class="font-bold text-slate-800 text-xs mt-1 truncate">' + name + '</h3>' +
+              '<p class="text-[10px] text-slate-500 line-clamp-2 mt-0.5 leading-tight">' + desc + '</p>' +
+            '</div>' +
+            '<div class="text-[10px] font-bold text-indigo-600 text-right mt-0.5">' + t.enterBoard + ' &gt;</div>' +
+          '</div>';
+          listContainer.innerHTML += card;
+        }
+      }
+    }
+
+    function openCityBoard(cityId) {
+      for (var i = 0; i < CITIES.length; i++) {
+        if (CITIES[i].id === cityId) {
+          currentCity = CITIES[i];
+          break;
+        }
+      }
+      if (!currentCity) return;
+
+      currentView = 'board';
+
+      document.getElementById('homeView').classList.add('hidden');
+      document.getElementById('roomListView').classList.add('hidden');
+      document.getElementById('chatView').classList.add('hidden');
+      document.getElementById('mapView').classList.add('hidden');
+      document.getElementById('boardView').classList.remove('hidden');
+      
+      document.getElementById('backBtn').classList.remove('hidden');
+      document.getElementById('refreshBtn').classList.add('hidden');
+
+      var cityName = getCityName(currentCity);
+      var t = I18N[currentLang] || I18N['ko'];
+
+      document.getElementById('headerTitle').innerText = cityName + t.boardTitleSuffix;
+      document.getElementById('headerSub').innerText = t.boardSub;
+      document.getElementById('boardBannerTitle').innerText = cityName + t.boardBannerSuffix;
+      document.getElementById('boardBannerSub').innerText = t.boardBannerSub;
+      document.getElementById('boardPostsTitle').innerHTML = t.boardPostsTitle;
+
+      renderBoardPosts();
+    }
+
+    function renderBoardPosts() {
+      var container = document.getElementById('boardPosts');
+      container.innerHTML = '';
+      
+      var posts
