@@ -7,7 +7,7 @@
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- 네이버 지도 v3 API 스크립트 정석 로드 (Client ID: e02il5rppk) -->
+  <!-- 네이버 지도 v3 API 정석 로드 -->
   <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -629,7 +629,7 @@
       renderMessages();
     }
 
-    // 네이버 지도 라이브 렌더링 함수
+    // 네이버 지도 렌더링 함수
     function renderNaverMap() {
       if (typeof naver === 'undefined' || !naver.maps) {
         return;
@@ -663,7 +663,7 @@
       }
       naverMapMarkers = [];
 
-      // 대한민국 주요 도시 핀 마커 및 언어별 팝업 렌더링
+      // 도시별 마커 생성
       for (var j = 0; j < CITIES.length; j++) {
         var c = CITIES[j];
         var cName = getCityName(c);
@@ -752,7 +752,7 @@
 
         setTimeout(function() {
           renderNaverMap();
-        }, 100);
+        }, 150);
       } else if (tabName === 'my') {
         tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
