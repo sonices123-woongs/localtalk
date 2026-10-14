@@ -391,3 +391,93 @@
       var targetLang = hasKorean ? 'en' : 'ko';
 
       var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + targetLang + '&dt=t&q=' + encodeURIComponent(text);
+
+      fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          if (data && data[0]) {
+            var fullTrans = '';
+            for (var i = 0; i < data[0].length; i++) {
+              if (data[0][i][0]) fullTrans += data[0][i][0];
+            }
+            msgObj.trans = '[번역] ' + fullTrans;
+            renderMessages();
+          }
+        })
+        .catch(function(err) {
+          alert('번역 실패: 인터넷 연결을 확인해 주세요.');
+        });
+    }
+
+    function sendMessage() {
+      var input = document.getElementById('msgInput');
+      var sendBtn = document.getElementById('sendBtn');
+      var text = input.value.trim();
+      if (!text || !currentCity) return;
+
+      var t = I18N[currentLang];
+      var now = new Date();
+      var hours = now.getHours();
+      var minutes = now.getMinutes();
+      var timeStr = (hours >= 12 ? 'PM' : 'AM') + ' ' + (hours % 12 || 12) + ':' + (minutes < 10 ? '0' : '') + minutes;
+
+      localStore[currentCity.id].push({
+        id: Date.now(),
+        sender: t.mySender,
+        text: text,
+        time: timeStr,
+        isMe: true
+      });
+
+      input.value = '';
+      input.disabled = false;
+      if (sendBtn) sendBtn.disabled = false;
+
+      renderMessages();
+      input.focus();
+    }
+
+    function loadMessages() {
+      var icon = document.getElementById('refreshIcon');
+      if (icon) icon.classList.add('fa-spin');
+      
+      setTimeout(function() {
+        if (icon) icon.classList.remove('fa-spin');
+        renderMessages();
+      }, 500);
+    }
+
+    function changeLanguage(lang) {
+      currentLang = lang;
+      var t = I18N[currentLang];
+
+      document.getElementById('headerSub').innerText = t.appSub;
+      document.getElementById('citySearch').placeholder = t.searchPlaceholder;
+      document.getElementById('popularTitle').innerText = t.popularTitle;
+      document.getElementById('chatNoticeSub').innerText = t.noticeSub;
+      document.getElementById('msgInput').placeholder = t.inputPlaceholder;
+
+      if (currentCity) {
+        var cityName = (currentLang === 'en') ? currentCity.name_en : currentCity.name_ko;
+        if (currentView === 'board') {
+          document.getElementById('headerTitle').innerText = cityName + ' 게시판';
+          document.getElementById('boardBannerTitle').innerText = cityName + ' 실시간 대화방 입장하기';
+        } else if (currentView === 'chat') {
+          document.getElementById('headerTitle').innerText = cityName + ' 실시간 톡';
+          document.getElementById('chatNoticeTitle').innerText = (currentLang === 'en') ? (cityName + ' Local Q&A') : (cityName + ' 현지인 Q&A 방');
+        }
+      }
+
+      renderCityList(document.getElementById('citySearch').value);
+      if (currentCity && currentView === 'chat') renderMessages();
+    }
+
+    function filterCities() {
+      var query = document.getElementById('citySearch').value;
+      renderCityList(query);
+    }
+
+    renderCityList('');
+  </script>
+</body>
+</html>
