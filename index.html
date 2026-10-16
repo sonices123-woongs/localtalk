@@ -5,13 +5,13 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   
-  <!-- 네이버 지도 Referer 헤더 전송 보장 태그 (인증 실패 해결 핵심) -->
+  <!-- 네이버 지도 Referer 헤더 전송 보장 태그 -->
   <meta name="referrer" content="no-referrer-when-downgrade">
   
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- 네이버 지도 v3 API 로드 -->
+  <!-- 네이버 지도 v3 API 로드 (VPC 전용) -->
   <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=e02il5rppk"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -176,6 +176,10 @@
     <!-- [화면 5] 네이버 지도 실시간 연동 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
       <div id="naverMap" class="w-full h-full min-h-[300px]"></div>
+      <!-- 내 위치 찾기 버튼 추가 -->
+      <button onclick="moveToMyLocation()" class="absolute bottom-16 right-4 bg-white text-slate-700 p-3 rounded-full shadow-lg z-50 hover:bg-slate-50 flex items-center justify-center border border-slate-200">
+        <i class="fas fa-crosshairs text-indigo-600 text-base"></i>
+      </button>
     </main>
 
     <!-- 하단 탭 바 (Bottom Navigation) -->
@@ -204,6 +208,7 @@
 
     var naverMapInstance = null;
     var naverMapMarkers = [];
+    var myLocationMarker = null;
 
     var localStore = {};
 
@@ -375,7 +380,7 @@
         id: 'gangneung', 
         name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/><line x1="60" y1="40" x2="60" y2="75" stroke="#ffffff" stroke-width="2"/></svg></div>', 
-        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
+        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩コーヒー街、鏡浦台' }, 
         users: 178,
         lat: 37.7519, lng: 128.8761
       }
@@ -403,7 +408,7 @@
           content: {
             ko: '💡 **명동 주요 환전소 꿀팁:**\n1. **대사관 앞 환전소:** 명동에서 가장 우대율이 높기로 유명함.\n2. **일품향 환전소:** 대사관 바로 옆 위치, 엔화/달러/위안화 우대 최고 수준.\n\n*팁: 주말보다는 평일 낮 시간대에 방문하시면 가장 좋은 환율로 우대받으실 수 있습니다!*',
             en: '💡 **Myeongdong Money Exchange Tips:**\n1. **Embassy Exchange:** Famous for having the best rates in Myeongdong.\n2. **Ilpumhyang Exchange:** Located right next to the Embassy, top rates for USD/JPY/CNY.\n\n*Tip: Visit during weekday daytime rather than weekends for better rates!*',
-            ja: '💡 **明洞両替所のコツ:**\n1. **大使館前両替所:** 明洞で一番レートが良いことで有名です。\n2. **一品香両替所:** 大使館のすぐ隣、円/ドル/元ともに最高水準。\n\n*コツ: 週末보다 平日昼間に訪問すると、より良いレートで両替できます！*',
+            ja: '💡 **明洞両替所のコツ:**\n1. **大使館前両替所:** 明洞で一番レートが良いことで有名です。\n2. **一品香両替所:** 大使館のすぐ隣、円/ドル/元ともに最高水準。\n\n*コツ: 週末より平日昼間に訪問すると、より良いレートで両替できます！*',
             'zh-CN': '💡 **明洞主要换钱所攻略:**\n1. **大使馆前换钱所:** 明洞公认汇率最划算的地方。\n2. **一品香换钱所:** 紧邻大使馆，日元/美元/人民币汇率极佳。\n\n*提示: 相比周末，建议工作日白天前往，换汇更划算！*'
           }
         }
@@ -695,6 +700,48 @@
         })(marker, infoWindow);
 
         naverMapMarkers.push(marker);
+      }
+
+      // 지도가 그려진 후 내 위치도 자동으로 파악해서 마커 추가
+      moveToMyLocation(false);
+    }
+
+    // 🔥 내 위치 찾기 및 마커 표시 함수
+    function moveToMyLocation(shouldPan) {
+      var panToUser = (shouldPan !== undefined) ? shouldPan : true;
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lng = position.coords.longitude;
+          var myLatLng = new naver.maps.LatLng(lat, lng);
+
+          // 기존 내 위치 마커 제거
+          if (myLocationMarker) {
+            myLocationMarker.setMap(null);
+          }
+
+          // 빨간색 아이콘으로 내 위치 마커 생성
+          myLocationMarker = new naver.maps.Marker({
+            position: myLatLng,
+            map: naverMapInstance,
+            title: "내 위치",
+            icon: {
+              content: '<div style="width:22px; height:22px; background-color:#ef4444; border:3px solid #ffffff; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
+              anchor: new naver.maps.Point(11, 11)
+            }
+          });
+
+          // 내 위치 버튼을 직접 눌렀을 때는 해당 위치로 지도 이동
+          if (panToUser && naverMapInstance) {
+            naverMapInstance.panTo(myLatLng);
+            naverMapInstance.setZoom(14);
+          }
+        }, function(error) {
+          if (panToUser) {
+            alert("내 위치 정보를 가져올 수 없습니다. 브라우저의 위치 접근 권한을 허용해 주세요.");
+          }
+        });
       }
     }
 
