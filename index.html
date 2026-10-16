@@ -169,7 +169,7 @@
       </footer>
     </div>
 
-    <!-- [화면 5] 구글 지도 및 동선/길찾기 연동 화면 -->
+    <!-- [화면 5] 구글 지도 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
       <div class="absolute top-3 left-3 right-3 z-50 flex flex-col gap-1.5">
         <div class="flex gap-1.5">
@@ -215,6 +215,7 @@
 
     var googleMapInstance = null;
     var googleMapMarkers = [];
+    var searchMarkers = [];
     var myLocationMarker = null;
     var directionsService = null;
     var directionsRenderer = null;
@@ -329,15 +330,8 @@
       }
     };
 
+    // 🔥 8개 주요 도시 전체 목록 복원
     var CITIES = [
-      { 
-        id: 'daegu', 
-        name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
-        iconTag: '<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
-        desc: { ko: '동성로, 반월당 더현대, 서문시장 질문', en: 'Dongseong-ro, Banwoldang & Local Eats', ja: '東城路、半月堂、グルメ質問', 'zh-CN': '东城路、半月堂、美食品鉴' }, 
-        users: 320,
-        lat: 35.8714, lng: 128.6014
-      },
       { 
         id: 'seoul', 
         name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
@@ -361,6 +355,46 @@
         desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
         users: 215,
         lat: 35.1796, lng: 129.0756
+      },
+      { 
+        id: 'daegu', 
+        name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
+        iconTag: '<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
+        desc: { ko: '동성로, 반월당 더현대, 서문시장 질문', en: 'Dongseong-ro, Banwoldang & Local Eats', ja: '東城路、半月堂、グルメ質問', 'zh-CN': '东城路、半月堂、美食品鉴' }, 
+        users: 320,
+        lat: 35.8714, lng: 128.6014
+      },
+      { 
+        id: 'incheon', 
+        name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
+        iconTag: '<div class="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M10,50 L40,42 L75,15 C80,11 88,14 85,20 L70,48 L90,52 L96,46 L100,50 L92,62 L82,60 L50,65 L20,75 L10,50 Z" fill="#0284c7"/></svg></div>', 
+        desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
+        users: 162,
+        lat: 37.4563, lng: 126.7052
+      },
+      { 
+        id: 'gyeongju', 
+        name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
+        iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 90" class="w-full h-full"><rect x="15" y="72" width="70" height="14" fill="#78350f" rx="1"/><rect x="25" y="58" width="50" height="14" fill="#92400e" rx="1"/><path d="M20,58 L80,58 L72,48 L28,48 Z" fill="#b45309"/><rect x="32" y="34" width="36" height="14" fill="#d97706"/><path d="M26,34 L74,34 L66,24 L34,24 Z" fill="#b45309"/><rect x="40" y="14" width="20" height="10" fill="#f59e0b"/><line x1="50" y1="2" x2="50" y2="14" stroke="#78350f" stroke-width="4"/><circle cx="50" cy="5" r="4" fill="#f59e0b"/></svg></div>', 
+        desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
+        users: 145,
+        lat: 35.8562, lng: 129.2247
+      },
+      { 
+        id: 'jeonju', 
+        name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
+        iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M15,35 Q50,75 85,35 Z" fill="#d97706"/><ellipse cx="50" cy="35" rx="35" ry="8" fill="#fef3c7"/><circle cx="50" cy="35" r="5" fill="#dc2626"/><circle cx="40" cy="34" r="4" fill="#16a34a"/><circle cx="60" cy="34" r="4" fill="#ca8a04"/><line x1="88" y1="15" x2="88" y2="70" stroke="#b45309" stroke-width="3"/><line x1="94" y1="15" x2="94" y2="70" stroke="#b45309" stroke-width="3"/></svg></div>', 
+        desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
+        users: 110,
+        lat: 35.8242, lng: 127.1480
+      },
+      { 
+        id: 'gangneung', 
+        name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
+        iconTag: '<div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/><line x1="60" y1="40" x2="60" y2="75" stroke="#ffffff" stroke-width="2"/></svg></div>', 
+        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
+        users: 178,
+        lat: 37.7519, lng: 128.8761
       }
     ];
 
@@ -628,9 +662,9 @@
         return;
       }
 
-      var centerLat = userLatLng ? userLatLng.lat : (currentCity ? currentCity.lat : 35.8714);
-      var centerLng = userLatLng ? userLatLng.lng : (currentCity ? currentCity.lng : 128.6014);
-      var zoomLevel = userLatLng ? 14 : 11;
+      var centerLat = userLatLng ? userLatLng.lat : (currentCity ? currentCity.lat : 36.3);
+      var centerLng = userLatLng ? userLatLng.lng : (currentCity ? currentCity.lng : 127.8);
+      var zoomLevel = userLatLng ? 14 : 7;
       var t = I18N[currentLang] || I18N['ko'];
 
       var mapOptions = {
@@ -677,11 +711,18 @@
       moveToMyLocation(false);
     }
 
-    // 장소 검색 (더현대 대구, 반월당, 현대 등 모든 키워드 포괄 검색)
+    // 🔥 보완된 다이렉트 검색 기능 (현대, 더현대, 반월당 등 완전 지원)
     function searchGoogleMapLocation() {
       var query = document.getElementById('mapSearchInput').value.trim();
       if (!query || !googleMapInstance) return;
 
+      // 기존 검색 핀 제거
+      for (var i = 0; i < searchMarkers.length; i++) {
+        searchMarkers[i].setMap(null);
+      }
+      searchMarkers = [];
+
+      // '->' 길찾기 검색
       if (query.indexOf('->') !== -1 || query.indexOf('→') !== -1) {
         var parts = query.split(/->|→/);
         var originStr = parts[0].trim();
@@ -711,51 +752,39 @@
           });
         }
       } else {
-        // 유연한 검색을 위한 키워드 보완 (대구 반월당 기준)
-        var searchQuery = query;
-        if (query.indexOf("현대") !== -1 && query.indexOf("대구") === -1) {
-          searchQuery = "더현대 대구 " + query;
-        }
+        // 단일 키워드 검색
+        var targetText = query;
+        if (query === "현대") targetText = "더현대 대구";
 
-        var service = new google.maps.places.PlacesService(googleMapInstance);
-        var request = {
-          query: searchQuery,
-          fields: ['name', 'geometry', 'formatted_address']
-        };
-
+        var geocoder = new google.maps.Geocoder();
+        
+        // 내 위치 주변을 기본 검색 위치로 적용
+        var geocodeOptions = { address: targetText };
         if (userLatLng) {
-          request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-          request.radius = 50000;
+          geocodeOptions.location = userLatLng;
         }
 
-        service.findPlaceFromQuery(request, function(results, status) {
-          if (status === google.maps.places.PlacesServiceStatus.OK && results[0]) {
-            var place = results[0];
-            googleMapInstance.setCenter(place.geometry.location);
-            googleMapInstance.setZoom(15);
+        geocoder.geocode(geocodeOptions, function(results, status) {
+          if (status === "OK" && results[0]) {
+            var loc = results[0].geometry.location;
+            googleMapInstance.setCenter(loc);
+            googleMapInstance.setZoom(16);
 
-            new google.maps.Marker({
+            var sMarker = new google.maps.Marker({
               map: googleMapInstance,
-              position: place.geometry.location,
-              title: place.name
+              position: loc,
+              title: results[0].formatted_address || targetText,
+              animation: google.maps.Animation.DROP
             });
-          } else {
-            // Geocoder 보완 검색
-            var geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: searchQuery }, function(resGeo, statGeo) {
-              if (statGeo === "OK" && resGeo[0]) {
-                googleMapInstance.setCenter(resGeo[0].geometry.location);
-                googleMapInstance.setZoom(15);
 
-                new google.maps.Marker({
-                  map: googleMapInstance,
-                  position: resGeo[0].geometry.location,
-                  title: searchQuery
-                });
-              } else {
-                alert("장소를 찾을 수 없습니다. 예: '더현대 대구' 또는 '반월당역'");
-              }
+            var sInfoWindow = new google.maps.InfoWindow({
+              content: '<div style="padding:6px; font-size:11px; font-weight:bold;">📍 ' + (results[0].formatted_address || targetText) + '</div>'
             });
+            sInfoWindow.open(googleMapInstance, sMarker);
+
+            searchMarkers.push(sMarker);
+          } else {
+            alert("장소를 찾을 수 없습니다. 정확한 장소명을 입력해 보세요. (예: 더현대 대구, 반월당역)");
           }
         });
       }
