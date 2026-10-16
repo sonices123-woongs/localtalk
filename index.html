@@ -5,14 +5,13 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   
-  <!-- 네이버 지도 Referer 헤더 전송 보장 태그 -->
-  <meta name="referrer" content="no-referrer-when-downgrade">
-  
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- 네이버 지도 v3 API 로드 (VPC 전용) -->
-  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=e02il5rppk"></script>
+  
+  <!-- 구글 지도 API 로드 (발급해주신 키 및 Places 라이브러리 탑재) -->
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4&libraries=places&language=ko"></script>
+  
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -173,17 +172,22 @@
       </footer>
     </div>
 
-    <!-- [화면 5] 네이버 지도 실시간 연동 화면 -->
+    <!-- [화면 5] 구글 지도 및 동선/길찾기 연동 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
-      <!-- 지도 검색 상자 추가 -->
-      <div class="absolute top-3 left-3 right-3 z-50 flex gap-2">
-        <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchMapCity()" placeholder="도시 이름 검색 (예: 제주, 부산)" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
-        <button onclick="searchMapCity()" class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700">
-          <i class="fas fa-search"></i>
-        </button>
+      <!-- 구글 지도 검색 상자 (장소 검색 및 길찾기 동선) -->
+      <div class="absolute top-3 left-3 right-3 z-50 flex flex-col gap-1.5">
+        <div class="flex gap-1.5">
+          <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchGoogleMapLocation()" placeholder="장소 검색 또는 '출발지 -> 목적지' 동선 입력" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
+          <button onclick="searchGoogleMapLocation()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700 shrink-0">
+            <i class="fas fa-route"></i>
+          </button>
+        </div>
+        <div class="text-[9.5px] text-slate-500 bg-white/90 px-2 py-0.5 rounded-md shadow-sm border border-slate-200">
+          💡 팁: '서울역 -> 성수동 카페' 처럼 입력하면 파란색 길찾기 동선이 그려집니다.
+        </div>
       </div>
 
-      <div id="naverMap" class="w-full h-full min-h-[300px]"></div>
+      <div id="googleMap" class="w-full h-full min-h-[300px]"></div>
       
       <!-- 내 위치 찾기 버튼 -->
       <button onclick="moveToMyLocation()" class="absolute bottom-16 right-4 bg-white text-slate-700 p-3 rounded-full shadow-lg z-50 hover:bg-slate-50 flex items-center justify-center border border-slate-200">
@@ -215,9 +219,11 @@
     var currentRoom = null;
     var currentView = 'home';
 
-    var naverMapInstance = null;
-    var naverMapMarkers = [];
+    var googleMapInstance = null;
+    var googleMapMarkers = [];
     var myLocationMarker = null;
+    var directionsService = null;
+    var directionsRenderer = null;
 
     var localStore = {};
 
@@ -244,8 +250,8 @@
         roomEnter: '입장하기',
         roomNoticeTitle: '실시간 Q&A 대화방 선택',
         roomNoticeSub: '쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.',
-        mapTitle: '대한민국 지역지도',
-        mapSub: '네이버 지도 실시간 위치 및 도시 마커',
+        mapTitle: '대한민국 지역지도 (Google Maps)',
+        mapSub: '글로벌 다국어 지명 및 실시간 길찾기 동선',
         mapQaLink: '[실시간 Q&A 보러가기]'
       },
       en: {
@@ -270,8 +276,8 @@
         roomEnter: 'Enter',
         roomNoticeTitle: 'Select Live Chat Room',
         roomNoticeSub: 'Max 4 people allowed per room for comfortable chatting.',
-        mapTitle: 'Korea Naver Map',
-        mapSub: 'Check real-time locations & city markers',
+        mapTitle: 'Korea Map (Google Maps)',
+        mapSub: 'Multilingual city names & live route directions',
         mapQaLink: '[Go to Live Q&A]'
       },
       ja: {
@@ -296,8 +302,8 @@
         roomEnter: '入室する',
         roomNoticeTitle: 'リアルタイムチャットルーム選択',
         roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。',
-        mapTitle: '韓国 NAVER地図',
-        mapSub: 'リアルタイム位置および都市マーカー確認',
+        mapTitle: '韓国 NAVER/Google地図',
+        mapSub: '多言語地名表示およびリアルタイムルート検索',
         mapQaLink: '[リアルタイム Q&Aへ]'
       },
       'zh-CN': {
@@ -322,8 +328,8 @@
         roomEnter: '进入',
         roomNoticeTitle: '选择实时聊天室',
         roomNoticeSub: '为了保持良好的沟通体验，每个聊天室限额4人。',
-        mapTitle: '韩国 NAVER 地图',
-        mapSub: '实时位置及城市标记查看',
+        mapTitle: '韩国 谷歌地图',
+        mapSub: '多语言地名显示及实时路线规划',
         mapQaLink: '[前往实时 Q&A]'
       }
     };
@@ -647,109 +653,123 @@
       renderMessages();
     }
 
-    // 🔥 지도 렌더링 및 언어 동기화 함수
-    function renderNaverMap() {
-      if (typeof naver === 'undefined' || !naver.maps) {
+    // 🔥 구글 지도 렌더링 & 언어 연동 함수
+    function renderGoogleMap() {
+      if (typeof google === 'undefined' || !google.maps) {
         return;
       }
 
       var centerLat = currentCity ? currentCity.lat : 36.3;
       var centerLng = currentCity ? currentCity.lng : 127.8;
-      var zoomLevel = currentCity ? 10 : 7;
+      var zoomLevel = currentCity ? 11 : 7;
       var t = I18N[currentLang] || I18N['ko'];
 
-      // 네이버 지도 언어코드 변환
-      var mapLang = 'ko';
-      if (currentLang === 'en') mapLang = 'en';
-      else if (currentLang === 'ja') mapLang = 'ja';
-      else if (currentLang === 'zh-CN') mapLang = 'zh';
-
       var mapOptions = {
-        center: new naver.maps.LatLng(centerLat, centerLng),
+        center: { lat: centerLat, lng: centerLng },
         zoom: zoomLevel,
-        language: mapLang, // 언어 연동
-        zoomControl: true,
-        zoomControlOptions: {
-          style: naver.maps.ZoomControlStyle.SMALL,
-          position: naver.maps.Position.TOP_RIGHT
-        }
+        mapTypeControl: false,
+        streetViewControl: false
       };
 
-      if (!naverMapInstance) {
-        naverMapInstance = new naver.maps.Map('naverMap', mapOptions);
-      } else {
-        naverMapInstance.setOptions({
-          language: mapLang
+      if (!googleMapInstance) {
+        googleMapInstance = new google.maps.Map(document.getElementById("googleMap"), mapOptions);
+        directionsService = new google.maps.DirectionsService();
+        directionsRenderer = new google.maps.DirectionsRenderer({
+          map: googleMapInstance,
+          polylineOptions: { strokeColor: "#4f46e5", strokeOpacity: 0.8, strokeWeight: 6 }
         });
-        naverMapInstance.setCenter(new naver.maps.LatLng(centerLat, centerLng));
-        naverMapInstance.setZoom(zoomLevel);
+      } else {
+        googleMapInstance.setCenter({ lat: centerLat, lng: centerLng });
+        googleMapInstance.setZoom(zoomLevel);
       }
 
       // 기존 마커 정리
-      for (var i = 0; i < naverMapMarkers.length; i++) {
-        naverMapMarkers[i].setMap(null);
+      for (var i = 0; i < googleMapMarkers.length; i++) {
+        googleMapMarkers[i].setMap(null);
       }
-      naverMapMarkers = [];
+      googleMapMarkers = [];
 
-      // 도시별 마커 생성
+      // 주요 도시 마커 찍기
       for (var j = 0; j < CITIES.length; j++) {
         var c = CITIES[j];
         var cName = getCityName(c);
 
-        var marker = new naver.maps.Marker({
-          position: new naver.maps.LatLng(c.lat, c.lng),
-          map: naverMapInstance,
+        var marker = new google.maps.Marker({
+          position: { lat: c.lat, lng: c.lng },
+          map: googleMapInstance,
           title: cName
         });
 
-        var infoWindow = new naver.maps.InfoWindow({
-          content: '<div style="padding:8px 12px; font-size:11px; font-weight:bold; text-align:center; border-radius:8px;">' +
+        var infowindow = new google.maps.InfoWindow({
+          content: '<div style="padding:6px; font-size:11px; font-weight:bold; text-align:center;">' +
             cName + '<br><span style="font-size:10px; color:#4f46e5; cursor:pointer;" onclick="openCityBoard(\'' + c.id + '\')">' + t.mapQaLink + '</span>' +
           '</div>'
         });
 
         (function(m, iw) {
-          naver.maps.Event.addListener(m, "click", function(e) {
-            if (iw.getMap()) {
-              iw.close();
-            } else {
-              iw.open(naverMapInstance, m);
-            }
+          m.addListener("click", function() {
+            iw.open(googleMapInstance, m);
           });
-        })(marker, infoWindow);
+        })(marker, infowindow);
 
-        naverMapMarkers.push(marker);
+        googleMapMarkers.push(marker);
       }
 
       moveToMyLocation(false);
     }
 
-    // 🔥 지도 검색창에서 도시 찾아가기 기능
-    function searchMapCity() {
-      var query = document.getElementById('mapSearchInput').value.trim().toLowerCase();
-      if (!query) return;
+    // 🔥 구글 장소 검색 및 '출발지 -> 목적지' 길찾기 동선 표시 기능
+    function searchGoogleMapLocation() {
+      var query = document.getElementById('mapSearchInput').value.trim();
+      if (!query || !googleMapInstance) return;
 
-      var foundCity = null;
+      // '->' 가 포함된 경우: 출발지 -> 목적지 길찾기 동선 계산
+      if (query.indexOf('->') !== -1 || query.indexOf('→') !== -1) {
+        var parts = query.split(/->|→/);
+        var originStr = parts[0].trim();
+        var destStr = parts[1].trim();
 
-      for (var i = 0; i < CITIES.length; i++) {
-        var c = CITIES[i];
-        var koName = c.name.ko.toLowerCase();
-        var enName = c.name.en.toLowerCase();
-        var jaName = c.name.ja.toLowerCase();
-        var zhName = c.name['zh-CN'].toLowerCase();
-
-        if (koName.indexOf(query) !== -1 || enName.indexOf(query) !== -1 || jaName.indexOf(query) !== -1 || zhName.indexOf(query) !== -1) {
-          foundCity = c;
-          break;
+        if (originStr && destStr && directionsService) {
+          directionsService.route({
+            origin: originStr,
+            destination: destStr,
+            travelMode: google.maps.TravelMode.TRANSIT // 대중교통
+          }, function(response, status) {
+            if (status === "OK") {
+              directionsRenderer.setDirections(response);
+            } else {
+              // 대중교통 실패 시 차량/도보 재시도
+              directionsService.route({
+                origin: originStr,
+                destination: destStr,
+                travelMode: google.maps.TravelMode.DRIVING
+              }, function(res2, stat2) {
+                if (stat2 === "OK") {
+                  directionsRenderer.setDirections(res2);
+                } else {
+                  alert("경로를 찾을 수 없습니다. 정확한 건물명/지명을 입력해 주세요. (예: 서울역 -> 성수역)");
+                }
+              });
+            }
+          });
         }
-      }
-
-      if (foundCity && naverMapInstance) {
-        var targetLatLng = new naver.maps.LatLng(foundCity.lat, foundCity.lng);
-        naverMapInstance.panTo(targetLatLng);
-        naverMapInstance.setZoom(11);
       } else {
-        alert("검색하신 도시를 찾을 수 없습니다. (예: 서울, 제주, 부산, 대구 등)");
+        // 단일 장소 검색: 지오코딩으로 해당 위치 이동
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: query }, function(results, status) {
+          if (status === "OK" && results[0]) {
+            googleMapInstance.setCenter(results[0].geometry.location);
+            googleMapInstance.setZoom(14);
+
+            new google.maps.Marker({
+              map: googleMapInstance,
+              position: results[0].geometry.location,
+              title: query
+            });
+          } else {
+            alert("장소를 찾을 수 없습니다. (예: 홍대, 해운대, 성수동)");
+          }
+        });
       }
     }
 
@@ -760,29 +780,33 @@
         navigator.geolocation.getCurrentPosition(function(position) {
           var lat = position.coords.latitude;
           var lng = position.coords.longitude;
-          var myLatLng = new naver.maps.LatLng(lat, lng);
+          var myLatLng = { lat: lat, lng: lng };
 
           if (myLocationMarker) {
             myLocationMarker.setMap(null);
           }
 
-          myLocationMarker = new naver.maps.Marker({
+          myLocationMarker = new google.maps.Marker({
             position: myLatLng,
-            map: naverMapInstance,
-            title: "내 위치",
+            map: googleMapInstance,
+            title: "My Location",
             icon: {
-              content: '<div style="width:22px; height:22px; background-color:#ef4444; border:3px solid #ffffff; border-radius:50%; box-shadow:0 2px 6px rgba(0,0,0,0.4);"></div>',
-              anchor: new naver.maps.Point(11, 11)
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 8,
+              fillColor: "#ef4444",
+              fillOpacity: 1,
+              strokeColor: "#ffffff",
+              strokeWeight: 2
             }
           });
 
-          if (panToUser && naverMapInstance) {
-            naverMapInstance.panTo(myLatLng);
-            naverMapInstance.setZoom(14);
+          if (panToUser && googleMapInstance) {
+            googleMapInstance.setCenter(myLatLng);
+            googleMapInstance.setZoom(14);
           }
         }, function(error) {
           if (panToUser) {
-            alert("내 위치 정보를 가져올 수 없습니다. 위치 권한을 허용해 주세요.");
+            alert("내 위치 정보를 가져올 수 없습니다. 브라우저 위치 접근 권한을 허용해 주세요.");
           }
         });
       }
@@ -845,7 +869,7 @@
         document.getElementById('headerSub').innerText = t.mapSub;
 
         setTimeout(function() {
-          renderNaverMap();
+          renderGoogleMap();
         }, 150);
       } else if (tabName === 'my') {
         tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
@@ -998,7 +1022,7 @@
       if (currentView === 'map') {
         document.getElementById('headerTitle').innerText = t.mapTitle;
         document.getElementById('headerSub').innerText = t.mapSub;
-        renderNaverMap();
+        renderGoogleMap();
       }
 
       renderCityList(document.getElementById('citySearch').value);
