@@ -211,7 +211,6 @@
   </div>
 
   <script>
-    // Firebase 설정 연결
     var firebaseConfig = {
       apiKey: "AIzaSyAFJzrygiDq_64TLCNi86VE5nmLKivq_Y8",
       authDomain: "local-talk-6c171.firebaseapp.com",
@@ -225,9 +224,9 @@
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
 
-    // 사용자 고유 익명 ID 생성
     var myUserId = localStorage.getItem('my_chat_uid') || 'user_' + Math.floor(Math.random() * 10000);
     localStorage.setItem('my_chat_uid', myUserId);
+    var myName = 'User_' + myUserId.substr(-4);
 
     var googleApiKey = "AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4";
     var currentLang = 'ko';
@@ -243,6 +242,7 @@
 
     var roomUserCounts = {};
     var currentRoomUsersRef = null;
+    var roomPresenceListener = null;
 
     var I18N = {
       ko: {
@@ -455,7 +455,6 @@
       return city.desc[currentLang] || city.desc['ko'];
     }
 
-    // 실시간 도시 전체 접속자 수 감지
     function listenCityUsers() {
       var presenceRef = db.ref('presence');
       presenceRef.on('value', function(snapshot) {
@@ -512,7 +511,6 @@
       }
       if (!currentCity) return;
 
-      // 내가 어떤 도시에 접속했는지 Firebase에 기록
       var userPresenceRef = db.ref('presence/' + myUserId);
       userPresenceRef.set({ cityId: currentCity.id, lastSeen: Date.now() });
       userPresenceRef.onDisconnect().remove();
@@ -617,7 +615,6 @@
       document.getElementById('roomListNoticeTitle').innerText = t.roomNoticeTitle;
       document.getElementById('roomListNoticeSub').innerText = t.roomNoticeSub;
 
-      // 방별 실제 인원 실시간 모니터링
       var roomsRef = db.ref('rooms/' + currentCity.id);
       roomsRef.on('value', function(snapshot) {
         var data = snapshot.val() || {};
@@ -672,10 +669,13 @@
       currentRoom = roomId;
       currentView = 'chat';
 
-      // 내가 들어간 방에 ID 등록 및 접속 해제 처리
+      // 내가 들어왔음을 등록
       currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
-      currentRoomUsersRef.set(true);
+      currentRoomUsersRef.set({ name: myName, joinedAt: Date.now() });
       currentRoomUsersRef.onDisconnect().remove();
+
+      // 입장 안내 시스템 메시지 전송
+      sendSystemMessage(myName + '님이 입장하셨습니다.');
 
       document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
@@ -689,12 +689,27 @@
       var t = I18N[currentLang] || I18N['ko'];
 
       document.getElementById('headerTitle').innerText = cityName + ' Room #' + roomId;
-      document.getElementById('headerSub').innerText = 'Room #' + roomId + ' (실시간 참여 중)';
       document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + roomId + ' Q&A';
       document.getElementById('chatNoticeSub').innerText = t.noticeSub;
 
-      // 실시간 메시지 바인딩
+      // 실시간 방 참여자 수 모니터링
+      listenRoomPresence();
+
+      // 실시간 메시지 수신
       listenRealtimeMessages();
+    }
+
+    function listenRoomPresence() {
+      if (roomPresenceListener) roomPresenceListener.off();
+
+      roomPresenceListener = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/activeUsers');
+      roomPresenceListener.on('value', function(snapshot) {
+        var usersData = snapshot.val() || {};
+        var userCount = Object.keys(usersData).length;
+        
+        var cityName = getCityName(currentCity);
+        document.getElementById('headerSub').innerText = '👥 현재 ' + userCount + '명 참여 중';
+      });
     }
 
     function listenRealtimeMessages() {
@@ -865,6 +880,7 @@
 
     function goBack() {
       if (currentRoomUsersRef) {
+        sendSystemMessage(myName + '님이 퇴장하셨습니다.');
         currentRoomUsersRef.remove();
         currentRoomUsersRef = null;
       }
@@ -943,6 +959,16 @@
 
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
+
+        // 시스템 알림 메시지 (입퇴장 알림)
+        if (m.isSystem) {
+          var sysCard = '<div class="flex justify-center my-1 w-full">' +
+            '<span class="bg-slate-200/80 text-slate-600 text-[10px] px-3 py-1 rounded-full font-bold shadow-xs">💬 ' + escapeHtml(m.text) + '</span>' +
+          '</div>';
+          container.innerHTML += sysCard;
+          continue;
+        }
+
         var isMyMsg = (m.uid === myUserId);
 
         var transBtnHtml = '<button onclick="translateMsg(\'' + m.id + '\', \'' + escapeHtml(m.text) + '\')" class="mt-1 text-[10px] text-indigo-600 font-bold hover:underline block">[번역하기]</button>';
@@ -973,6 +999,17 @@
 
     function escapeHtml(str) {
       return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function sendSystemMessage(msgText) {
+      if (!currentCity || !currentRoom) return;
+      var newMsgRef = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages').push();
+      newMsgRef.set({
+        id: newMsgRef.key,
+        isSystem: true,
+        text: msgText,
+        time: ''
+      });
     }
 
     function translateMsg(msgId, text) {
@@ -1014,7 +1051,7 @@
       newMsgRef.set({
         id: newMsgRef.key,
         uid: myUserId,
-        sender: 'User_' + myUserId.substr(-4),
+        sender: myName,
         text: text,
         time: timeStr
       });
@@ -1074,7 +1111,6 @@
       renderCityList(query);
     }
 
-    // 서비스 시작 시 실시간 접속자 리스너 등록
     listenCityUsers();
   </script>
 </body>
