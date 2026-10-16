@@ -295,7 +295,7 @@
         roomFull: '満員',
         roomEnter: '入室する',
         roomNoticeTitle: 'リアルタイムチャットルーム選択',
-        roomNoticeSub: '快適な会話のため、各部屋最大4명まで入室可能です。',
+        roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。',
         mapTitle: '韓国 Google Maps',
         mapSub: '多言語地名表示およびリアルタイムルート検索',
         mapQaLink: '[リアルタイム Q&Aへ]'
@@ -653,15 +653,16 @@
       renderMessages();
     }
 
+    // 🔥 선택된 도시가 있을 경우 그 도시 위치로 확대하여 지도 표시
     function renderGoogleMap() {
       if (typeof google === 'undefined' || !google.maps) {
         loadGoogleMapsScript(currentLang, renderGoogleMap);
         return;
       }
 
-      var centerLat = userLatLng ? userLatLng.lat : (currentCity ? currentCity.lat : 36.3);
-      var centerLng = userLatLng ? userLatLng.lng : (currentCity ? currentCity.lng : 127.8);
-      var zoomLevel = userLatLng ? 14 : 7;
+      var centerLat = currentCity ? currentCity.lat : (userLatLng ? userLatLng.lat : 36.3);
+      var centerLng = currentCity ? currentCity.lng : (userLatLng ? userLatLng.lng : 127.8);
+      var zoomLevel = currentCity ? 12 : (userLatLng ? 14 : 7);
       var t = I18N[currentLang] || I18N['ko'];
 
       var mapOptions = {
@@ -702,7 +703,6 @@
       moveToMyLocation(false);
     }
 
-    // 🔥 100% 오류 없는 네이버지도/카카오맵 모바일 길찾기 표준 연동
     function searchGoogleMapLocation() {
       var query = document.getElementById('mapSearchInput').value.trim();
       if (!query || !googleMapInstance) return;
@@ -734,7 +734,6 @@
             animation: google.maps.Animation.DROP
           });
 
-          // 네이버 / 카카오 모바일 웹 다이렉트 검색 및 길찾기 URL
           var encodedQuery = encodeURIComponent(targetText);
           var naverMapUrl = "https://m.map.naver.com/search2/search.naver?query=" + encodedQuery;
           var kakaoMapUrl = "https://m.map.kakao.com/actions/searchView?q=" + encodedQuery;
