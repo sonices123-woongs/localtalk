@@ -9,9 +9,6 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
-  <!-- 구글 지도 API 로드 (발급해주신 키 및 Places 라이브러리 탑재) -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4&libraries=places&language=ko"></script>
-  
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -107,7 +104,7 @@
     <main id="homeView" class="p-4 space-y-3.5 flex-1 scroll-area w-full pb-16">
       <div class="relative w-full">
         <i class="fas fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 서울, 제주, 부산)" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 서울, 제주, 대구)" class="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
       </div>
 
       <div class="w-full">
@@ -121,7 +118,7 @@
       <div onclick="openChatRoomList()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-3.5 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
         <div>
           <span class="bg-white/20 text-[10px] px-2 py-0.5 rounded-full font-bold">LIVE Q&A (Max 4명)</span>
-          <h3 id="boardBannerTitle" class="font-bold text-sm mt-1">서울 실시간 대화방 목록</h3>
+          <h3 id="boardBannerTitle" class="font-bold text-sm mt-1">실시간 대화방 목록</h3>
           <p id="boardBannerSub" class="text-[11px] text-indigo-100 mt-0.5">원하는 채팅방을 선택하여 소통해보세요</p>
         </div>
         <div class="bg-white text-indigo-600 w-9 h-9 rounded-full flex items-center justify-center text-sm shadow shrink-0">
@@ -156,7 +153,7 @@
         <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-xs text-indigo-800 flex items-start gap-2 w-full">
           <i class="fas fa-info-circle text-indigo-500 mt-0.5 shrink-0 text-xs"></i>
           <div class="min-w-0 flex-1">
-            <strong id="chatNoticeTitle" class="text-xs">서울 현지인 Q&A 방</strong><br>
+            <strong id="chatNoticeTitle" class="text-xs">현지인 Q&A 방</strong><br>
             <span id="chatNoticeSub" class="text-[11px]">여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.</span>
           </div>
         </div>
@@ -174,23 +171,19 @@
 
     <!-- [화면 5] 구글 지도 및 동선/길찾기 연동 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
-      <!-- 구글 지도 검색 상자 (장소 검색 및 길찾기 동선) -->
       <div class="absolute top-3 left-3 right-3 z-50 flex flex-col gap-1.5">
         <div class="flex gap-1.5">
-          <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchGoogleMapLocation()" placeholder="장소 검색 또는 '출발지 -> 목적지' 동선 입력" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
+          <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchGoogleMapLocation()" placeholder="장소(예: 현대, 더현대 대구) 또는 '출발지 -> 목적지'" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
           <button onclick="searchGoogleMapLocation()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700 shrink-0">
-            <i class="fas fa-route"></i>
+            <i class="fas fa-search"></i>
           </button>
-        </div>
-        <div class="text-[9.5px] text-slate-500 bg-white/90 px-2 py-0.5 rounded-md shadow-sm border border-slate-200">
-          💡 팁: '서울역 -> 성수동 카페' 처럼 입력하면 파란색 길찾기 동선이 그려집니다.
         </div>
       </div>
 
       <div id="googleMap" class="w-full h-full min-h-[300px]"></div>
       
       <!-- 내 위치 찾기 버튼 -->
-      <button onclick="moveToMyLocation()" class="absolute bottom-16 right-4 bg-white text-slate-700 p-3 rounded-full shadow-lg z-50 hover:bg-slate-50 flex items-center justify-center border border-slate-200">
+      <button onclick="moveToMyLocation(true)" class="absolute bottom-16 right-4 bg-white text-slate-700 p-3 rounded-full shadow-lg z-50 hover:bg-slate-50 flex items-center justify-center border border-slate-200">
         <i class="fas fa-crosshairs text-indigo-600 text-base"></i>
       </button>
     </main>
@@ -214,6 +207,7 @@
   </div>
 
   <script>
+    var googleApiKey = "AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4";
     var currentLang = 'ko';
     var currentCity = null;
     var currentRoom = null;
@@ -224,13 +218,14 @@
     var myLocationMarker = null;
     var directionsService = null;
     var directionsRenderer = null;
+    var userLatLng = null;
 
     var localStore = {};
 
     var I18N = {
       ko: {
         appSub: '대한민국 실시간 현지인 Q&A',
-        searchPlaceholder: '궁금한 도시를 검색하세요 (예: 서울, 제주, 부산)',
+        searchPlaceholder: '궁금한 도시를 검색하세요 (예: 서울, 제주, 대구)',
         popularTitle: '대한민국 주요 도시 목록',
         online: '명 접속 중',
         enterBoard: '지역 게시판 입장',
@@ -251,12 +246,12 @@
         roomNoticeTitle: '실시간 Q&A 대화방 선택',
         roomNoticeSub: '쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.',
         mapTitle: '대한민국 지역지도 (Google Maps)',
-        mapSub: '글로벌 다국어 지명 및 실시간 길찾기 동선',
+        mapSub: '글로벌 다국어 지명 및 실시간 장소/길찾기',
         mapQaLink: '[실시간 Q&A 보러가기]'
       },
       en: {
         appSub: 'Korea Real-time Local Q&A',
-        searchPlaceholder: 'Search city (e.g. Seoul, Jeju, Busan)',
+        searchPlaceholder: 'Search city (e.g. Seoul, Jeju, Daegu)',
         popularTitle: 'Korea Popular Cities',
         online: 'online',
         enterBoard: 'View Board',
@@ -282,7 +277,7 @@
       },
       ja: {
         appSub: '韓国 リアルタイム現地人 Q&A',
-        searchPlaceholder: '都市を検索 (例: ソウル, 済州, 釜山)',
+        searchPlaceholder: '都市を検索 (例: ソウル, 済州, 大邱)',
         popularTitle: '韓国の主要都市',
         online: '人オンライン',
         enterBoard: '掲示板を見る',
@@ -302,13 +297,13 @@
         roomEnter: '入室する',
         roomNoticeTitle: 'リアルタイムチャットルーム選択',
         roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。',
-        mapTitle: '韓国 NAVER/Google地図',
+        mapTitle: '韓国 Google Maps',
         mapSub: '多言語地名表示およびリアルタイムルート検索',
         mapQaLink: '[リアルタイム Q&Aへ]'
       },
       'zh-CN': {
         appSub: '韩国 实时当地人 Q&A',
-        searchPlaceholder: '搜索城市 (例如: 首尔, 济州, 釜山)',
+        searchPlaceholder: '搜索城市 (例如: 首尔, 济州, 大邱)',
         popularTitle: '韩国主要城市',
         online: '人在线',
         enterBoard: '进入论坛',
@@ -336,6 +331,14 @@
 
     var CITIES = [
       { 
+        id: 'daegu', 
+        name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
+        iconTag: '<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
+        desc: { ko: '동성로, 반월당 더현대, 서문시장 질문', en: 'Dongseong-ro, Banwoldang & Local Eats', ja: '東城路、半月堂、グルメ質問', 'zh-CN': '东城路、半月堂、美食品鉴' }, 
+        users: 320,
+        lat: 35.8714, lng: 128.6014
+      },
+      { 
         id: 'seoul', 
         name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M5,32 Q50,22 95,32 L88,25 Q50,18 12,25 Z" fill="#1e293b"/><path d="M12,25 Q50,14 88,25 L82,18 Q50,10 18,18 Z" fill="#334155"/><rect x="18" y="32" width="64" height="16" fill="#881337"/><rect x="22" y="36" width="6" height="8" fill="#fef08a"/><rect x="34" y="36" width="6" height="8" fill="#fef08a"/><rect x="47" y="36" width="6" height="8" fill="#fef08a"/><rect x="60" y="36" width="6" height="8" fill="#fef08a"/><rect x="72" y="36" width="6" height="8" fill="#fef08a"/><rect x="8" y="48" width="84" height="28" fill="#e2e8f0" rx="2"/><path d="M20,76 A10,12 0 0,1 36,76 Z" fill="#991b1b"/><path d="M42,76 A11,14 0 0,1 58,76 Z" fill="#991b1b"/><path d="M64,76 A10,12 0 0,1 80,76 Z" fill="#991b1b"/></svg></div>', 
@@ -358,73 +361,21 @@
         desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
         users: 215,
         lat: 35.1796, lng: 129.0756
-      },
-      { 
-        id: 'daegu', 
-        name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
-        iconTag: '<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
-        desc: { ko: '동성로, 서문시장, 현지 맛집 질문', en: 'Dongseong-ro, Seomun Market & Local Eats', ja: '東城路、西門市場、グルメ質問', 'zh-CN': '东城路、西门市场、美食品鉴' }, 
-        users: 128,
-        lat: 35.8714, lng: 128.6014
-      },
-      { 
-        id: 'incheon', 
-        name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
-        iconTag: '<div class="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M10,50 L40,42 L75,15 C80,11 88,14 85,20 L70,48 L90,52 L96,46 L100,50 L92,62 L82,60 L50,65 L20,75 L10,50 Z" fill="#0284c7"/></svg></div>', 
-        desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
-        users: 162,
-        lat: 37.4563, lng: 126.7052
-      },
-      { 
-        id: 'gyeongju', 
-        name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
-        iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 90" class="w-full h-full"><rect x="15" y="72" width="70" height="14" fill="#78350f" rx="1"/><rect x="25" y="58" width="50" height="14" fill="#92400e" rx="1"/><path d="M20,58 L80,58 L72,48 L28,48 Z" fill="#b45309"/><rect x="32" y="34" width="36" height="14" fill="#d97706"/><path d="M26,34 L74,34 L66,24 L34,24 Z" fill="#b45309"/><rect x="40" y="14" width="20" height="10" fill="#f59e0b"/><line x1="50" y1="2" x2="50" y2="14" stroke="#78350f" stroke-width="4"/><circle cx="50" cy="5" r="4" fill="#f59e0b"/></svg></div>', 
-        desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
-        users: 145,
-        lat: 35.8562, lng: 129.2247
-      },
-      { 
-        id: 'jeonju', 
-        name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
-        iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M15,35 Q50,75 85,35 Z" fill="#d97706"/><ellipse cx="50" cy="35" rx="35" ry="8" fill="#fef3c7"/><circle cx="50" cy="35" r="5" fill="#dc2626"/><circle cx="40" cy="34" r="4" fill="#16a34a"/><circle cx="60" cy="34" r="4" fill="#ca8a04"/><line x1="88" y1="15" x2="88" y2="70" stroke="#b45309" stroke-width="3"/><line x1="94" y1="15" x2="94" y2="70" stroke="#b45309" stroke-width="3"/></svg></div>', 
-        desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
-        users: 110,
-        lat: 35.8242, lng: 127.1480
-      },
-      { 
-        id: 'gangneung', 
-        name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
-        iconTag: '<div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/><line x1="60" y1="40" x2="60" y2="75" stroke="#ffffff" stroke-width="2"/></svg></div>', 
-        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
-        users: 178,
-        lat: 37.7519, lng: 128.8761
       }
     ];
 
     var BOARD_DATA = {
-      seoul: [
+      daegu: [
         { 
-          id: 'p1',
-          title: { ko: '[공지] 성수동/홍대 최신 팝업스토어 스케줄', en: '[Notice] Seongsu/Hongdae Pop-up Store Schedule', ja: '[お知らせ] 聖水/弘大 ポップアップストア日程', 'zh-CN': '[公告] 圣水洞/弘大最新快闪店日程' }, 
-          author: '서울나들이', date: '오늘', views: 890, 
-          tag: { ko: '공지', en: 'Notice', ja: 'お知らせ', 'zh-CN': '公告' },
+          id: 'p_dg1',
+          title: { ko: '[팁] 더현대 대구(반월당) 및 동성로 핫플 안내', en: '[Tip] The Hyundai Daegu & Dongseong-ro Info', ja: '[コツ] ザ・ヒュンダイ大邱 & 東城路 情報', 'zh-CN': '[攻略] 现代百货大邱店及东城路资讯' }, 
+          author: '대구시민', date: '오늘', views: 420, 
+          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' },
           content: {
-            ko: '📍 **성수동 핫플 팝업 스토어:**\n- 디저트 패션 브랜드 팝업 (10:00 ~ 20:00)\n- 캐릭터 스토어 (성수역 3번 출구 앞)\n\n📍 **홍대 팝업 스토어:**\n- 글로벌 애니메이션 콜라보 팝업 (상상마당 인근)\n- 미디어 아트 체험관 할인 이벤트 진행 중!',
-            en: '📍 **Seongsu Pop-up Stores:**\n- Dessert & Fashion Brand Pop-up (10:00 ~ 20:00)\n- Character Goods Store (Near Seongsu Stn Exit 3)\n\n📍 **Hongdae Pop-up Stores:**\n- Global Anime Collab Pop-up (Near Sangsangmadang)\n- Media Art Exhibition Discount Event in progress!',
-            ja: '📍 **聖水(ソンス)ポップアップ:**\n- デザートファッションブランド (10:00 ~ 20:00)\n- キャラクターグッズストア (聖水駅3番出口前)\n\n📍 **弘大(ホンデ)ポップアップ:**\n- グローバルアニメコラボポップアップ\n- メディアアート体験館割引イベント開催中！',
-            'zh-CN': '📍 **圣水洞快闪店:**\n- 甜品时尚品牌快闪 (10:00 ~ 20:00)\n- 动漫周边店 (圣水站3号出口前)\n\n📍 **弘大快闪店:**\n- 联名动漫快闪店 (想像庭院附近)\n- 媒体艺术体验馆正在举办打折活动！'
-          }
-        },
-        { 
-          id: 'p2',
-          title: { ko: '명동 실시간 환전율 가장 높은 곳 추천', en: 'Best Money Exchange Rates in Myeongdong', ja: '明洞でリアルタイム換算レートが最も高い場所', 'zh-CN': '明洞实时汇率最高的兑换所推荐' }, 
-          author: '명동지킴이', date: '어제', views: 650, 
-          tag: { ko: '팁', en: 'Tip', ja: 'コツ', 'zh-CN': '攻略' },
-          content: {
-            ko: '💡 **명동 주요 환전소 꿀팁:**\n1. **대사관 앞 환전소:** 명동에서 가장 우대율이 높기로 유명함.\n2. **일품향 환전소:** 대사관 바로 옆 위치, 엔화/달러/위안화 우대 최고 수준.\n\n*팁: 주말보다는 평일 낮 시간대에 방문하시면 가장 좋은 환율로 우대받으실 수 있습니다!*',
-            en: '💡 **Myeongdong Money Exchange Tips:**\n1. **Embassy Exchange:** Famous for having the best rates in Myeongdong.\n2. **Ilpumhyang Exchange:** Located right next to the Embassy, top rates for USD/JPY/CNY.\n\n*Tip: Visit during weekday daytime rather than weekends for better rates!*',
-            ja: '💡 **明洞両替所のコツ:**\n1. **大使館前両替所:** 明洞で一番レートが良いことで有名です。\n2. **一品香両替所:** 大使館のすぐ隣、円/ドル/元ともに最高水準。\n\n*コツ: 週末より平日昼間に訪問すると、より良いレートで両替できます！*',
-            'zh-CN': '💡 **明洞主要换钱所攻略:**\n1. **大使馆前换钱所:** 明洞公认汇率最划算的地方。\n2. **一品香换钱所:** 紧邻大使馆，日元/美元/人民币汇率极佳。\n\n*提示: 相比周末，建议工作日白天前往，换汇更划算！*'
+            ko: '📍 **더현대 대구 (반월당역 인근):**\n- 반월당역 지하 연결통로 이용 가능\n- 지하 1층 푸드코트 팝업스토어 및 9층 게이츠 파크 문화공간 강추!',
+            en: '📍 **The Hyundai Daegu (Near Banwoldang Stn):**\n- Directly connected via Banwoldang Station underground exit\n- B1 Food Hall Pop-ups & 9F Cultural Space highly recommended!',
+            ja: '📍 **ザ・ヒュンダイ大邱 (半月堂駅近く):**\n- 半月堂駅地下通路から직결\n- 地下1階フードコート & 9階文化空間おすすめ！',
+            'zh-CN': '📍 **现代百货大邱店 (半月堂站附近):**\n- 通过半月堂站地下通道可直达\n- 推荐B1美食街快闪店及9楼文化空间！'
           }
         }
       ]
@@ -437,6 +388,24 @@
       { id: 4, count: 1, max: 4 },
       { id: 5, count: 2, max: 4 }
     ];
+
+    function loadGoogleMapsScript(langCode, callback) {
+      var existingScript = document.getElementById("googleMapsScript");
+      if (existingScript) {
+        existingScript.remove();
+      }
+      delete window.google;
+
+      var script = document.createElement("script");
+      script.id = "googleMapsScript";
+      script.src = "https://maps.googleapis.com/maps/api/js?key=" + googleApiKey + "&libraries=places&language=" + langCode;
+      script.async = true;
+      script.defer = true;
+      script.onload = function() {
+        if (callback) callback();
+      };
+      document.head.appendChild(script);
+    }
 
     function getCityName(city) {
       if (!city) return '';
@@ -653,15 +622,15 @@
       renderMessages();
     }
 
-    // 🔥 구글 지도 렌더링 & 언어 연동 함수
     function renderGoogleMap() {
       if (typeof google === 'undefined' || !google.maps) {
+        loadGoogleMapsScript(currentLang, renderGoogleMap);
         return;
       }
 
-      var centerLat = currentCity ? currentCity.lat : 36.3;
-      var centerLng = currentCity ? currentCity.lng : 127.8;
-      var zoomLevel = currentCity ? 11 : 7;
+      var centerLat = userLatLng ? userLatLng.lat : (currentCity ? currentCity.lat : 35.8714);
+      var centerLng = userLatLng ? userLatLng.lng : (currentCity ? currentCity.lng : 128.6014);
+      var zoomLevel = userLatLng ? 14 : 11;
       var t = I18N[currentLang] || I18N['ko'];
 
       var mapOptions = {
@@ -671,25 +640,15 @@
         streetViewControl: false
       };
 
-      if (!googleMapInstance) {
-        googleMapInstance = new google.maps.Map(document.getElementById("googleMap"), mapOptions);
-        directionsService = new google.maps.DirectionsService();
-        directionsRenderer = new google.maps.DirectionsRenderer({
-          map: googleMapInstance,
-          polylineOptions: { strokeColor: "#4f46e5", strokeOpacity: 0.8, strokeWeight: 6 }
-        });
-      } else {
-        googleMapInstance.setCenter({ lat: centerLat, lng: centerLng });
-        googleMapInstance.setZoom(zoomLevel);
-      }
+      googleMapInstance = new google.maps.Map(document.getElementById("googleMap"), mapOptions);
+      directionsService = new google.maps.DirectionsService();
+      directionsRenderer = new google.maps.DirectionsRenderer({
+        map: googleMapInstance,
+        polylineOptions: { strokeColor: "#4f46e5", strokeOpacity: 0.8, strokeWeight: 6 }
+      });
 
-      // 기존 마커 정리
-      for (var i = 0; i < googleMapMarkers.length; i++) {
-        googleMapMarkers[i].setMap(null);
-      }
       googleMapMarkers = [];
 
-      // 주요 도시 마커 찍기
       for (var j = 0; j < CITIES.length; j++) {
         var c = CITIES[j];
         var cName = getCityName(c);
@@ -718,12 +677,11 @@
       moveToMyLocation(false);
     }
 
-    // 🔥 구글 장소 검색 및 '출발지 -> 목적지' 길찾기 동선 표시 기능
+    // 장소 검색 (더현대 대구, 반월당, 현대 등 모든 키워드 포괄 검색)
     function searchGoogleMapLocation() {
       var query = document.getElementById('mapSearchInput').value.trim();
       if (!query || !googleMapInstance) return;
 
-      // '->' 가 포함된 경우: 출발지 -> 목적지 길찾기 동선 계산
       if (query.indexOf('->') !== -1 || query.indexOf('→') !== -1) {
         var parts = query.split(/->|→/);
         var originStr = parts[0].trim();
@@ -733,12 +691,11 @@
           directionsService.route({
             origin: originStr,
             destination: destStr,
-            travelMode: google.maps.TravelMode.TRANSIT // 대중교통
+            travelMode: google.maps.TravelMode.TRANSIT
           }, function(response, status) {
             if (status === "OK") {
               directionsRenderer.setDirections(response);
             } else {
-              // 대중교통 실패 시 차량/도보 재시도
               directionsService.route({
                 origin: originStr,
                 destination: destStr,
@@ -747,27 +704,58 @@
                 if (stat2 === "OK") {
                   directionsRenderer.setDirections(res2);
                 } else {
-                  alert("경로를 찾을 수 없습니다. 정확한 건물명/지명을 입력해 주세요. (예: 서울역 -> 성수역)");
+                  alert("경로를 찾을 수 없습니다.");
                 }
               });
             }
           });
         }
       } else {
-        // 단일 장소 검색: 지오코딩으로 해당 위치 이동
-        var geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ address: query }, function(results, status) {
-          if (status === "OK" && results[0]) {
-            googleMapInstance.setCenter(results[0].geometry.location);
-            googleMapInstance.setZoom(14);
+        // 유연한 검색을 위한 키워드 보완 (대구 반월당 기준)
+        var searchQuery = query;
+        if (query.indexOf("현대") !== -1 && query.indexOf("대구") === -1) {
+          searchQuery = "더현대 대구 " + query;
+        }
+
+        var service = new google.maps.places.PlacesService(googleMapInstance);
+        var request = {
+          query: searchQuery,
+          fields: ['name', 'geometry', 'formatted_address']
+        };
+
+        if (userLatLng) {
+          request.location = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
+          request.radius = 50000;
+        }
+
+        service.findPlaceFromQuery(request, function(results, status) {
+          if (status === google.maps.places.PlacesServiceStatus.OK && results[0]) {
+            var place = results[0];
+            googleMapInstance.setCenter(place.geometry.location);
+            googleMapInstance.setZoom(15);
 
             new google.maps.Marker({
               map: googleMapInstance,
-              position: results[0].geometry.location,
-              title: query
+              position: place.geometry.location,
+              title: place.name
             });
           } else {
-            alert("장소를 찾을 수 없습니다. (예: 홍대, 해운대, 성수동)");
+            // Geocoder 보완 검색
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: searchQuery }, function(resGeo, statGeo) {
+              if (statGeo === "OK" && resGeo[0]) {
+                googleMapInstance.setCenter(resGeo[0].geometry.location);
+                googleMapInstance.setZoom(15);
+
+                new google.maps.Marker({
+                  map: googleMapInstance,
+                  position: resGeo[0].geometry.location,
+                  title: searchQuery
+                });
+              } else {
+                alert("장소를 찾을 수 없습니다. 예: '더현대 대구' 또는 '반월당역'");
+              }
+            });
           }
         });
       }
@@ -780,33 +768,35 @@
         navigator.geolocation.getCurrentPosition(function(position) {
           var lat = position.coords.latitude;
           var lng = position.coords.longitude;
-          var myLatLng = { lat: lat, lng: lng };
+          userLatLng = { lat: lat, lng: lng };
 
           if (myLocationMarker) {
             myLocationMarker.setMap(null);
           }
 
-          myLocationMarker = new google.maps.Marker({
-            position: myLatLng,
-            map: googleMapInstance,
-            title: "My Location",
-            icon: {
-              path: google.maps.SymbolPath.CIRCLE,
-              scale: 8,
-              fillColor: "#ef4444",
-              fillOpacity: 1,
-              strokeColor: "#ffffff",
-              strokeWeight: 2
-            }
-          });
+          if (typeof google !== 'undefined' && google.maps) {
+            myLocationMarker = new google.maps.Marker({
+              position: userLatLng,
+              map: googleMapInstance,
+              title: "My Location",
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 9,
+                fillColor: "#ef4444",
+                fillOpacity: 1,
+                strokeColor: "#ffffff",
+                strokeWeight: 2
+              }
+            });
 
-          if (panToUser && googleMapInstance) {
-            googleMapInstance.setCenter(myLatLng);
-            googleMapInstance.setZoom(14);
+            if (panToUser && googleMapInstance) {
+              googleMapInstance.setCenter(userLatLng);
+              googleMapInstance.setZoom(14);
+            }
           }
         }, function(error) {
           if (panToUser) {
-            alert("내 위치 정보를 가져올 수 없습니다. 브라우저 위치 접근 권한을 허용해 주세요.");
+            alert("위치 정보를 가져올 수 없습니다. 브라우저 위치 접근을 허용해 주세요.");
           }
         });
       }
@@ -868,9 +858,7 @@
         document.getElementById('headerTitle').innerText = t.mapTitle;
         document.getElementById('headerSub').innerText = t.mapSub;
 
-        setTimeout(function() {
-          renderGoogleMap();
-        }, 150);
+        loadGoogleMapsScript(currentLang, renderGoogleMap);
       } else if (tabName === 'my') {
         tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
@@ -1022,7 +1010,7 @@
       if (currentView === 'map') {
         document.getElementById('headerTitle').innerText = t.mapTitle;
         document.getElementById('headerSub').innerText = t.mapSub;
-        renderGoogleMap();
+        loadGoogleMapsScript(currentLang, renderGoogleMap);
       }
 
       renderCityList(document.getElementById('citySearch').value);
