@@ -9,6 +9,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
+  <!-- Firebase SDK (v9 호환 모드) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -207,6 +211,24 @@
   </div>
 
   <script>
+    // Firebase 설정 연결
+    var firebaseConfig = {
+      apiKey: "AIzaSyAFJzrygiDq_64TLCNi86VE5nmLKivq_Y8",
+      authDomain: "local-talk-6c171.firebaseapp.com",
+      projectId: "local-talk-6c171",
+      storageBucket: "local-talk-6c171.firebasestorage.app",
+      messagingSenderId: "1088072869168",
+      appId: "1:1088072869168:web:88417cb6c4eb9b623654f5",
+      databaseURL: "https://local-talk-6c171-default-rtdb.firebaseio.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    var db = firebase.database();
+
+    // 사용자 고유 익명 ID 생성
+    var myUserId = localStorage.getItem('my_chat_uid') || 'user_' + Math.floor(Math.random() * 10000);
+    localStorage.setItem('my_chat_uid', myUserId);
+
     var googleApiKey = "AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4";
     var currentLang = 'ko';
     var currentCity = null;
@@ -219,7 +241,8 @@
     var myLocationMarker = null;
     var userLatLng = null;
 
-    var localStore = {};
+    var roomUserCounts = {};
+    var currentRoomUsersRef = null;
 
     var I18N = {
       ko: {
@@ -334,7 +357,6 @@
         name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M5,32 Q50,22 95,32 L88,25 Q50,18 12,25 Z" fill="#1e293b"/><path d="M12,25 Q50,14 88,25 L82,18 Q50,10 18,18 Z" fill="#334155"/><rect x="18" y="32" width="64" height="16" fill="#881337"/><rect x="22" y="36" width="6" height="8" fill="#fef08a"/><rect x="34" y="36" width="6" height="8" fill="#fef08a"/><rect x="47" y="36" width="6" height="8" fill="#fef08a"/><rect x="60" y="36" width="6" height="8" fill="#fef08a"/><rect x="72" y="36" width="6" height="8" fill="#fef08a"/><rect x="8" y="48" width="84" height="28" fill="#e2e8f0" rx="2"/><path d="M20,76 A10,12 0 0,1 36,76 Z" fill="#991b1b"/><path d="M42,76 A11,14 0 0,1 58,76 Z" fill="#991b1b"/><path d="M64,76 A10,12 0 0,1 80,76 Z" fill="#991b1b"/></svg></div>', 
         desc: { ko: '명동, 홍대, 핫플레이스 실시간 정보', en: 'Myeongdong, Hongdae & Hotspots', ja: '明洞、弘大、人気スポット情報', 'zh-CN': '明洞、弘大、热门景点实时资讯' }, 
-        users: 340,
         lat: 37.5665, lng: 126.9780
       },
       { 
@@ -342,7 +364,6 @@
         name: { ko: '대한민국 제주', en: 'Jeju Island', ja: '済州島', 'zh-CN': '济州岛' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 60" class="w-full h-full"><ellipse cx="50" cy="32" rx="45" ry="20" fill="#15803d"/><path d="M25,32 Q50,10 75,32 Z" fill="#166534"/><path d="M44,20 L50,15 L56,20 Z" fill="#d97706"/><ellipse cx="50" cy="32" rx="43" ry="18" fill="none" stroke="#22c55e" stroke-width="2" stroke-dasharray="4,2"/></svg></div>', 
         desc: { ko: '렌터카, 날씨, 흑돼지/카페 질문', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚/カフェ質問', 'zh-CN': '租车、天气、黑猪肉/咖啡馆咨询' }, 
-        users: 189,
         lat: 33.4996, lng: 126.5312
       },
       { 
@@ -350,7 +371,6 @@
         name: { ko: '대한민국 부산', en: 'Busan, Korea', ja: '釜山, 韓国', 'zh-CN': '釜山, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M0,50 Q25,40 50,50 T100,50 L100,80 L0,80 Z" fill="#0284c7"/><path d="M0,60 Q25,52 50,60 T100,60 L100,80 L0,80 Z" fill="#0369a1"/><path d="M15,25 Q30,12 45,28 Q30,22 15,25 Z" fill="#ffffff" stroke="#334155" stroke-width="1.5"/><path d="M55,18 Q70,5 85,20 Q70,14 55,18 Z" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></svg></div>', 
         desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
-        users: 215,
         lat: 35.1796, lng: 129.0756
       },
       { 
@@ -358,7 +378,6 @@
         name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
         desc: { ko: '동성로, 반월당 더현대, 서문시장 질문', en: 'Dongseong-ro, Banwoldang & Local Eats', ja: '東城路、半月堂、グルメ質問', 'zh-CN': '东城路、半月堂、美食品鉴' }, 
-        users: 320,
         lat: 35.8714, lng: 128.6014
       },
       { 
@@ -366,7 +385,6 @@
         name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M10,50 L40,42 L75,15 C80,11 88,14 85,20 L70,48 L90,52 L96,46 L100,50 L92,62 L82,60 L50,65 L20,75 L10,50 Z" fill="#0284c7"/></svg></div>', 
         desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
-        users: 162,
         lat: 37.4563, lng: 126.7052
       },
       { 
@@ -374,7 +392,6 @@
         name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 90" class="w-full h-full"><rect x="15" y="72" width="70" height="14" fill="#78350f" rx="1"/><rect x="25" y="58" width="50" height="14" fill="#92400e" rx="1"/><path d="M20,58 L80,58 L72,48 L28,48 Z" fill="#b45309"/><rect x="32" y="34" width="36" height="14" fill="#d97706"/><path d="M26,34 L74,34 L66,24 L34,24 Z" fill="#b45309"/><rect x="40" y="14" width="20" height="10" fill="#f59e0b"/><line x1="50" y1="2" x2="50" y2="14" stroke="#78350f" stroke-width="4"/><circle cx="50" cy="5" r="4" fill="#f59e0b"/></svg></div>', 
         desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
-        users: 145,
         lat: 35.8562, lng: 129.2247
       },
       { 
@@ -382,7 +399,6 @@
         name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M15,35 Q50,75 85,35 Z" fill="#d97706"/><ellipse cx="50" cy="35" rx="35" ry="8" fill="#fef3c7"/><circle cx="50" cy="35" r="5" fill="#dc2626"/><circle cx="40" cy="34" r="4" fill="#16a34a"/><circle cx="60" cy="34" r="4" fill="#ca8a04"/><line x1="88" y1="15" x2="88" y2="70" stroke="#b45309" stroke-width="3"/><line x1="94" y1="15" x2="94" y2="70" stroke="#b45309" stroke-width="3"/></svg></div>', 
         desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
-        users: 110,
         lat: 35.8242, lng: 127.1480
       },
       { 
@@ -390,7 +406,6 @@
         name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/><line x1="60" y1="40" x2="60" y2="75" stroke="#ffffff" stroke-width="2"/></svg></div>', 
         desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
-        users: 178,
         lat: 37.7519, lng: 128.8761
       }
     ];
@@ -411,14 +426,6 @@
         }
       ]
     };
-
-    var ROOM_STATES = [
-      { id: 1, count: 3, max: 4 },
-      { id: 2, count: 4, max: 4 },
-      { id: 3, count: 2, max: 4 },
-      { id: 4, count: 1, max: 4 },
-      { id: 5, count: 2, max: 4 }
-    ];
 
     function loadGoogleMapsScript(langCode, callback) {
       var existingScript = document.getElementById("googleMapsScript");
@@ -448,7 +455,24 @@
       return city.desc[currentLang] || city.desc['ko'];
     }
 
-    function renderCityList(filterKeyword) {
+    // 실시간 도시 전체 접속자 수 감지
+    function listenCityUsers() {
+      var presenceRef = db.ref('presence');
+      presenceRef.on('value', function(snapshot) {
+        var data = snapshot.val() || {};
+        var counts = {};
+
+        for (var key in data) {
+          var userObj = data[key];
+          if (userObj && userObj.cityId) {
+            counts[userObj.cityId] = (counts[userObj.cityId] || 0) + 1;
+          }
+        }
+        renderCityList(document.getElementById('citySearch').value, counts);
+      });
+    }
+
+    function renderCityList(filterKeyword, liveCounts) {
       var filter = filterKeyword || '';
       var listContainer = document.getElementById('cityList');
       if (!listContainer) return;
@@ -460,13 +484,14 @@
         var city = CITIES[i];
         var name = getCityName(city);
         var desc = getCityDesc(city);
+        var realCount = (liveCounts && liveCounts[city.id]) ? liveCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
           var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="bg-white p-2.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex flex-col justify-between space-y-1.5 w-full min-w-0">' +
             '<div>' +
               '<div class="flex justify-between items-center">' +
                 '<span>' + city.iconTag + '</span>' +
-                '<span class="text-[9px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100">' + city.users + ' ' + t.online + '</span>' +
+                '<span class="text-[9px] bg-emerald-50 text-emerald-600 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100">' + realCount + ' ' + t.online + '</span>' +
               '</div>' +
               '<h3 class="font-bold text-slate-800 text-xs mt-1 truncate">' + name + '</h3>' +
               '<p class="text-[10px] text-slate-500 line-clamp-2 mt-0.5 leading-tight">' + desc + '</p>' +
@@ -486,6 +511,11 @@
         }
       }
       if (!currentCity) return;
+
+      // 내가 어떤 도시에 접속했는지 Firebase에 기록
+      var userPresenceRef = db.ref('presence/' + myUserId);
+      userPresenceRef.set({ cityId: currentCity.id, lastSeen: Date.now() });
+      userPresenceRef.onDisconnect().remove();
 
       currentView = 'board';
 
@@ -524,7 +554,7 @@
             ko: '📍 **주요 관광 코스:**\n1. 현지인들이 자주 찾는 로컬 시장 방문\n2. 경치가 아름다운 명소 및 야경 스팟 체험\n3. 시그니처 대표 먹거리 탐방!',
             en: '📍 **Main Tour Route:**\n1. Visit local markets popular with residents\n2. Scenic spots and beautiful night view spots\n3. Enjoy local signature delicacies!',
             ja: '📍 **主な観光コース:**\n1. 現地人がよく訪れるローカル市場の訪問\n2. 景色の良い名所と夜景スポット体験\n3. シグネチャー名物グルメ探訪！',
-            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地居民常去的本土市场\n2. 体验风景优美的打卡点及夜景名所\n3. 品尝代表性特色美食！'
+            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地居民常去的本土 market\n2. 体验风景优美的打卡点及夜景名所\n3. 品尝代表性特色美食！'
           }
         }
       ];
@@ -587,7 +617,18 @@
       document.getElementById('roomListNoticeTitle').innerText = t.roomNoticeTitle;
       document.getElementById('roomListNoticeSub').innerText = t.roomNoticeSub;
 
-      renderChatRooms();
+      // 방별 실제 인원 실시간 모니터링
+      var roomsRef = db.ref('rooms/' + currentCity.id);
+      roomsRef.on('value', function(snapshot) {
+        var data = snapshot.val() || {};
+        roomUserCounts = {};
+        for (var roomId in data) {
+          if (data[roomId] && data[roomId].activeUsers) {
+            roomUserCounts[roomId] = Object.keys(data[roomId].activeUsers).length;
+          }
+        }
+        renderChatRooms();
+      });
     }
 
     function renderChatRooms() {
@@ -595,23 +636,24 @@
       container.innerHTML = '';
       var t = I18N[currentLang] || I18N['ko'];
 
-      for (var i = 0; i < ROOM_STATES.length; i++) {
-        var r = ROOM_STATES[i];
-        var isFull = r.count >= r.max;
+      for (var rId = 1; rId <= 5; rId++) {
+        var count = roomUserCounts[rId] || 0;
+        var max = 4;
+        var isFull = count >= max;
 
         var statusBadge = isFull 
-          ? '<span class="text-[10px] bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full border border-rose-100">' + r.count + '/' + r.max + ' ' + t.roomFull + '</span>'
-          : '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100">' + r.count + '/' + r.max + '명 참여 중</span>';
+          ? '<span class="text-[10px] bg-rose-50 text-rose-600 font-bold px-2 py-0.5 rounded-full border border-rose-100">' + count + '/' + max + ' ' + t.roomFull + '</span>'
+          : '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100">' + count + '/' + max + '명 참여 중</span>';
 
         var btnHtml = isFull
           ? '<button disabled class="bg-slate-200 text-slate-400 px-3.5 py-1.5 rounded-xl font-bold text-xs cursor-not-allowed">꽉참</button>'
-          : '<button onclick="enterSpecificChatRoom(' + r.id + ')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition shadow-sm">' + t.roomEnter + '</button>';
+          : '<button onclick="enterSpecificChatRoom(' + rId + ')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs transition shadow-sm">' + t.roomEnter + '</button>';
 
         var card = '<div class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center w-full min-w-0">' +
           '<div class="flex items-center gap-3 min-w-0 flex-1 pr-2">' +
             '<div class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0"><i class="fas fa-hashtag"></i></div>' +
             '<div class="min-w-0 flex-1">' +
-              '<h4 class="font-bold text-slate-800 text-sm truncate">Room #' + r.id + '</h4>' +
+              '<h4 class="font-bold text-slate-800 text-sm truncate">Room #' + rId + '</h4>' +
               '<div class="mt-0.5">' + statusBadge + '</div>' +
             '</div>' +
           '</div>' +
@@ -623,8 +665,17 @@
     }
 
     function enterSpecificChatRoom(roomId) {
+      if (currentRoomUsersRef) {
+        currentRoomUsersRef.remove();
+      }
+
       currentRoom = roomId;
       currentView = 'chat';
+
+      // 내가 들어간 방에 ID 등록 및 접속 해제 처리
+      currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
+      currentRoomUsersRef.set(true);
+      currentRoomUsersRef.onDisconnect().remove();
 
       document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
@@ -638,22 +689,26 @@
       var t = I18N[currentLang] || I18N['ko'];
 
       document.getElementById('headerTitle').innerText = cityName + ' Room #' + roomId;
-      document.getElementById('headerSub').innerText = 'Room #' + roomId + ' (최대 4명 소수 정예 톡방)';
+      document.getElementById('headerSub').innerText = 'Room #' + roomId + ' (실시간 참여 중)';
       document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + roomId + ' Q&A';
       document.getElementById('chatNoticeSub').innerText = t.noticeSub;
 
-      var storeKey = currentCity.id + '_room_' + roomId;
-      if (!localStore[storeKey]) {
-        localStore[storeKey] = [
-          { id: 1, sender: 'Alex (Tourist)', text: 'Hello! Welcome to Room #' + roomId + ' in ' + cityName + '!', time: '8:12 PM', isMe: false },
-          { id: 2, sender: '현지 가이드', text: '안녕하세요! ' + roomId + '번 방에 오신 것을 환영합니다.', time: '8:15 PM', isMe: false }
-        ];
-      }
-
-      renderMessages();
+      // 실시간 메시지 바인딩
+      listenRealtimeMessages();
     }
 
-    // 🔥 선택된 도시가 있을 경우 그 도시 위치로 확대하여 지도 표시
+    function listenRealtimeMessages() {
+      var msgsRef = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages');
+      msgsRef.on('value', function(snapshot) {
+        var data = snapshot.val() || {};
+        var msgList = [];
+        for (var k in data) {
+          msgList.push(data[k]);
+        }
+        renderMessages(msgList);
+      });
+    }
+
     function renderGoogleMap() {
       if (typeof google === 'undefined' || !google.maps) {
         loadGoogleMapsScript(currentLang, renderGoogleMap);
@@ -809,6 +864,11 @@
     }
 
     function goBack() {
+      if (currentRoomUsersRef) {
+        currentRoomUsersRef.remove();
+        currentRoomUsersRef = null;
+      }
+
       if (currentView === 'chat') {
         openChatRoomList();
       } else if (currentView === 'roomList') {
@@ -871,24 +931,21 @@
       }
     }
 
-    function renderMessages() {
+    function renderMessages(msgs) {
       var container = document.getElementById('messageList');
       container.innerHTML = '';
       var t = I18N[currentLang] || I18N['ko'];
 
-      var storeKey = currentCity.id + '_room_' + currentRoom;
-      var msgs = localStore[storeKey] || [];
-
-      if (msgs.length === 0) {
+      if (!msgs || msgs.length === 0) {
         container.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">' + t.noMsg + '</div>';
         return;
       }
 
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
-        var isMyMsg = m.isMe;
+        var isMyMsg = (m.uid === myUserId);
 
-        var transBtnHtml = '<button onclick="translateMsg(' + i + ')" class="mt-1 text-[10px] text-indigo-600 font-bold hover:underline block">[번역하기]</button>';
+        var transBtnHtml = '<button onclick="translateMsg(\'' + m.id + '\', \'' + escapeHtml(m.text) + '\')" class="mt-1 text-[10px] text-indigo-600 font-bold hover:underline block">[번역하기]</button>';
         
         var transBoxHtml = '';
         if (m.trans) {
@@ -900,9 +957,9 @@
         }
 
         var msgCard = '<div class="flex flex-col w-full ' + (isMyMsg ? 'items-end' : 'items-start') + '">' +
-          '<span class="text-[10px] text-slate-400 px-1 mb-0.5">' + m.sender + '</span>' +
+          '<span class="text-[10px] text-slate-400 px-1 mb-0.5">' + (isMyMsg ? t.mySender : m.sender) + '</span>' +
           '<div class="max-w-[80%] rounded-2xl p-2.5 text-xs leading-relaxed chat-bubble ' + (isMyMsg ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none') + '">' +
-            m.text + transBoxHtml +
+            escapeHtml(m.text) + transBoxHtml +
           '</div>' +
           transBtnHtml +
           '<span class="text-[9px] text-slate-400 px-1 mt-0.5">' + m.time + '</span>' +
@@ -914,12 +971,11 @@
       scrollArea.scrollTop = scrollArea.scrollHeight;
     }
 
-    function translateMsg(idx) {
-      var storeKey = currentCity.id + '_room_' + currentRoom;
-      var msgObj = localStore[storeKey][idx];
-      if (!msgObj) return;
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
 
-      var text = msgObj.text;
+    function translateMsg(msgId, text) {
       var targetLang = currentLang;
       if (currentLang === 'ko') {
         var hasKorean = /[가-힣]/.test(text);
@@ -936,8 +992,7 @@
             for (var i = 0; i < data[0].length; i++) {
               if (data[0][i][0]) fullTrans += data[0][i][0];
             }
-            msgObj.trans = '[번역] ' + fullTrans;
-            renderMessages();
+            db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages/' + msgId + '/trans').set('[번역] ' + fullTrans);
           }
         })
         .catch(function(err) {
@@ -947,40 +1002,32 @@
 
     function sendMessage() {
       var input = document.getElementById('msgInput');
-      var sendBtn = document.getElementById('sendBtn');
       var text = input.value.trim();
       if (!text || !currentCity || !currentRoom) return;
 
-      var storeKey = currentCity.id + '_room_' + currentRoom;
-      var t = I18N[currentLang] || I18N['ko'];
       var now = new Date();
       var hours = now.getHours();
       var minutes = now.getMinutes();
       var timeStr = (hours >= 12 ? 'PM' : 'AM') + ' ' + (hours % 12 || 12) + ':' + (minutes < 10 ? '0' : '') + minutes;
 
-      localStore[storeKey].push({
-        id: Date.now(),
-        sender: t.mySender,
+      var newMsgRef = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages').push();
+      newMsgRef.set({
+        id: newMsgRef.key,
+        uid: myUserId,
+        sender: 'User_' + myUserId.substr(-4),
         text: text,
-        time: timeStr,
-        isMe: true
+        time: timeStr
       });
 
       input.value = '';
-      input.disabled = false;
-      if (sendBtn) sendBtn.disabled = false;
-
-      renderMessages();
       input.focus();
     }
 
     function loadMessages() {
       var icon = document.getElementById('refreshIcon');
       if (icon) icon.classList.add('fa-spin');
-      
       setTimeout(function() {
         if (icon) icon.classList.remove('fa-spin');
-        renderMessages();
       }, 500);
     }
 
@@ -1020,7 +1067,6 @@
       }
 
       renderCityList(document.getElementById('citySearch').value);
-      if (currentCity && currentView === 'chat') renderMessages();
     }
 
     function filterCities() {
@@ -1028,7 +1074,8 @@
       renderCityList(query);
     }
 
-    renderCityList('');
+    // 서비스 시작 시 실시간 접속자 리스너 등록
+    listenCityUsers();
   </script>
 </body>
 </html>
