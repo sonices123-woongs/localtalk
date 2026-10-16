@@ -173,7 +173,7 @@
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
       <div class="absolute top-3 left-3 right-3 z-50 flex flex-col gap-1.5">
         <div class="flex gap-1.5">
-          <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchGoogleMapLocation()" placeholder="장소(예: 현대, 더현대 대구) 또는 '출발지 -> 목적지'" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
+          <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchGoogleMapLocation()" placeholder="장소(예: 현대, 더현대 대구)" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
           <button onclick="searchGoogleMapLocation()" class="bg-indigo-600 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700 shrink-0">
             <i class="fas fa-search"></i>
           </button>
@@ -217,8 +217,6 @@
     var googleMapMarkers = [];
     var searchMarkers = [];
     var myLocationMarker = null;
-    var directionsService = null;
-    var directionsRenderer = null;
     var userLatLng = null;
 
     var localStore = {};
@@ -674,12 +672,6 @@
       };
 
       googleMapInstance = new google.maps.Map(document.getElementById("googleMap"), mapOptions);
-      directionsService = new google.maps.DirectionsService();
-      directionsRenderer = new google.maps.DirectionsRenderer({
-        map: googleMapInstance,
-        polylineOptions: { strokeColor: "#4f46e5", strokeOpacity: 0.8, strokeWeight: 6 }
-      });
-
       googleMapMarkers = [];
 
       for (var j = 0; j < CITIES.length; j++) {
@@ -710,7 +702,7 @@
       moveToMyLocation(false);
     }
 
-    // 🔥 핀 클릭 시 길찾기 및 정보 안내가 뜨도록 개선된 장소 검색 기능
+    // 🔥 한국 지형 환경에 맞는 실시간 네이버 지도/카카오맵 길찾기 링크 연결
     function searchGoogleMapLocation() {
       var query = document.getElementById('mapSearchInput').value.trim();
       if (!query || !googleMapInstance) return;
@@ -720,99 +712,62 @@
       }
       searchMarkers = [];
 
-      // '->' 키워드가 들어간 길찾기 직접 검색
-      if (query.indexOf('->') !== -1 || query.indexOf('→') !== -1) {
-        var parts = query.split(/->|→/);
-        var originStr = parts[0].trim();
-        var destStr = parts[1].trim();
-        calculateRoute(originStr, destStr);
-      } else {
-        // 단일 키워드 검색
-        var targetText = query;
-        if (query === "현대") targetText = "더현대 대구";
+      var targetText = query;
+      if (query === "현대") targetText = "더현대 대구";
 
-        var geocoder = new google.maps.Geocoder();
-        var geocodeOptions = { address: targetText };
-        if (userLatLng) geocodeOptions.location = userLatLng;
+      var geocoder = new google.maps.Geocoder();
+      var geocodeOptions = { address: targetText };
+      if (userLatLng) geocodeOptions.location = userLatLng;
 
-        geocoder.geocode(geocodeOptions, function(results, status) {
-          if (status === "OK" && results[0]) {
-            var loc = results[0].geometry.location;
-            var placeName = results[0].formatted_address || targetText;
+      geocoder.geocode(geocodeOptions, function(results, status) {
+        if (status === "OK" && results[0]) {
+          var loc = results[0].geometry.location;
+          var placeName = results[0].formatted_address || targetText;
 
-            googleMapInstance.setCenter(loc);
-            googleMapInstance.setZoom(16);
+          googleMapInstance.setCenter(loc);
+          googleMapInstance.setZoom(16);
 
-            var sMarker = new google.maps.Marker({
-              map: googleMapInstance,
-              position: loc,
-              title: placeName,
-              animation: google.maps.Animation.DROP
-            });
-
-            // 핀 클릭 시 실행되는 길찾기 팝업 창
-            var windowContent = '<div style="padding:8px; font-size:12px; font-family:sans-serif; max-width:200px;">' +
-              '<strong style="color:#1e293b; font-size:13px; display:block; margin-bottom:3px;">📍 ' + targetText + '</strong>' +
-              '<span style="color:#64748b; font-size:10px; display:block; margin-bottom:8px;">' + placeName + '</span>' +
-              '<button onclick="routeToDestination(' + loc.lat() + ',' + loc.lng() + ')" style="width:100%; bg-color:#4f46e5; background:#4f46e5; color:white; border:none; padding:6px 10px; border-radius:8px; font-size:11px; font-weight:bold; cursor:pointer;">' +
-                '🧭 길찾기 (내 위치 ➔ 목적지)' +
-              '</button>' +
-            '</div>';
-
-            var sInfoWindow = new google.maps.InfoWindow({
-              content: windowContent
-            });
-
-            sMarker.addListener("click", function() {
-              sInfoWindow.open(googleMapInstance, sMarker);
-            });
-
-            // 바로 팝업창 열기
-            sInfoWindow.open(googleMapInstance, sMarker);
-            searchMarkers.push(sMarker);
-          } else {
-            alert("장소를 찾을 수 없습니다. (예: 더현대 대구, 반월당역)");
-          }
-        });
-      }
-    }
-
-    // 팝업 버튼 클릭 시 내 현재 위치에서 해당 장소로 경로 그리기
-    function routeToDestination(destLat, destLng) {
-      if (!userLatLng) {
-        alert("내 위치 정보를 확인 중입니다. 브라우저 위치 권한을 허용해 주세요.");
-        moveToMyLocation(true);
-        return;
-      }
-      
-      var origin = new google.maps.LatLng(userLatLng.lat, userLatLng.lng);
-      var destination = new google.maps.LatLng(destLat, destLng);
-
-      calculateRoute(origin, destination);
-    }
-
-    function calculateRoute(origin, destination) {
-      if (!directionsService || !directionsRenderer) return;
-
-      directionsService.route({
-        origin: origin,
-        destination: destination,
-        travelMode: google.maps.TravelMode.TRANSIT
-      }, function(response, status) {
-        if (status === "OK") {
-          directionsRenderer.setDirections(response);
-        } else {
-          directionsService.route({
-            origin: origin,
-            destination: destination,
-            travelMode: google.maps.TravelMode.DRIVING
-          }, function(res2, stat2) {
-            if (stat2 === "OK") {
-              directionsRenderer.setDirections(res2);
-            } else {
-              alert("경로를 탐색할 수 없습니다.");
-            }
+          var sMarker = new google.maps.Marker({
+            map: googleMapInstance,
+            position: loc,
+            title: placeName,
+            animation: google.maps.Animation.DROP
           });
+
+          // 네이버지도/카카오맵 길찾기 웹 주소 세팅
+          var encodedDest = encodeURIComponent(targetText);
+          var naverMapUrl = "https://map.naver.com/v5/search/" + encodedDest;
+          var kakaoMapUrl = "https://map.kakao.com/link/search/" + encodedDest;
+
+          if (userLatLng) {
+            naverMapUrl = "https://map.naver.com/v5/directions/" + userLatLng.lng + "," + userLatLng.lat + ",내위치/,,/" + loc.lng() + "," + loc.lat() + "," + encodedDest + "/-/transit";
+          }
+
+          var windowContent = '<div style="padding:8px; font-size:12px; font-family:sans-serif; max-width:210px;">' +
+            '<strong style="color:#1e293b; font-size:13px; display:block; margin-bottom:3px;">📍 ' + targetText + '</strong>' +
+            '<span style="color:#64748b; font-size:10px; display:block; margin-bottom:8px; line-height:1.2;">' + placeName + '</span>' +
+            '<div style="display:flex; flex-direction:column; gap:5px;">' +
+              '<a href="' + naverMapUrl + '" target="_blank" style="text-align:center; background:#03C75A; color:white; text-decoration:none; padding:6px 8px; border-radius:8px; font-size:11px; font-weight:bold;">' +
+                '🧭 네이버 지도로 길찾기' +
+              '</a>' +
+              '<a href="' + kakaoMapUrl + '" target="_blank" style="text-align:center; background:#FEE500; color:#191919; text-decoration:none; padding:6px 8px; border-radius:8px; font-size:11px; font-weight:bold;">' +
+                '💛 카카오맵으로 길찾기' +
+              '</a>' +
+            '</div>' +
+          '</div>';
+
+          var sInfoWindow = new google.maps.InfoWindow({
+            content: windowContent
+          });
+
+          sMarker.addListener("click", function() {
+            sInfoWindow.open(googleMapInstance, sMarker);
+          });
+
+          sInfoWindow.open(googleMapInstance, sMarker);
+          searchMarkers.push(sMarker);
+        } else {
+          alert("장소를 찾을 수 없습니다. (예: 더현대 대구, 반월당역)");
         }
       });
     }
