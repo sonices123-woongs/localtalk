@@ -5,7 +5,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   
-  <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
+  <title>Local Talk - 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   
@@ -71,7 +71,7 @@
 
   <div class="app-container sm:rounded-[36px] border-slate-700 sm:border-[8px]">
 
-    <!-- 0. 최초 프로필 설정 모달 (팝업창) -->
+    <!-- 0. 최초 프로필 설정 모달 -->
     <div id="profileModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
       <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl space-y-4 border border-slate-100">
         <div class="text-center space-y-1">
@@ -125,14 +125,13 @@
               <circle cx="82" cy="118" r="5"/>
               <circle cx="92" cy="55" r="3"/>
             </svg>
-            <span class="truncate">Korea Local Talk</span>
+            <span class="truncate">Local Talk</span>
           </h1>
-          <p id="headerSub" class="text-xs text-indigo-100 truncate">대한민국 실시간 현지인 Q&A</p>
+          <p id="headerSub" class="text-xs text-indigo-100 truncate">실시간 현지인 Q&A</p>
         </div>
       </div>
       
       <div class="flex items-center gap-1.5 shrink-0 ml-1">
-        <!-- 프로필 수정 버튼 -->
         <button onclick="openProfileModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white p-1.5 px-2 rounded-full text-xs font-bold flex items-center gap-1">
           <i class="fas fa-user-circle"></i>
           <span id="headerUserLabel" class="max-w-[70px] truncate text-[10px]">설정</span>
@@ -147,15 +146,15 @@
       </div>
     </header>
 
-    <!-- [화면 1] 도시 선택 메인 화면 -->
+    <!-- [화면 1] 도시 및 지역 선택 메인 화면 -->
     <main id="homeView" class="p-4 space-y-4 flex-1 scroll-area w-full pb-16">
       <div class="relative w-full">
         <i class="fas fa-search absolute left-4 top-3.5 text-slate-400 text-sm"></i>
-        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시를 검색하세요 (예: 서울, 제주, 대구)" class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+        <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시/지역을 검색하세요 (예: 서울, 대구, 여수)" class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
       </div>
 
       <div class="w-full">
-        <h2 id="popularTitle" class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">대한민국 주요 도시 목록</h2>
+        <h2 id="popularTitle" class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">주요 도시 및 지역 목록</h2>
         <div id="cityList" class="flex flex-col gap-3 w-full"></div>
       </div>
     </main>
@@ -234,7 +233,7 @@
       </button>
     </main>
 
-    <!-- 하단 탭 바 (Bottom Navigation) -->
+    <!-- 하단 탭 바 -->
     <nav class="bg-white border-t border-slate-200 px-6 py-2 flex justify-between items-center shrink-0 z-50 w-full">
       <button onclick="switchTab('home')" id="tabHome" class="flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition">
         <i class="fas fa-house text-lg"></i>
@@ -288,7 +287,6 @@
     var currentRoomUsersRef = null;
     var roomPresenceListener = null;
 
-    // 프로필 모달 및 저장 로직
     function checkUserProfile() {
       if (!userCountry || !userNickname) {
         openProfileModal();
@@ -339,9 +337,9 @@
 
     var I18N = {
       ko: {
-        appSub: '대한민국 실시간 현지인 Q&A',
-        searchPlaceholder: '궁금한 도시를 검색하세요 (예: 서울, 제주, 대구)',
-        popularTitle: '대한민국 주요 도시 목록',
+        appSub: '실시간 현지인 Q&A',
+        searchPlaceholder: '궁금한 도시/지역을 검색하세요 (예: 서울, 대구, 여수)',
+        popularTitle: '주요 도시 및 지역 목록',
         online: '명 접속 중',
         enterBoard: '지역 게시판 입장',
         noticeSub: '여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.',
@@ -360,14 +358,14 @@
         roomEnter: '입장하기',
         roomNoticeTitle: '실시간 Q&A 대화방 선택',
         roomNoticeSub: '쾌적한 대화를 위해 각 방당 최대 4명까지 입장 가능합니다.',
-        mapTitle: '대한민국 지역지도 (Google Maps)',
+        mapTitle: '지역지도 (Google Maps)',
         mapSub: '글로벌 다국어 지명 및 실시간 장소/길찾기',
         mapQaLink: '[실시간 Q&A 보러가기]'
       },
       en: {
         appSub: 'Korea Real-time Local Q&A',
-        searchPlaceholder: 'Search city (e.g. Seoul, Jeju, Daegu)',
-        popularTitle: 'Korea Popular Cities',
+        searchPlaceholder: 'Search city or region (e.g. Seoul, Daegu, Yeosu)',
+        popularTitle: 'Popular Cities & Regions',
         online: 'online',
         enterBoard: 'View Board',
         noticeSub: 'Ask local residents anything about your trip!',
@@ -386,14 +384,14 @@
         roomEnter: 'Enter',
         roomNoticeTitle: 'Select Live Chat Room',
         roomNoticeSub: 'Max 4 people allowed per room for comfortable chatting.',
-        mapTitle: 'Korea Map (Google Maps)',
+        mapTitle: 'Regional Map (Google Maps)',
         mapSub: 'Multilingual city names & live route directions',
         mapQaLink: '[Go to Live Q&A]'
       },
       ja: {
         appSub: '韓国 リアルタイム現地人 Q&A',
-        searchPlaceholder: '都市を検索 (例: ソウル, 済州, 大邱)',
-        popularTitle: '韓国の主要都市',
+        searchPlaceholder: '都市/地域を検索 (例: ソウル, 大邱, 麗水)',
+        popularTitle: '主要都市 & 地域一覧',
         online: '人オンライン',
         enterBoard: '掲示板を見る',
         noticeSub: '旅行中の疑問を現地の人に質問してみましょう！',
@@ -412,14 +410,14 @@
         roomEnter: '入室する',
         roomNoticeTitle: 'リアルタイムチャットルーム選択',
         roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。',
-        mapTitle: '韓国 Google Maps',
+        mapTitle: '地域地図 (Google Maps)',
         mapSub: '多言語地名表示およびリアルタイムルート検索',
         mapQaLink: '[リアルタイム Q&Aへ]'
       },
       'zh-CN': {
         appSub: '韩国 实时当地人 Q&A',
-        searchPlaceholder: '搜索城市 (例如: 首尔, 济州, 大邱)',
-        popularTitle: '韩国主要城市',
+        searchPlaceholder: '搜索城市或区域 (例如: 首尔, 大邱, 丽水)',
+        popularTitle: '主要城市及区域列表',
         online: '人在线',
         enterBoard: '进入论坛',
         noticeSub: '提出您在旅行中的疑问！当地人为您解答。',
@@ -438,83 +436,100 @@
         roomEnter: '进入',
         roomNoticeTitle: '选择实时聊天室',
         roomNoticeSub: '为了保持良好的沟通体验，每个聊天室限额4人。',
-        mapTitle: '韩国 谷歌地图',
+        mapTitle: '区域地图 (Google Maps)',
         mapSub: '多语言地名显示及实时路线规划',
         mapQaLink: '[前往实时 Q&A]'
       }
     };
 
+    // 요청하신 9개 지역 구조 (서울, 제주, 부산, 경기, 강원, 경북, 경남, 전북, 전남)
     var CITIES = [
       { 
         id: 'seoul', 
-        name: { ko: '대한민국 서울', en: 'Seoul, Korea', ja: 'ソウル, 韓国', 'zh-CN': '首尔, 韩国' },
+        name: { ko: '서울', en: 'Seoul', ja: 'ソウル', 'zh-CN': '首尔' },
         iconTag: '<div class="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M5,32 Q50,22 95,32 L88,25 Q50,18 12,25 Z" fill="#1e293b"/><path d="M12,25 Q50,14 88,25 L82,18 Q50,10 18,18 Z" fill="#334155"/><rect x="18" y="32" width="64" height="16" fill="#881337"/><rect x="22" y="36" width="6" height="8" fill="#fef08a"/><rect x="34" y="36" width="6" height="8" fill="#fef08a"/><rect x="47" y="36" width="6" height="8" fill="#fef08a"/><rect x="60" y="36" width="6" height="8" fill="#fef08a"/><rect x="72" y="36" width="6" height="8" fill="#fef08a"/><rect x="8" y="48" width="84" height="28" fill="#e2e8f0" rx="2"/><path d="M20,76 A10,12 0 0,1 36,76 Z" fill="#991b1b"/><path d="M42,76 A11,14 0 0,1 58,76 Z" fill="#991b1b"/><path d="M64,76 A10,12 0 0,1 80,76 Z" fill="#991b1b"/></svg></div>', 
-        desc: { ko: '명동, 홍대, 핫플레이스 실시간 정보', en: 'Myeongdong, Hongdae & Hotspots', ja: '明洞、弘大、人気スポット情報', 'zh-CN': '明洞、弘大、热门景点实时资讯' }, 
+        desc: { ko: '명동, 홍대, 강남, 성수 핫플레이스', en: 'Myeongdong, Hongdae, Gangnam', ja: '明洞、弘大、江南、聖水スポット', 'zh-CN': '明洞、弘大、江南、圣水热门地' },
+        subCities: '서울 대표 핫플',
         lat: 37.5665, lng: 126.9780
       },
       { 
         id: 'jeju', 
-        name: { ko: '대한민국 제주', en: 'Jeju Island', ja: '済州島', 'zh-CN': '济州岛' },
+        name: { ko: '제주', en: 'Jeju', ja: '済州', 'zh-CN': '济州' },
         iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 60" class="w-full h-full"><ellipse cx="50" cy="32" rx="45" ry="20" fill="#15803d"/><path d="M25,32 Q50,10 75,32 Z" fill="#166534"/><path d="M44,20 L50,15 L56,20 Z" fill="#d97706"/><ellipse cx="50" cy="32" rx="43" ry="18" fill="none" stroke="#22c55e" stroke-width="2" stroke-dasharray="4,2"/></svg></div>', 
-        desc: { ko: '렌터카, 날씨, 흑돼지/카페 질문', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚/カフェ質問', 'zh-CN': '租车、天气、黑猪肉/咖啡馆咨询' }, 
+        desc: { ko: '렌터카, 날씨, 흑돼지, 감성카페', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚、人気カフェ', 'zh-CN': '租车、天气、黑猪肉、特色咖啡馆' }, 
+        subCities: '제주시, 애월, 서귀포, 성산',
         lat: 33.4996, lng: 126.5312
       },
       { 
         id: 'busan', 
-        name: { ko: '대한민국 부산', en: 'Busan, Korea', ja: '釜山, 韓国', 'zh-CN': '釜山, 韩国' },
+        name: { ko: '부산', en: 'Busan', ja: '釜山', 'zh-CN': '釜山' },
         iconTag: '<div class="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M0,50 Q25,40 50,50 T100,50 L100,80 L0,80 Z" fill="#0284c7"/><path d="M0,60 Q25,52 50,60 T100,60 L100,80 L0,80 Z" fill="#0369a1"/><path d="M15,25 Q30,12 45,28 Q30,22 15,25 Z" fill="#ffffff" stroke="#334155" stroke-width="1.5"/><path d="M55,18 Q70,5 85,20 Q70,14 55,18 Z" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></svg></div>', 
-        desc: { ko: '해운대, 광안리, 국밥/해산물 추천', en: 'Haeundae, Gwangalli & Seafood Spots', ja: '海雲台、広安里、クッパ/海鮮おすすめ', 'zh-CN': '海云台、广安里、汤饭/海鲜推荐' }, 
+        desc: { ko: '해운대, 광안리, 서면, 국밥/해산물', en: 'Haeundae, Gwangalli & Seafood', ja: '海雲台、広安里、西面、クッパ', 'zh-CN': '海云台、广安里、西面、汤饭' }, 
+        subCities: '해운대, 광안리, 서면, 남포동',
         lat: 35.1796, lng: 129.0756
       },
       { 
-        id: 'daegu', 
-        name: { ko: '대한민국 대구', en: 'Daegu, Korea', ja: '大邱, 韓国', 'zh-CN': '大邱, 韩国' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/><rect x="48" y="22" width="6" height="8" fill="#fef08a"/><rect x="58" y="22" width="6" height="8" fill="#fef08a"/><rect x="48" y="36" width="6" height="8" fill="#fef08a"/><rect x="58" y="36" width="6" height="8" fill="#fef08a"/></svg></div>', 
-        desc: { ko: '동성로, 반월당 더현대, 서문시장 질문', en: 'Dongseong-ro, Banwoldang & Local Eats', ja: '東城路、半月堂、グルメ質問', 'zh-CN': '东城路、半月堂、美食品鉴' }, 
+        id: 'gyeonggi', 
+        name: { ko: '경기', en: 'Gyeonggi Region', ja: '京畿地域', 'zh-CN': '京畿区域' },
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/></svg></div>', 
+        desc: { ko: '수원화성, 파주 아울렛, 가평 남이섬', en: 'Suwon, Paju, Gapyeong & Yongin', ja: '水原、坡州、加平の質問', 'zh-CN': '水原、坡州、加平资讯' }, 
+        subCities: '대표 도시: 수원, 성남(분당), 고양(일산), 용인, 파주',
+        lat: 37.2636, lng: 127.0286
+      },
+      { 
+        id: 'gangwon', 
+        name: { ko: '강원', en: 'Gangwon Region', ja: '江原地域', 'zh-CN': '江原区域' },
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/></svg></div>', 
+        desc: { ko: '속초 바다, 강릉 커피거리, 춘천 닭갈비', en: 'Sokcho, Gangneung & Chuncheon', ja: '束草、江陵、春川の質問', 'zh-CN': '束草、江陵、春川资讯' }, 
+        subCities: '대표 도시: 강릉, 속초, 춘천, 원주, 평창',
+        lat: 37.8228, lng: 128.1555
+      },
+      { 
+        id: 'gyeongbuk', 
+        name: { ko: '경북', en: 'Gyeongbuk Region', ja: '慶北地域', 'zh-CN': '庆北区域' },
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="20" y="20" width="60" height="40" fill="#7e22ce" rx="4"/></svg></div>', 
+        desc: { ko: '대구 동성로, 경주 황리단길, 포항 영일대', en: 'Daegu, Gyeongju, Pohang & Andong', ja: '大邱、慶州、浦項、安東', 'zh-CN': '大邱、庆州、浦项、安东' }, 
+        subCities: '대표 도시: 대구, 경주, 포항, 안동, 구미',
         lat: 35.8714, lng: 128.6014
       },
       { 
-        id: 'incheon', 
-        name: { ko: '대한민국 인천', en: 'Incheon, Korea', ja: '仁川, 韓国', 'zh-CN': '仁川, 韩国' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M10,50 L40,42 L75,15 C80,11 88,14 85,20 L70,48 L90,52 L96,46 L100,50 L92,62 L82,60 L50,65 L20,75 L10,50 Z" fill="#0284c7"/></svg></div>', 
-        desc: { ko: '공항 꿀팁, 송도, 차이나타운 정보', en: 'Airport Tips, Songdo & Chinatown', ja: '空港コツ、松島、チャイナタウン情報', 'zh-CN': '机场攻略、松岛、唐人街资讯' }, 
-        lat: 37.4563, lng: 126.7052
+        id: 'gyeongnam', 
+        name: { ko: '경남', en: 'Gyeongnam Region', ja: '慶南地域', 'zh-CN': '庆南区域' },
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M10,50 L40,42 L75,15 C80,11 88,14 85,20 L70,48 Z" fill="#0284c7"/></svg></div>', 
+        desc: { ko: '울산 대왕암, 거제 바람의언덕, 통영 루지', en: 'Ulsan, Changwon, Geoje & Tongyeong', ja: '蔚山、昌原、巨済、統営', 'zh-CN': '蔚山、昌原、巨济、统营' }, 
+        subCities: '대표 도시: 울산, 창원, 거제, 통영, 진주',
+        lat: 35.2285, lng: 128.6811
       },
       { 
-        id: 'gyeongju', 
-        name: { ko: '대한민국 경주', en: 'Gyeongju, Korea', ja: '慶州, 韓国', 'zh-CN': '庆州, 韩国' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 90" class="w-full h-full"><rect x="15" y="72" width="70" height="14" fill="#78350f" rx="1"/><rect x="25" y="58" width="50" height="14" fill="#92400e" rx="1"/><path d="M20,58 L80,58 L72,48 L28,48 Z" fill="#b45309"/><rect x="32" y="34" width="36" height="14" fill="#d97706"/><path d="M26,34 L74,34 L66,24 L34,24 Z" fill="#b45309"/><rect x="40" y="14" width="20" height="10" fill="#f59e0b"/><line x1="50" y1="2" x2="50" y2="14" stroke="#78350f" stroke-width="4"/><circle cx="50" cy="5" r="4" fill="#f59e0b"/></svg></div>', 
-        desc: { ko: '황리단길, 첨성대, 야경 코스 추천', en: 'Hwangnidan-gil & Historic Sites', ja: '皇理団路、瞻星台、夜景コース推薦', 'zh-CN': '皇理团路、瞻星台、夜景路线推荐' }, 
-        lat: 35.8562, lng: 129.2247
-      },
-      { 
-        id: 'jeonju', 
-        name: { ko: '대한민국 전주', en: 'Jeonju, Korea', ja: '全州, 韓国', 'zh-CN': '全州, 韩国' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M15,35 Q50,75 85,35 Z" fill="#d97706"/><ellipse cx="50" cy="35" rx="35" ry="8" fill="#fef3c7"/><circle cx="50" cy="35" r="5" fill="#dc2626"/><circle cx="40" cy="34" r="4" fill="#16a34a"/><circle cx="60" cy="34" r="4" fill="#ca8a04"/><line x1="88" y1="15" x2="88" y2="70" stroke="#b45309" stroke-width="3"/><line x1="94" y1="15" x2="94" y2="70" stroke="#b45309" stroke-width="3"/></svg></div>', 
-        desc: { ko: '한옥마을, 전주비빔밥, 야시장 팁', en: 'Hanok Village & Local Delicacies', ja: '韓屋村、全州ビビンバ、夜市コツ', 'zh-CN': '韩屋村、全州拌饭、夜市攻略' }, 
+        id: 'jeonbuk', 
+        name: { ko: '전북', en: 'Jeonbuk Region', ja: '全北地域', 'zh-CN': '全北区域' },
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M15,35 Q50,75 85,35 Z" fill="#d97706"/></svg></div>', 
+        desc: { ko: '전주 한옥마을, 군산 선유도, 익산', en: 'Jeonju, Gunsan & Iksan', ja: '全州、群山、益山', 'zh-CN': '全州、群山、益山' }, 
+        subCities: '대표 도시: 전주, 군산, 익산, 남원',
         lat: 35.8242, lng: 127.1480
       },
       { 
-        id: 'gangneung', 
-        name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/><line x1="60" y1="40" x2="60" y2="75" stroke="#ffffff" stroke-width="2"/></svg></div>', 
-        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
-        lat: 37.7519, lng: 128.8761
+        id: 'jeonnam', 
+        name: { ko: '전남', en: 'Jeonnam Region', ja: '全南地域', 'zh-CN': '全南区域' },
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 Z" fill="#16a34a"/></svg></div>', 
+        desc: { ko: '여수 밤바다, 순천만국가정원, 목포', en: 'Gwangju, Yeosu, Suncheon & Mokpo', ja: '光州、麗水、順天、木浦', 'zh-CN': '光州、丽水、顺天、木浦' }, 
+        subCities: '대표 도시: 광주, 여수, 순천, 목포, 나주',
+        lat: 35.1595, lng: 126.8526
       }
     ];
 
     var BOARD_DATA = {
-      daegu: [
+      seoul: [
         { 
-          id: 'p_dg1',
-          title: { ko: '[팁] 더현대 대구(반월당) 및 동성로 핫플 안내', en: '[Tip] The Hyundai Daegu & Dongseong-ro Info', ja: '[コツ] ザ・ヒュンダイ大邱 & 東城路 情報', 'zh-CN': '[攻略] 现代百货大邱店及东城路资讯' }, 
-          author: '대구시민', date: '오늘', views: 420, 
+          id: 'p_seoul1',
+          title: { ko: '[팁] 서울 명동, 홍대, 성수 핫플 가이드', en: '[Tip] Seoul Hotspot Guide', ja: '[コツ] ソウル弘大・聖水ガイド', 'zh-CN': '[攻略] 首尔热门景点指南' }, 
+          author: '서울시민', date: '오늘', views: 512, 
           tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' },
           content: {
-            ko: '📍 **더현대 대구 (반월당역 인근):**\n- 반월당역 지하 연결통로 이용 가능\n- 지하 1층 푸드코트 팝업스토어 및 9층 게이츠 파크 문화공간 강추!',
-            en: '📍 **The Hyundai Daegu (Near Banwoldang Stn):**\n- Directly connected via Banwoldang Station underground exit\n- B1 Food Hall Pop-ups & 9F Cultural Space highly recommended!',
-            ja: '📍 **ザ・ヒュンダイ大邱 (半月堂駅近く):**\n- 半月堂駅地下通路から직결\n- 地下1階フードコート & 9階文化空間おすすめ！',
-            'zh-CN': '📍 **现代百货大邱店 (半月堂站附近):**\n- 通过半月堂站地下通道可直达\n- 推荐B1美食街快闪店及9楼文化空间！'
+            ko: '📍 **서울 주요 지역 팁:**\n- 명동: 쇼핑 및 길거리 음식 추천\n- 성수동: 카페거리와 팝업스토어 성지',
+            en: '📍 **Seoul Tips:**\n- Myeongdong: Great for shopping & street food\n- Seongsu-dong: Famous cafe street & pop-up stores',
+            ja: '📍 **ソウル主要地域のコツ:**\n- 明洞: ショッピングと屋台グルメ\n- 聖수洞: カフェ通りとポップアップストア',
+            'zh-CN': '📍 **首尔主要区域攻略:**\n- 明洞: 购物与街头小吃推荐\n- 圣수洞: 咖啡街与快闪店圣地'
           }
         }
       ]
@@ -576,9 +591,10 @@
         var city = CITIES[i];
         var name = getCityName(city);
         var desc = getCityDesc(city);
+        var subText = city.subCities || '';
         var realCount = (liveCounts && liveCounts[city.id]) ? liveCounts[city.id] : 0;
 
-        if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
+        if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
           var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition">' +
             '<div class="flex items-center gap-3.5 min-w-0 flex-1">' +
               city.iconTag +
@@ -587,11 +603,12 @@
                   '<h3 class="font-bold text-slate-800 text-sm truncate">' + name + '</h3>' +
                   '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
                 '</div>' +
-                '<p class="text-xs text-slate-500 truncate mt-0.5">' + desc + '</p>' +
+                '<p class="text-xs text-slate-600 truncate mt-0.5 font-medium">' + desc + '</p>' +
+                '<p class="text-[10px] text-indigo-500 font-bold truncate mt-1 bg-indigo-50/80 px-2 py-0.5 rounded-md inline-block">' + subText + '</p>' +
               '</div>' +
             '</div>' +
-            '<div class="text-xs font-bold text-indigo-600 shrink-0 flex items-center gap-1">' +
-              '<span>' + t.enterBoard + '</span>' +
+            '<div class="text-xs font-bold text-indigo-600 shrink-0 flex items-center gap-1 ml-1">' +
+              '<span>입장</span>' +
               '<i class="fas fa-chevron-right text-[10px]"></i>' +
             '</div>' +
           '</div>';
@@ -642,14 +659,14 @@
       var posts = BOARD_DATA[currentCity.id] || [
         { 
           id: 'def1',
-          title: { ko: '이 지역 추천 여행 코스 안내', en: 'Recommended Travel Itinerary for this City', ja: 'この地域のオススメ旅行コース案内', 'zh-CN': '本区域推荐旅游路线指南' }, 
+          title: { ko: '이 지역 추천 주요 관광 코스', en: 'Recommended Travel Itinerary for this Region', ja: 'この地域のオススメ旅行コース案内', 'zh-CN': '本区域推荐旅游路线指南' }, 
           author: '현지인', date: '오늘', views: 50, 
           tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' },
           content: {
-            ko: '📍 **주요 관광 코스:**\n1. 현지인들이 자주 찾는 로컬 시장 방문\n2. 경치가 아름다운 명소 및 야경 스팟 체험\n3. 시그니처 대표 먹거리 탐방!',
-            en: '📍 **Main Tour Route:**\n1. Visit local markets popular with residents\n2. Scenic spots and beautiful night view spots\n3. Enjoy local signature delicacies!',
-            ja: '📍 **主な観光コース:**\n1. 現地人がよく訪れるローカル市場の訪問\n2. 景色の良い名所と夜景スポット体験\n3. シグネチャー名物グルメ探訪！',
-            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地居民常去的本土 market\n2. 体验风景优美的打卡点及夜景名所\n3. 品尝代表性特色美食！'
+            ko: '📍 **주요 관광 코스:**\n1. 현지 주민 추천 로컬 맛집 및 시장 방문\n2. 랜드마크 명소 및 밤야경 스팟 체험\n3. 대표 먹거리 탐방!',
+            en: '📍 **Main Tour Route:**\n1. Visit local markets recommended by residents\n2. Scenic spots and beautiful night views\n3. Enjoy local delicacies!',
+            ja: '📍 **主な観光コース:**\n1. 現地人オススメのローカルグルメと市場訪問\n2. ランドマーク名所と夜景スポット体験\n3. 名물グルメ探訪！',
+            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地人推荐的本土美食& market\n2. 体验地标打卡点及夜景名所\n3. 品尝代表性特色美食！'
           }
         }
       ];
@@ -1007,7 +1024,7 @@
 
         var t = I18N[currentLang] || I18N['ko'];
         
-        document.getElementById('headerTitle').innerHTML = '<svg class="w-5 h-6 fill-indigo-200 shrink-0" viewBox="0 0 100 140"><path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/><circle cx="82" cy="118" r="5"/><circle cx="92" cy="55" r="3"/></svg><span class="truncate">Korea Local Talk</span>';
+        document.getElementById('headerTitle').innerHTML = '<svg class="w-5 h-6 fill-indigo-200 shrink-0" viewBox="0 0 100 140"><path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/><circle cx="82" cy="118" r="5"/><circle cx="92" cy="55" r="3"/></svg><span class="truncate">Local Talk</span>';
         document.getElementById('headerSub').innerText = t.appSub;
       }
     }
@@ -1198,7 +1215,6 @@
       renderCityList(query);
     }
 
-    // 초기 실행 시 프로필 점검 및 접속자 수 감지
     checkUserProfile();
     listenCityUsers();
   </script>
