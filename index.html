@@ -175,8 +175,17 @@
 
     <!-- [화면 5] 네이버 지도 실시간 연동 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
+      <!-- 지도 검색 상자 추가 -->
+      <div class="absolute top-3 left-3 right-3 z-50 flex gap-2">
+        <input type="text" id="mapSearchInput" onkeypress="if(event.key==='Enter') searchMapCity()" placeholder="도시 이름 검색 (예: 제주, 부산)" class="flex-1 px-3.5 py-2 bg-white/95 backdrop-blur border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-md">
+        <button onclick="searchMapCity()" class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-bold shadow-md hover:bg-indigo-700">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+
       <div id="naverMap" class="w-full h-full min-h-[300px]"></div>
-      <!-- 내 위치 찾기 버튼 추가 -->
+      
+      <!-- 내 위치 찾기 버튼 -->
       <button onclick="moveToMyLocation()" class="absolute bottom-16 right-4 bg-white text-slate-700 p-3 rounded-full shadow-lg z-50 hover:bg-slate-50 flex items-center justify-center border border-slate-200">
         <i class="fas fa-crosshairs text-indigo-600 text-base"></i>
       </button>
@@ -380,7 +389,7 @@
         id: 'gangneung', 
         name: { ko: '대한민국 강릉', en: 'Gangneung, Korea', ja: '江陵, 韓国', 'zh-CN': '江陵, 韩国' },
         iconTag: '<div class="w-9 h-9 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1 shadow-sm"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/><line x1="60" y1="40" x2="60" y2="75" stroke="#ffffff" stroke-width="2"/></svg></div>', 
-        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩コーヒー街、鏡浦台' }, 
+        desc: { ko: '안목해변 커피거리, 경포대, 짬뽕순두부', en: 'Anmok Coffee Street & Beach Views', ja: '安木海岸コーヒー街、鏡浦台', 'zh-CN': '安木海滩咖啡街、镜浦台' }, 
         users: 178,
         lat: 37.7519, lng: 128.8761
       }
@@ -638,7 +647,7 @@
       renderMessages();
     }
 
-    // 네이버 지도 렌더링 함수
+    // 🔥 지도 렌더링 및 언어 동기화 함수
     function renderNaverMap() {
       if (typeof naver === 'undefined' || !naver.maps) {
         return;
@@ -649,9 +658,16 @@
       var zoomLevel = currentCity ? 10 : 7;
       var t = I18N[currentLang] || I18N['ko'];
 
+      // 네이버 지도 언어코드 변환
+      var mapLang = 'ko';
+      if (currentLang === 'en') mapLang = 'en';
+      else if (currentLang === 'ja') mapLang = 'ja';
+      else if (currentLang === 'zh-CN') mapLang = 'zh';
+
       var mapOptions = {
         center: new naver.maps.LatLng(centerLat, centerLng),
         zoom: zoomLevel,
+        language: mapLang, // 언어 연동
         zoomControl: true,
         zoomControlOptions: {
           style: naver.maps.ZoomControlStyle.SMALL,
@@ -662,6 +678,9 @@
       if (!naverMapInstance) {
         naverMapInstance = new naver.maps.Map('naverMap', mapOptions);
       } else {
+        naverMapInstance.setOptions({
+          language: mapLang
+        });
         naverMapInstance.setCenter(new naver.maps.LatLng(centerLat, centerLng));
         naverMapInstance.setZoom(zoomLevel);
       }
@@ -702,11 +721,38 @@
         naverMapMarkers.push(marker);
       }
 
-      // 지도가 그려진 후 내 위치도 자동으로 파악해서 마커 추가
       moveToMyLocation(false);
     }
 
-    // 🔥 내 위치 찾기 및 마커 표시 함수
+    // 🔥 지도 검색창에서 도시 찾아가기 기능
+    function searchMapCity() {
+      var query = document.getElementById('mapSearchInput').value.trim().toLowerCase();
+      if (!query) return;
+
+      var foundCity = null;
+
+      for (var i = 0; i < CITIES.length; i++) {
+        var c = CITIES[i];
+        var koName = c.name.ko.toLowerCase();
+        var enName = c.name.en.toLowerCase();
+        var jaName = c.name.ja.toLowerCase();
+        var zhName = c.name['zh-CN'].toLowerCase();
+
+        if (koName.indexOf(query) !== -1 || enName.indexOf(query) !== -1 || jaName.indexOf(query) !== -1 || zhName.indexOf(query) !== -1) {
+          foundCity = c;
+          break;
+        }
+      }
+
+      if (foundCity && naverMapInstance) {
+        var targetLatLng = new naver.maps.LatLng(foundCity.lat, foundCity.lng);
+        naverMapInstance.panTo(targetLatLng);
+        naverMapInstance.setZoom(11);
+      } else {
+        alert("검색하신 도시를 찾을 수 없습니다. (예: 서울, 제주, 부산, 대구 등)");
+      }
+    }
+
     function moveToMyLocation(shouldPan) {
       var panToUser = (shouldPan !== undefined) ? shouldPan : true;
 
@@ -716,12 +762,10 @@
           var lng = position.coords.longitude;
           var myLatLng = new naver.maps.LatLng(lat, lng);
 
-          // 기존 내 위치 마커 제거
           if (myLocationMarker) {
             myLocationMarker.setMap(null);
           }
 
-          // 빨간색 아이콘으로 내 위치 마커 생성
           myLocationMarker = new naver.maps.Marker({
             position: myLatLng,
             map: naverMapInstance,
@@ -732,14 +776,13 @@
             }
           });
 
-          // 내 위치 버튼을 직접 눌렀을 때는 해당 위치로 지도 이동
           if (panToUser && naverMapInstance) {
             naverMapInstance.panTo(myLatLng);
             naverMapInstance.setZoom(14);
           }
         }, function(error) {
           if (panToUser) {
-            alert("내 위치 정보를 가져올 수 없습니다. 브라우저의 위치 접근 권한을 허용해 주세요.");
+            alert("내 위치 정보를 가져올 수 없습니다. 위치 권한을 허용해 주세요.");
           }
         });
       }
