@@ -113,7 +113,6 @@
 
       <div class="w-full">
         <h2 id="popularTitle" class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">대한민국 주요 도시 목록</h2>
-        <!-- 한 줄에 1개씩 시원하게 나열되는 리스트 -->
         <div id="cityList" class="flex flex-col gap-3 w-full"></div>
       </div>
     </main>
@@ -471,7 +470,6 @@
       });
     }
 
-    // 한 줄에 한 도시씩 시원하게 출력되도록 레이아웃 변경
     function renderCityList(filterKeyword, liveCounts) {
       var filter = filterKeyword || '';
       var listContainer = document.getElementById('cityList');
@@ -675,12 +673,9 @@
       currentRoom = roomId;
       currentView = 'chat';
 
-      // 내가 입장한 상태 저장
       currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
       currentRoomUsersRef.set({ name: myName, joinedAt: Date.now() });
       currentRoomUsersRef.onDisconnect().remove();
-
-      // (내 화면용 알림 전송은 제외)
 
       document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
@@ -701,16 +696,24 @@
       listenRealtimeMessages();
     }
 
+    // 실시간 방 참여자 수 모니터링 & 마지막 1명 나가면 대화 리셋
     function listenRoomPresence() {
       if (roomPresenceListener) roomPresenceListener.off();
 
-      roomPresenceListener = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/activeUsers');
+      var roomRef = db.ref('rooms/' + currentCity.id + '/' + currentRoom);
+      roomPresenceListener = roomRef.child('activeUsers');
+
       roomPresenceListener.on('value', function(snapshot) {
         var usersData = snapshot.val() || {};
         var userCount = Object.keys(usersData).length;
         
         var cityName = getCityName(currentCity);
         document.getElementById('headerSub').innerText = '👥 현재 ' + userCount + '명 참여 중';
+
+        // 대화방에 아무도 없으면 (0명이면) 대화 내용 전체 리셋
+        if (userCount === 0) {
+          roomRef.child('messages').remove();
+        }
       });
     }
 
@@ -880,13 +883,16 @@
       }
     }
 
+    // 뒤로 가기 / 나가기 처리 (퇴장 경고 팝업 포함)
     function goBack() {
-      if (currentRoomUsersRef) {
-        currentRoomUsersRef.remove();
-        currentRoomUsersRef = null;
-      }
-
       if (currentView === 'chat') {
+        var leaveConfirm = confirm("채팅방을 나가시겠습니까?\n나가시면 이전 대화 내용은 초기화될 수 있습니다.");
+        if (!leaveConfirm) return; // 취소 누르면 안 나감
+
+        if (currentRoomUsersRef) {
+          currentRoomUsersRef.remove();
+          currentRoomUsersRef = null;
+        }
         openChatRoomList();
       } else if (currentView === 'roomList') {
         openCityBoard(currentCity.id);
@@ -961,9 +967,8 @@
       for (var i = 0; i < msgs.length; i++) {
         var m = msgs[i];
 
-        // 상대방 입퇴장 알림 (내가 발생시킨 시스템 알림은 제외)
         if (m.isSystem) {
-          if (m.uid && m.uid === myUserId) continue; // 본인 알림은 스킵
+          if (m.uid && m.uid === myUserId) continue;
           
           var sysCard = '<div class="flex justify-center my-1 w-full">' +
             '<span class="bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold shadow-xs">💬 ' + escapeHtml(m.text) + '</span>' +
