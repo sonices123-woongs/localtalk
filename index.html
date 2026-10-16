@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
+  <!-- 네이버 지도 Referer 헤더 전송 보장 태그 (인증 실패 해결 핵심) -->
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  
   <title>Korea Local Talk - 대한민국 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-  <!-- 네이버 지도 v3 API 로드 (VPC & Dynamic Map 전용) -->
-  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk&submodules=panorama"></script>
+  <!-- 네이버 지도 v3 API 로드 -->
+  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=e02il5rppk"></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -399,7 +403,7 @@
           content: {
             ko: '💡 **명동 주요 환전소 꿀팁:**\n1. **대사관 앞 환전소:** 명동에서 가장 우대율이 높기로 유명함.\n2. **일품향 환전소:** 대사관 바로 옆 위치, 엔화/달러/위안화 우대 최고 수준.\n\n*팁: 주말보다는 평일 낮 시간대에 방문하시면 가장 좋은 환율로 우대받으실 수 있습니다!*',
             en: '💡 **Myeongdong Money Exchange Tips:**\n1. **Embassy Exchange:** Famous for having the best rates in Myeongdong.\n2. **Ilpumhyang Exchange:** Located right next to the Embassy, top rates for USD/JPY/CNY.\n\n*Tip: Visit during weekday daytime rather than weekends for better rates!*',
-            ja: '💡 **明洞両替所のコツ:**\n1. **大使館前両替所:** 明洞で一番レートが良いことで有名です。\n2. **一品香両替所:** 大使館のすぐ隣、円/ドル/元ともに最高水準。\n\n*コツ: 週末より平日昼間に訪問すると、より良いレートで両替できます！*',
+            ja: '💡 **明洞両替所のコツ:**\n1. **大使館前両替所:** 明洞で一番レートが良いことで有名です。\n2. **一品香両替所:** 大使館のすぐ隣、円/ドル/元ともに最高水準。\n\n*コツ: 週末보다 平日昼間に訪問すると、より良いレートで両替できます！*',
             'zh-CN': '💡 **明洞主要换钱所攻略:**\n1. **大使馆前换钱所:** 明洞公认汇率最划算的地方。\n2. **一品香换钱所:** 紧邻大使馆，日元/美元/人民币汇率极佳。\n\n*提示: 相比周末，建议工作日白天前往，换汇更划算！*'
           }
         }
@@ -629,14 +633,11 @@
       renderMessages();
     }
 
-    // 안전한 네이버 지도 동적 렌더링 함수
+    // 네이버 지도 렌더링 함수
     function renderNaverMap() {
       if (typeof naver === 'undefined' || !naver.maps) {
         return;
       }
-
-      var mapDiv = document.getElementById('naverMap');
-      if (!mapDiv) return;
 
       var centerLat = currentCity ? currentCity.lat : 36.3;
       var centerLng = currentCity ? currentCity.lng : 127.8;
@@ -654,19 +655,19 @@
       };
 
       if (!naverMapInstance) {
-        naverMapInstance = new naver.maps.Map(mapDiv, mapOptions);
+        naverMapInstance = new naver.maps.Map('naverMap', mapOptions);
       } else {
         naverMapInstance.setCenter(new naver.maps.LatLng(centerLat, centerLng));
         naverMapInstance.setZoom(zoomLevel);
       }
 
-      // 기존 마커 제거
+      // 기존 마커 정리
       for (var i = 0; i < naverMapMarkers.length; i++) {
         naverMapMarkers[i].setMap(null);
       }
       naverMapMarkers = [];
 
-      // 도시 마커 재생성
+      // 도시별 마커 생성
       for (var j = 0; j < CITIES.length; j++) {
         var c = CITIES[j];
         var cName = getCityName(c);
@@ -695,13 +696,6 @@
 
         naverMapMarkers.push(marker);
       }
-
-      // 화면 리사이즈 동기화
-      setTimeout(function() {
-        if (naverMapInstance) {
-          naver.maps.Event.trigger(naverMapInstance, 'resize');
-        }
-      }, 100);
     }
 
     function goBack() {
@@ -762,7 +756,7 @@
 
         setTimeout(function() {
           renderNaverMap();
-        }, 200);
+        }, 150);
       } else if (tabName === 'my') {
         tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
