@@ -71,6 +71,47 @@
 
   <div class="app-container sm:rounded-[36px] border-slate-700 sm:border-[8px]">
 
+    <!-- 0. 최초 프로필 설정 모달 (팝업창) -->
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl space-y-4 border border-slate-100">
+        <div class="text-center space-y-1">
+          <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
+            <i class="fas fa-user-globe"></i>
+          </div>
+          <h2 class="text-base font-bold text-slate-800">프로필 설정</h2>
+          <p class="text-xs text-slate-500">대화방에서 사용할 국가와 별명을 선택해주세요.</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">국가 선택</label>
+            <select id="modalCountry" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="🇰🇷 대한민국">🇰🇷 대한민국 (Korea)</option>
+              <option value="🇺🇸 미국">🇺🇸 미국 (USA)</option>
+              <option value="🇯🇵 일본">🇯🇵 일본 (Japan)</option>
+              <option value="🇨🇳 중국">🇨🇳 중국 (China)</option>
+              <option value="🇹🇼 대만">🇹🇼 대만 (Taiwan)</option>
+              <option value="🇻🇳 베트남">🇻🇳 베트남 (Vietnam)</option>
+              <option value="🇹🇭 태국">🇹🇭 태국 (Thailand)</option>
+              <option value="🇬🇧 영국">🇬🇧 영국 (UK)</option>
+              <option value="🇫🇷 프랑스">🇫🇷 프랑스 (France)</option>
+              <option value="🇩🇪 독일">🇩🇪 독일 (Germany)</option>
+              <option value="🌐 기타">🌐 기타 (Other)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-600 block mb-1">별명 (닉네임)</label>
+            <input type="text" id="modalNickname" placeholder="예: 대구여행자, 로컬맛집탐험가" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+
+        <button onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition">
+          시작하기
+        </button>
+      </div>
+    </div>
+
     <!-- 1. 상단 헤더 -->
     <header class="bg-indigo-600 text-white px-4 py-3.5 shrink-0 flex justify-between items-center shadow-md w-full z-50">
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
@@ -91,11 +132,13 @@
       </div>
       
       <div class="flex items-center gap-1.5 shrink-0 ml-1">
-        <button id="refreshBtn" onclick="loadMessages()" class="hidden bg-indigo-700 hover:bg-indigo-800 text-white p-2 rounded-full text-xs font-bold items-center justify-center mr-0.5">
-          <i class="fas fa-sync-alt text-xs" id="refreshIcon"></i>
+        <!-- 프로필 수정 버튼 -->
+        <button onclick="openProfileModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white p-1.5 px-2 rounded-full text-xs font-bold flex items-center gap-1">
+          <i class="fas fa-user-circle"></i>
+          <span id="headerUserLabel" class="max-w-[70px] truncate text-[10px]">설정</span>
         </button>
-        <span class="text-xs text-indigo-200 font-bold">Language:</span>
-        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-xs font-bold py-1 px-2 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
+        <span class="text-xs text-indigo-200 font-bold">Lang:</span>
+        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-xs font-bold py-1 px-1.5 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
           <option value="ko">한국어</option>
           <option value="en">English</option>
           <option value="ja">日本語</option>
@@ -225,7 +268,9 @@
 
     var myUserId = localStorage.getItem('my_chat_uid') || 'user_' + Math.floor(Math.random() * 10000);
     localStorage.setItem('my_chat_uid', myUserId);
-    var myName = 'User_' + myUserId.substr(-4);
+
+    var userCountry = localStorage.getItem('my_user_country') || '';
+    var userNickname = localStorage.getItem('my_user_nickname') || '';
 
     var googleApiKey = "AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4";
     var currentLang = 'ko';
@@ -242,6 +287,55 @@
     var roomUserCounts = {};
     var currentRoomUsersRef = null;
     var roomPresenceListener = null;
+
+    // 프로필 모달 및 저장 로직
+    function checkUserProfile() {
+      if (!userCountry || !userNickname) {
+        openProfileModal();
+      } else {
+        updateHeaderUserLabel();
+      }
+    }
+
+    function openProfileModal() {
+      if (userCountry) document.getElementById('modalCountry').value = userCountry;
+      if (userNickname) document.getElementById('modalNickname').value = userNickname;
+      document.getElementById('profileModal').classList.remove('hidden');
+    }
+
+    function saveUserProfile() {
+      var country = document.getElementById('modalCountry').value;
+      var nick = document.getElementById('modalNickname').value.trim();
+
+      if (!nick) {
+        alert('별명을 입력해 주세요!');
+        return;
+      }
+
+      userCountry = country;
+      userNickname = nick;
+
+      localStorage.setItem('my_user_country', userCountry);
+      localStorage.setItem('my_user_nickname', userNickname);
+
+      document.getElementById('profileModal').classList.add('hidden');
+      updateHeaderUserLabel();
+
+      if (currentRoomUsersRef) {
+        var flagOnly = userCountry.split(' ')[0];
+        currentRoomUsersRef.set({ name: flagOnly + ' ' + userNickname, joinedAt: Date.now() });
+      }
+    }
+
+    function updateHeaderUserLabel() {
+      var flagOnly = userCountry ? userCountry.split(' ')[0] : '🌐';
+      document.getElementById('headerUserLabel').innerText = flagOnly + ' ' + userNickname;
+    }
+
+    function getFormattedMySender() {
+      var flagOnly = userCountry ? userCountry.split(' ')[0] : '🌐';
+      return flagOnly + ' ' + userNickname;
+    }
 
     var I18N = {
       ko: {
@@ -528,7 +622,6 @@
       document.getElementById('boardView').classList.remove('hidden');
       
       document.getElementById('backBtn').classList.remove('hidden');
-      document.getElementById('refreshBtn').classList.add('hidden');
 
       var cityName = getCityName(currentCity);
       var t = I18N[currentLang] || I18N['ko'];
@@ -666,6 +759,11 @@
     }
 
     function enterSpecificChatRoom(roomId) {
+      if (!userCountry || !userNickname) {
+        openProfileModal();
+        return;
+      }
+
       if (currentRoomUsersRef) {
         currentRoomUsersRef.remove();
       }
@@ -673,17 +771,17 @@
       currentRoom = roomId;
       currentView = 'chat';
 
+      var flagOnly = userCountry.split(' ')[0];
+      var myDisplayName = flagOnly + ' ' + userNickname;
+
       currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
-      currentRoomUsersRef.set({ name: myName, joinedAt: Date.now() });
+      currentRoomUsersRef.set({ name: myDisplayName, joinedAt: Date.now() });
       currentRoomUsersRef.onDisconnect().remove();
 
       document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
       document.getElementById('chatView').classList.remove('hidden');
       document.getElementById('chatView').classList.add('flex');
-      
-      document.getElementById('refreshBtn').classList.remove('hidden');
-      document.getElementById('refreshBtn').classList.add('flex');
 
       var cityName = getCityName(currentCity);
       var t = I18N[currentLang] || I18N['ko'];
@@ -696,7 +794,6 @@
       listenRealtimeMessages();
     }
 
-    // 실시간 방 참여자 수 모니터링 & 마지막 1명 나가면 대화 리셋
     function listenRoomPresence() {
       if (roomPresenceListener) roomPresenceListener.off();
 
@@ -710,7 +807,6 @@
         var cityName = getCityName(currentCity);
         document.getElementById('headerSub').innerText = '👥 현재 ' + userCount + '명 참여 중';
 
-        // 대화방에 아무도 없으면 (0명이면) 대화 내용 전체 리셋
         if (userCount === 0) {
           roomRef.child('messages').remove();
         }
@@ -883,232 +979,4 @@
       }
     }
 
-    // 뒤로 가기 / 나가기 처리 (퇴장 경고 팝업 포함)
-    function goBack() {
-      if (currentView === 'chat') {
-        var leaveConfirm = confirm("채팅방을 나가시겠습니까?\n나가시면 이전 대화 내용은 초기화될 수 있습니다.");
-        if (!leaveConfirm) return; // 취소 누르면 안 나감
-
-        if (currentRoomUsersRef) {
-          currentRoomUsersRef.remove();
-          currentRoomUsersRef = null;
-        }
-        openChatRoomList();
-      } else if (currentView === 'roomList') {
-        openCityBoard(currentCity.id);
-      } else {
-        currentCity = null;
-        currentRoom = null;
-        currentView = 'home';
-
-        document.getElementById('homeView').classList.remove('hidden');
-        document.getElementById('boardView').classList.add('hidden');
-        document.getElementById('roomListView').classList.add('hidden');
-        document.getElementById('chatView').classList.add('hidden');
-        document.getElementById('mapView').classList.add('hidden');
-        document.getElementById('chatView').classList.remove('flex');
-        
-        document.getElementById('backBtn').classList.add('hidden');
-        document.getElementById('refreshBtn').classList.add('hidden');
-
-        var t = I18N[currentLang] || I18N['ko'];
-        
-        document.getElementById('headerTitle').innerHTML = '<svg class="w-5 h-6 fill-indigo-200 shrink-0" viewBox="0 0 100 140"><path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/><circle cx="82" cy="118" r="5"/><circle cx="92" cy="55" r="3"/></svg><span class="truncate">Korea Local Talk</span>';
-        document.getElementById('headerSub').innerText = t.appSub;
-      }
-    }
-
-    function switchTab(tabName) {
-      var tHome = document.getElementById('tabHome');
-      var tMap = document.getElementById('tabMap');
-      var tMy = document.getElementById('tabMy');
-
-      tHome.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
-      tMap.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
-      tMy.className = "flex flex-col items-center gap-0.5 text-slate-400 font-medium hover:text-indigo-600 transition";
-
-      if (tabName === 'home') {
-        tHome.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
-        goBack();
-      } else if (tabName === 'map') {
-        tMap.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
-        currentView = 'map';
-
-        document.getElementById('homeView').classList.add('hidden');
-        document.getElementById('boardView').classList.add('hidden');
-        document.getElementById('roomListView').classList.add('hidden');
-        document.getElementById('chatView').classList.add('hidden');
-        document.getElementById('mapView').classList.remove('hidden');
-
-        document.getElementById('backBtn').classList.remove('hidden');
-        document.getElementById('refreshBtn').classList.add('hidden');
-
-        var t = I18N[currentLang] || I18N['ko'];
-        document.getElementById('headerTitle').innerText = t.mapTitle;
-        document.getElementById('headerSub').innerText = t.mapSub;
-
-        loadGoogleMapsScript(currentLang, renderGoogleMap);
-      } else if (tabName === 'my') {
-        tMy.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
-        alert('👤 [My] 내 프로필 및 작성한 Q&A 내역 기능 준비 중입니다!');
-      }
-    }
-
-    function renderMessages(msgs) {
-      var container = document.getElementById('messageList');
-      container.innerHTML = '';
-      var t = I18N[currentLang] || I18N['ko'];
-
-      if (!msgs || msgs.length === 0) {
-        container.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">' + t.noMsg + '</div>';
-        return;
-      }
-
-      for (var i = 0; i < msgs.length; i++) {
-        var m = msgs[i];
-
-        if (m.isSystem) {
-          if (m.uid && m.uid === myUserId) continue;
-          
-          var sysCard = '<div class="flex justify-center my-1 w-full">' +
-            '<span class="bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold shadow-xs">💬 ' + escapeHtml(m.text) + '</span>' +
-          '</div>';
-          container.innerHTML += sysCard;
-          continue;
-        }
-
-        var isMyMsg = (m.uid === myUserId);
-
-        var transBtnHtml = '<button onclick="translateMsg(\'' + m.id + '\', \'' + escapeHtml(m.text) + '\')" class="mt-1 text-xs text-indigo-600 font-bold hover:underline block">[번역하기]</button>';
-        
-        var transBoxHtml = '';
-        if (m.trans) {
-          if (isMyMsg) {
-            transBoxHtml = '<div class="mt-1.5 pt-1.5 border-t border-indigo-400/50 text-xs text-amber-200 font-medium chat-bubble">' + m.trans + '</div>';
-          } else {
-            transBoxHtml = '<div class="mt-1.5 pt-1.5 border-t border-slate-200 text-xs text-indigo-700 font-medium chat-bubble">' + m.trans + '</div>';
-          }
-        }
-
-        var msgCard = '<div class="flex flex-col w-full ' + (isMyMsg ? 'items-end' : 'items-start') + '">' +
-          '<span class="text-xs text-slate-400 px-1 mb-0.5">' + (isMyMsg ? t.mySender : m.sender) + '</span>' +
-          '<div class="max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' + (isMyMsg ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none') + '">' +
-            escapeHtml(m.text) + transBoxHtml +
-          '</div>' +
-          transBtnHtml +
-          '<span class="text-[10px] text-slate-400 px-1 mt-0.5">' + m.time + '</span>' +
-        '</div>';
-        container.innerHTML += msgCard;
-      }
-
-      var scrollArea = document.getElementById('chatScrollArea');
-      scrollArea.scrollTop = scrollArea.scrollHeight;
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    function translateMsg(msgId, text) {
-      var targetLang = currentLang;
-      if (currentLang === 'ko') {
-        var hasKorean = /[가-힣]/.test(text);
-        targetLang = hasKorean ? 'en' : 'ko';
-      }
-
-      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + targetLang + '&dt=t&q=' + encodeURIComponent(text);
-
-      fetch(url)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (data && data[0]) {
-            var fullTrans = '';
-            for (var i = 0; i < data[0].length; i++) {
-              if (data[0][i][0]) fullTrans += data[0][i][0];
-            }
-            db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages/' + msgId + '/trans').set('[번역] ' + fullTrans);
-          }
-        })
-        .catch(function(err) {
-          alert('번역 실패: 인터넷 연결을 확인해 주세요.');
-        });
-    }
-
-    function sendMessage() {
-      var input = document.getElementById('msgInput');
-      var text = input.value.trim();
-      if (!text || !currentCity || !currentRoom) return;
-
-      var now = new Date();
-      var hours = now.getHours();
-      var minutes = now.getMinutes();
-      var timeStr = (hours >= 12 ? 'PM' : 'AM') + ' ' + (hours % 12 || 12) + ':' + (minutes < 10 ? '0' : '') + minutes;
-
-      var newMsgRef = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages').push();
-      newMsgRef.set({
-        id: newMsgRef.key,
-        uid: myUserId,
-        sender: myName,
-        text: text,
-        time: timeStr
-      });
-
-      input.value = '';
-      input.focus();
-    }
-
-    function loadMessages() {
-      var icon = document.getElementById('refreshIcon');
-      if (icon) icon.classList.add('fa-spin');
-      setTimeout(function() {
-        if (icon) icon.classList.remove('fa-spin');
-      }, 500);
-    }
-
-    function changeLanguage(lang) {
-      currentLang = lang;
-      var t = I18N[currentLang] || I18N['ko'];
-
-      document.getElementById('headerSub').innerText = t.appSub;
-      document.getElementById('citySearch').placeholder = t.searchPlaceholder;
-      document.getElementById('popularTitle').innerText = t.popularTitle;
-      document.getElementById('msgInput').placeholder = t.inputPlaceholder;
-      document.getElementById('sendBtn').innerText = t.send;
-
-      if (currentCity) {
-        var cityName = getCityName(currentCity);
-        if (currentView === 'board') {
-          document.getElementById('headerTitle').innerText = cityName + t.boardTitleSuffix;
-          document.getElementById('headerSub').innerText = t.boardSub;
-          document.getElementById('boardBannerTitle').innerText = cityName + t.boardBannerSuffix;
-          document.getElementById('boardBannerSub').innerText = t.boardBannerSub;
-          document.getElementById('boardPostsTitle').innerHTML = t.boardPostsTitle;
-          renderBoardPosts();
-        } else if (currentView === 'roomList') {
-          document.getElementById('headerTitle').innerText = cityName + t.roomListTitle;
-          renderChatRooms();
-        } else if (currentView === 'chat') {
-          document.getElementById('headerTitle').innerText = cityName + ' Room #' + currentRoom;
-          document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + currentRoom + ' Q&A';
-          document.getElementById('chatNoticeSub').innerText = t.noticeSub;
-        }
-      }
-
-      if (currentView === 'map') {
-        document.getElementById('headerTitle').innerText = t.mapTitle;
-        document.getElementById('headerSub').innerText = t.mapSub;
-        loadGoogleMapsScript(currentLang, renderGoogleMap);
-      }
-
-      renderCityList(document.getElementById('citySearch').value);
-    }
-
-    function filterCities() {
-      var query = document.getElementById('citySearch').value;
-      renderCityList(query);
-    }
-
-    listenCityUsers();
-  </script>
-</body>
-</html>
+    function goBack()
