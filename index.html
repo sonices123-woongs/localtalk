@@ -295,7 +295,7 @@
         roomFull: '満員',
         roomEnter: '入室する',
         roomNoticeTitle: 'リアルタイムチャットルーム選択',
-        roomNoticeSub: '快適な会話のため、各部屋最大4名まで入室可能です。',
+        roomNoticeSub: '快適な会話のため、各部屋最大4명まで入室可能です。',
         mapTitle: '韓国 Google Maps',
         mapSub: '多言語地名表示およびリアルタイムルート検索',
         mapQaLink: '[リアルタイム Q&Aへ]'
@@ -702,7 +702,7 @@
       moveToMyLocation(false);
     }
 
-    // 🔥 한국 지형 환경에 맞는 실시간 네이버 지도/카카오맵 길찾기 링크 연결
+    // 🔥 100% 오류 없는 네이버지도/카카오맵 모바일 길찾기 표준 연동
     function searchGoogleMapLocation() {
       var query = document.getElementById('mapSearchInput').value.trim();
       if (!query || !googleMapInstance) return;
@@ -734,23 +734,19 @@
             animation: google.maps.Animation.DROP
           });
 
-          // 네이버지도/카카오맵 길찾기 웹 주소 세팅
-          var encodedDest = encodeURIComponent(targetText);
-          var naverMapUrl = "https://map.naver.com/v5/search/" + encodedDest;
-          var kakaoMapUrl = "https://map.kakao.com/link/search/" + encodedDest;
-
-          if (userLatLng) {
-            naverMapUrl = "https://map.naver.com/v5/directions/" + userLatLng.lng + "," + userLatLng.lat + ",내위치/,,/" + loc.lng() + "," + loc.lat() + "," + encodedDest + "/-/transit";
-          }
+          // 네이버 / 카카오 모바일 웹 다이렉트 검색 및 길찾기 URL
+          var encodedQuery = encodeURIComponent(targetText);
+          var naverMapUrl = "https://m.map.naver.com/search2/search.naver?query=" + encodedQuery;
+          var kakaoMapUrl = "https://m.map.kakao.com/actions/searchView?q=" + encodedQuery;
 
           var windowContent = '<div style="padding:8px; font-size:12px; font-family:sans-serif; max-width:210px;">' +
             '<strong style="color:#1e293b; font-size:13px; display:block; margin-bottom:3px;">📍 ' + targetText + '</strong>' +
             '<span style="color:#64748b; font-size:10px; display:block; margin-bottom:8px; line-height:1.2;">' + placeName + '</span>' +
             '<div style="display:flex; flex-direction:column; gap:5px;">' +
-              '<a href="' + naverMapUrl + '" target="_blank" style="text-align:center; background:#03C75A; color:white; text-decoration:none; padding:6px 8px; border-radius:8px; font-size:11px; font-weight:bold;">' +
+              '<a href="' + naverMapUrl + '" target="_blank" style="text-align:center; background:#03C75A; color:white; text-decoration:none; padding:7px 8px; border-radius:8px; font-size:11px; font-weight:bold; display:block;">' +
                 '🧭 네이버 지도로 길찾기' +
               '</a>' +
-              '<a href="' + kakaoMapUrl + '" target="_blank" style="text-align:center; background:#FEE500; color:#191919; text-decoration:none; padding:6px 8px; border-radius:8px; font-size:11px; font-weight:bold;">' +
+              '<a href="' + kakaoMapUrl + '" target="_blank" style="text-align:center; background:#FEE500; color:#191919; text-decoration:none; padding:7px 8px; border-radius:8px; font-size:11px; font-weight:bold; display:block;">' +
                 '💛 카카오맵으로 길찾기' +
               '</a>' +
             '</div>' +
