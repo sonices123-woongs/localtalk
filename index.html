@@ -236,6 +236,15 @@
         <div id="communityComposer" class="hidden bg-white border border-indigo-200 rounded-2xl p-4 space-y-3">
           <input id="communityPostTitle" maxlength="100" class="w-full border rounded-xl p-3 text-sm" placeholder="제목 (최대 100자)">
           <textarea id="communityPostBody" maxlength="3000" rows="5" class="w-full border rounded-xl p-3 text-sm" placeholder="여행 질문이나 정보를 공유해 주세요 (최대 3,000자)"></textarea>
+          <div class="rounded-xl border border-emerald-200 p-3 space-y-2 bg-emerald-50">
+            <label id="communityPlaceLabel" class="block text-sm font-bold text-emerald-900">📍 장소 첨부 (선택)</label>
+            <div class="flex gap-2">
+              <input id="communityPlaceQuery" maxlength="150" class="flex-1 min-w-0 border rounded-lg p-2 text-sm" placeholder="장소명 또는 주소 검색">
+              <button type="button" id="communityPlaceSearch" onclick="searchCommunityPlace()" class="bg-emerald-700 text-white rounded-lg px-3 text-xs font-bold">검색</button>
+            </div>
+            <p id="communityPlaceResult" class="text-xs text-emerald-900 break-words" aria-live="polite"></p>
+            <button type="button" id="communityPlaceRemove" onclick="removeCommunityPlace()" class="hidden text-red-600 text-xs font-bold">첨부 취소</button>
+          </div>
           <div class="flex gap-2">
             <button type="button" id="communityCancelButton" onclick="toggleCommunityComposer(false)" class="flex-1 rounded-xl bg-slate-100 p-3 text-sm font-bold">취소</button>
             <button type="button" id="communityPublishButton" onclick="publishCommunityPost()" class="flex-1 rounded-xl bg-indigo-600 text-white p-3 text-sm font-bold">등록</button>
@@ -981,6 +990,55 @@
     // v16: public, city-scoped community board. Uses textContent for all user input.
     var communityRef=null, communityCallback=null, communityData={};
     var communityOpenPost=null;
+    var communitySelectedPlace=null;
+    var communityPlaceLocale={
+      ko:['📍 장소 첨부 (선택)','장소명 또는 주소 검색','검색','첨부 취소','장소를 검색해 주세요.','검색 중...','장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.','지도 기능을 불러오지 못했습니다.','첨부된 장소'],
+      en:['📍 Attach a place (optional)','Search place name or address','Search','Remove place','Enter a place name.','Searching...','Place not found. Try another name or address.','Map service unavailable.','Attached place'],
+      ja:['📍 場所を添付（任意）','場所名または住所を検索','検索','添付を解除','場所名を入力してください。','検索中...','場所が見つかりません。','地図を読み込めません。','添付した場所'],
+      'zh-CN':['📍 添加地点（可选）','搜索地点名称或地址','搜索','移除地点','请输入地点名称。','搜索中...','未找到地点，请重试。','地图服务不可用。','已添加地点']
+    };
+    function communityPlaceT(){return communityPlaceLocale[currentLang]||communityPlaceLocale.ko;}
+    function communityPlaceLabels(){
+      var t=communityPlaceT();
+      document.getElementById('communityPlaceLabel').textContent=t[0];
+      document.getElementById('communityPlaceQuery').placeholder=t[1];
+      document.getElementById('communityPlaceSearch').textContent=t[2];
+      document.getElementById('communityPlaceRemove').textContent=t[3];
+    }
+    function removeCommunityPlace(){
+      communitySelectedPlace=null;
+      document.getElementById('communityPlaceResult').textContent='';
+      document.getElementById('communityPlaceRemove').classList.add('hidden');
+    }
+    function searchCommunityPlace(){
+      var t=communityPlaceT(),query=document.getElementById('communityPlaceQuery').value.trim();
+      var result=document.getElementById('communityPlaceResult');
+      if(!query){result.textContent=t[4];return;}
+      if(!window.google||!google.maps||!google.maps.Geocoder){result.textContent=t[7];return;}
+      var btn=document.getElementById('communityPlaceSearch');btn.disabled=true;
+      result.textContent=t[5];
+      new google.maps.Geocoder().geocode({address:query},function(results,status){
+        btn.disabled=false;
+        if(status!=='OK'||!results||!results[0]){result.textContent=t[6];return;}
+        var r=results[0];
+        communitySelectedPlace={name:query.slice(0,150),address:String(r.formatted_address||query).slice(0,350),lat:r.geometry.location.lat(),lng:r.geometry.location.lng()};
+        result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+communitySelectedPlace.address;
+        document.getElementById('communityPlaceRemove').classList.remove('hidden');
+      });
+    }
+    function communityPlaceCard(place){
+      if(!place||typeof place.name!=='string'||typeof place.address!=='string'||typeof place.lat!=='number'||typeof place.lng!=='number'||!Number.isFinite(place.lat)||!Number.isFinite(place.lng)||Math.abs(place.lat)>90||Math.abs(place.lng)>180)return null;
+      var wrap=communityEl('div','rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2');
+      wrap.appendChild(communityEl('p','text-sm font-bold text-emerald-900 break-words','📍 '+place.name));
+      wrap.appendChild(communityEl('p','text-xs text-emerald-800 break-words',place.address));
+      var links=communityEl('div','flex gap-2 flex-wrap');
+      var dest=encodeURIComponent(place.lat+','+place.lng);
+      [[ 'Google Maps','https://www.google.com/maps/search/?api=1&query='+dest ],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(place.name+' '+place.address)]].forEach(function(pair){
+        var a=communityEl('a','text-xs font-bold text-emerald-700 underline',pair[0]);
+        a.href=pair[1];a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
+      });
+      wrap.appendChild(links);return wrap;
+    }
     var communityLocale={
       ko:{heading:'여행자 게시판',newPost:'+ 글쓰기',title:'제목 (최대 100자)',body:'여행 질문이나 정보를 공유해 주세요 (최대 3,000자)',cancel:'취소',publish:'등록',empty:'아직 게시글이 없습니다. 첫 글을 남겨보세요!',loading:'게시글을 불러오는 중...',auth:'로그인 연결 후 다시 시도해 주세요.',required:'제목과 내용을 입력해 주세요.',error:'저장에 실패했습니다. 잠시 후 다시 시도해 주세요.',delete:'삭제',edit:'수정',save:'저장',comment:'댓글',commentHint:'댓글을 입력해 주세요 (최대 1,000자)',send:'댓글 등록',deleteAsk:'정말 삭제하시겠습니까?',anonymous:'여행자',replyEmpty:'아직 댓글이 없습니다.',mine:'내 글',editing:'게시글 수정'},
       en:{heading:'Traveler board',newPost:'+ New post',title:'Title (up to 100 characters)',body:'Share travel questions or tips (up to 3,000 characters)',cancel:'Cancel',publish:'Publish',empty:'No posts yet. Start the conversation!',loading:'Loading posts...',auth:'Please wait for sign-in.',required:'Enter a title and message.',error:'Could not save. Please try again.',delete:'Delete',edit:'Edit',save:'Save',comment:'Comments',commentHint:'Write a comment (up to 1,000 characters)',send:'Post comment',deleteAsk:'Delete this item?',anonymous:'Traveler',replyEmpty:'No comments yet.',mine:'My post',editing:'Edit post'},
@@ -1001,6 +1059,7 @@
     function communityStatus(msg){document.getElementById('communityStatus').textContent=msg||'';}
     function communityLabels(){
       var t=communityT();
+      communityPlaceLabels();
       var pairs={communityHeading:t.heading,communityNewButton:t.newPost,communityCancelButton:t.cancel,communityPublishButton:t.publish};
       Object.keys(pairs).forEach(function(id){document.getElementById(id).textContent=pairs[id];});
       document.getElementById('communityPostTitle').placeholder=t.title;
@@ -1011,6 +1070,7 @@
       var show=typeof force==='boolean'?force:box.classList.contains('hidden');
       box.classList.toggle('hidden',!show);
       if(show)document.getElementById('communityPostTitle').focus();
+      else removeCommunityPlace();
     }
     function stopCommunityListener(){
       if(communityRef && communityCallback)communityRef.off('value',communityCallback);
@@ -1042,10 +1102,13 @@
       if(!title||!body){alert(communityT().required);return;}
       var btn=document.getElementById('communityPublishButton');btn.disabled=true;
       var ref=db.ref('communityPosts/'+currentCity.id).push();
-      ref.set({uid:myUserId,author:communityAuthor().slice(0,100),title:title.slice(0,100),body:body.slice(0,3000),createdAt:firebase.database.ServerValue.TIMESTAMP})
+      var data={uid:myUserId,author:communityAuthor().slice(0,100),title:title.slice(0,100),body:body.slice(0,3000),createdAt:firebase.database.ServerValue.TIMESTAMP};
+      if(communitySelectedPlace)data.place=Object.assign({},communitySelectedPlace);
+      ref.set(data)
         .then(function(){
           document.getElementById('communityPostTitle').value='';
           document.getElementById('communityPostBody').value='';
+          document.getElementById('communityPlaceQuery').value='';
           toggleCommunityComposer(false);
         }).catch(function(err){console.error(err);alert(communityT().error);})
         .finally(function(){btn.disabled=false;});
@@ -1110,9 +1173,12 @@
           actions.appendChild(communityBtn(t.delete,function(){deleteCommunityPost(id);},'text-red-600 text-xs font-bold px-2 py-1'));
         }
         card.appendChild(actions);
+        if(!expanded){var placePreview=communityPlaceCard(p.place);if(placePreview)card.insertBefore(placePreview,actions);}
         if(expanded){
           var body=communityEl('p','text-sm text-slate-700 whitespace-pre-wrap break-words bg-slate-50 rounded-xl p-3',p.body);
           card.insertBefore(body,actions);
+          var placeCard=communityPlaceCard(p.place);
+          if(placeCard)card.insertBefore(placeCard,actions);
           var commentBox=communityEl('div','space-y-2 border-t pt-3');
           Object.keys(comments).sort(function(a,b){return (comments[a].createdAt||0)-(comments[b].createdAt||0);}).forEach(function(cid){
             var c=comments[cid];
