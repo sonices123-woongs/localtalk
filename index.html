@@ -14,7 +14,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
-  <link rel="stylesheet" href="./styles.css?v=20">
+  <link rel="stylesheet" href="./styles.css?v=20.2">
 </head>
 <body>
 
@@ -128,7 +128,8 @@
     </main>
 
     <!-- [화면 2] 지역 게시판 메인 화면 -->
-    <main id="boardView" class="hidden p-4 space-y-4 flex-1 scroll-area w-full pb-16">
+    <main id="boardView" class="hidden flex-1 w-full min-h-0">
+      <div id="boardFixedArea" class="p-4 pb-2 space-y-4 shrink-0">
       <div onclick="openChatRoomList()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
         <div>
           <span id="boardMaxBadge" class="bg-white/20 text-xs px-2.5 py-0.5 rounded-full font-bold">LIVE Q&A (Max 4명)</span>
@@ -147,11 +148,12 @@
         <div id="boardPosts" class="space-y-2.5"></div>
       </div>
 
-      <section class="space-y-3" aria-label="Community posts">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center" id="communityToolbar">
           <h3 id="communityHeading" class="font-bold text-slate-800 text-base">여행자 게시판</h3>
           <button type="button" id="communityNewButton" onclick="toggleCommunityComposer()" class="bg-indigo-600 text-white rounded-xl px-4 py-2 text-sm font-bold">+ 글쓰기</button>
         </div>
+      </div>
+      <section id="boardScrollablePosts" class="space-y-3 px-4 pt-2 pb-5 scroll-area min-h-0 flex-1" aria-label="Community posts">
         <div id="communityComposer" class="hidden bg-white border border-indigo-200 rounded-2xl p-4 space-y-3">
           <input id="communityPostTitle" maxlength="100" class="w-full border rounded-xl p-3 text-sm" placeholder="제목 (최대 100자)">
           <textarea id="communityPostBody" maxlength="3000" rows="5" class="w-full border rounded-xl p-3 text-sm" placeholder="여행 질문이나 정보를 공유해 주세요 (최대 3,000자)"></textarea>
