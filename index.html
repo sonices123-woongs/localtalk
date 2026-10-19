@@ -277,6 +277,11 @@
     var cityPresenceRef = null;
     var cityPresenceListenerRef = null;
     var roomListListenerRef = null;
+    var roomPreviousUsers = null;
+    var roomNoticeQueue = [];
+    var roomNoticeSeq = 0;
+    var roomLatestMessages = [];
+    var roomJoinToken = 0;
 
     function requireAuth() {
       if (authReady && auth.currentUser && myUserId === auth.currentUser.uid) return true;
@@ -847,12 +852,14 @@
       }
       stopRoomListeners();
       if (currentRoomUsersRef) {
-        currentRoomUsersRef.remove();
-        currentRoomUsersRef = null;
+        leaveCurrentRoom();
       }
       if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
 
       currentRoom = roomId;
+      roomJoinToken++;
+      roomPreviousUsers = null;
+      roomNoticeQueue = [];
       roomAdmissionReady = false;
       currentView = 'chat';
 
@@ -860,9 +867,22 @@
       var myDisplayName = flagOnly + ' ' + userNickname;
 
       currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
-      currentRoomUsersRef.onDisconnect().remove();
-      currentRoomUsersRef.set({ name: myDisplayName, joinedAt: firebase.database.ServerValue.TIMESTAMP }).then(function() {
-        roomAdmissionReady = true;
+      var joiningRef = currentRoomUsersRef;
+      var joinToken = roomJoinToken;
+      // Register server disconnect cleanup BEFORE announcing presence.
+      joiningRef.onDisconnect().remove().then(function() {
+        // Best-effort stale history cleanup when an empty room is entered.
+        // Not atomic with other simultaneous admissions; see README.
+        return joiningRef.parent.once('value').then(function(snapshot) {
+          if (!snapshot.exists()) {
+            return joiningRef.parent.parent.child('messages').remove();
+          }
+        });
+      }).then(function() {
+        if (joinToken !== roomJoinToken) return;
+        return joiningRef.set({ name: myDisplayName, joinedAt: firebase.database.ServerValue.TIMESTAMP });
+      }).then(function() {
+        if (joinToken === roomJoinToken) roomAdmissionReady = true;
       }).catch(function(err) {
         console.error('Room admission failed:', err);
         alert('채팅방 입장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
@@ -896,6 +916,10 @@
 
     function stopRoomListeners() {
       roomAdmissionReady = false;
+      roomJoinToken++;
+      roomPreviousUsers = null;
+      roomNoticeQueue = [];
+      roomLatestMessages = [];
       if (roomPresenceListener) roomPresenceListener.off();
       if (messageListenerRef) messageListenerRef.off();
       roomPresenceListener = null;
@@ -911,6 +935,18 @@
       roomPresenceListener.on('value', function(snapshot) {
         var usersData = snapshot.val() || {};
         var userCount = Object.keys(usersData).length;
+        // Local-only departure notices: do not grant users permission to forge
+        // system messages in the shared database.
+        if (roomPreviousUsers !== null) {
+          Object.keys(roomPreviousUsers).forEach(function(uid) {
+            if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(usersData, uid)) {
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, text: String(roomPreviousUsers[uid].name || '참여자') + '님이 퇴장했습니다.' });
+            }
+          });
+          if (roomNoticeQueue.length > 30) roomNoticeQueue.splice(0, roomNoticeQueue.length - 30);
+          if (currentView === 'chat') renderMessages(roomLatestMessages || []);
+        }
+        roomPreviousUsers = usersData;
         
         var cityName = getCityName(currentCity);
         document.getElementById('headerSub').innerText = '👥 현재 ' + userCount + '명 참여 중';
@@ -930,6 +966,7 @@
         for (var k in data) {
           msgList.push(data[k]);
         }
+        roomLatestMessages = msgList;
         renderMessages(msgList);
       });
     }
@@ -1088,16 +1125,32 @@
       }
     }
 
+    function leaveCurrentRoom() {
+      if (!currentRoomUsersRef) return Promise.resolve();
+      var leavingRef = currentRoomUsersRef;
+      currentRoomUsersRef = null;
+      // Cancels stale onDisconnect operation when user explicitly leaves.
+      return leavingRef.remove().then(function() {
+        return leavingRef.onDisconnect().cancel();
+      }).then(function() {
+        return leavingRef.parent.once('value');
+      }).then(function(snapshot) {
+        if (!snapshot.exists()) {
+          return leavingRef.parent.parent.child('messages').remove();
+        }
+      }).catch(function(error) {
+        console.error('퇴장/기록 정리 실패:', error);
+      });
+    }
+
     function goBack() {
       if (currentView === 'chat') {
-        var leaveConfirm = confirm("채팅방을 나가시겠습니까?\n나가시면 이전 대화 내용은 초기화될 수 있습니다.");
+        var leaveConfirm = confirm("채팅방을 나가시겠습니까?\n마지막 사람이 나가면 대화 기록 삭제를 시도합니다.");
         if (!leaveConfirm) return;
 
         stopRoomListeners();
-        if (currentRoomUsersRef) {
-          currentRoomUsersRef.remove();
-          currentRoomUsersRef = null;
-        }
+        leaveCurrentRoom();
+        currentRoom = null;
         openChatRoomList();
       } else if (currentView === 'roomList') {
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
@@ -1105,7 +1158,7 @@
       } else {
         stopRoomListeners();
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
-        if (currentRoomUsersRef) { currentRoomUsersRef.remove(); currentRoomUsersRef = null; }
+        if (currentRoomUsersRef) leaveCurrentRoom();
         if (cityPresenceRef) { cityPresenceRef.remove(); cityPresenceRef = null; }
         currentCity = null;
         currentRoom = null;
@@ -1143,8 +1196,7 @@
         tMap.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
         if (currentRoomUsersRef) {
           stopRoomListeners();
-          currentRoomUsersRef.remove();
-          currentRoomUsersRef = null;
+          leaveCurrentRoom();
           currentRoom = null;
         }
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
@@ -1179,9 +1231,8 @@
         empty.className = 'text-center py-10 text-slate-400 text-xs';
         empty.textContent = t.noMsg;
         container.appendChild(empty);
-        return;
       }
-      msgs.forEach(function(m) {
+      (msgs || []).forEach(function(m) {
         if (!m || typeof m !== 'object') return;
         if (m.isSystem && m.uid === myUserId) return;
         if (m.isSystem) {
@@ -1231,6 +1282,15 @@
         time.textContent = String(m.time || '');
         wrapper.appendChild(time);
         container.appendChild(wrapper);
+      });
+      roomNoticeQueue.forEach(function(notice) {
+        var wrap = document.createElement('div');
+        wrap.className = 'flex justify-center my-1 w-full';
+        var text = document.createElement('span');
+        text.className = 'bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold';
+        text.textContent = '🚪 ' + notice.text;
+        wrap.appendChild(text);
+        container.appendChild(wrap);
       });
       var scrollArea = document.getElementById('chatScrollArea');
       scrollArea.scrollTop = scrollArea.scrollHeight;
