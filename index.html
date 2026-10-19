@@ -83,13 +83,13 @@
           <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
             <i class="fas fa-user-globe"></i>
           </div>
-          <h2 class="text-base font-bold text-slate-800">프로필 설정</h2>
-          <p class="text-xs text-slate-500">대화방에서 사용할 국가와 별명을 선택해주세요.</p>
+          <h2 id="profileTitle" class="text-base font-bold text-slate-800">프로필 설정</h2>
+          <p id="profileDescription" class="text-xs text-slate-500">대화방에서 사용할 국가와 별명을 선택해주세요.</p>
         </div>
 
         <div class="space-y-3">
           <div>
-            <label class="text-xs font-bold text-slate-600 block mb-1">국가 선택</label>
+            <label id="profileCountryLabel" class="text-xs font-bold text-slate-600 block mb-1">국가 선택</label>
             <select id="modalCountry" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="🇰🇷 대한민국">🇰🇷 대한민국 (Korea)</option>
               <option value="🇺🇸 미국">🇺🇸 미국 (USA)</option>
@@ -106,12 +106,12 @@
           </div>
 
           <div>
-            <label class="text-xs font-bold text-slate-600 block mb-1">별명 (닉네임)</label>
+            <label id="profileNicknameLabel" class="text-xs font-bold text-slate-600 block mb-1">별명 (닉네임)</label>
             <input type="text" id="modalNickname" placeholder="예: 대구여행자, 로컬맛집탐험가" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
         </div>
 
-        <button onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition">
+        <button id="profileSaveButton" onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition">
           시작하기
         </button>
       </div>
@@ -168,7 +168,7 @@
     <main id="boardView" class="hidden p-4 space-y-4 flex-1 scroll-area w-full pb-16">
       <div onclick="openChatRoomList()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
         <div>
-          <span class="bg-white/20 text-xs px-2.5 py-0.5 rounded-full font-bold">LIVE Q&A (Max 4명)</span>
+          <span id="boardMaxBadge" class="bg-white/20 text-xs px-2.5 py-0.5 rounded-full font-bold">LIVE Q&A (Max 4명)</span>
           <h3 id="boardBannerTitle" class="font-bold text-base mt-1">실시간 대화방 목록</h3>
           <p id="boardBannerSub" class="text-xs text-indigo-100 mt-0.5">원하는 채팅방을 선택하여 소통해보세요</p>
         </div>
@@ -226,7 +226,7 @@
       <div class="bg-white rounded-2xl w-full max-w-xl h-full max-h-[760px] mx-auto flex flex-col overflow-hidden shadow-2xl">
         <div class="flex items-center justify-between p-3 border-b gap-2">
           <strong class="text-sm">📍 채팅방에 장소 공유</strong>
-          <button type="button" onclick="closePlacePicker()" class="px-3 py-2 rounded-lg bg-slate-100 text-sm" aria-label="닫기">✕</button>
+          <button type="button" id="closePlacePickerButton" onclick="closePlacePicker()" class="px-3 py-2 rounded-lg bg-slate-100 text-sm" aria-label="닫기">✕</button>
         </div>
         <div class="flex gap-2 p-3">
           <input id="placeSearchInput" class="flex-1 min-w-0 bg-slate-100 rounded-xl px-3 py-2 text-sm" placeholder="장소 이름 또는 주소 검색" onkeypress="if(event.key==='Enter') searchSharePlace()" maxlength="150">
@@ -308,18 +308,18 @@
 
     function requireAuth() {
       if (authReady && auth.currentUser && myUserId === auth.currentUser.uid) return true;
-      alert('연결 중입니다. 잠시 후 다시 시도해 주세요.');
+      alert(uiText('authWait'));
       return false;
     }
 
     function startAnonymousAuth() {
       var status = document.getElementById('authStatus');
-      document.getElementById('authStatusText').textContent = '안전한 연결을 준비하고 있습니다...';
+      document.getElementById('authStatusText').textContent = uiText('authConnecting');
       document.getElementById('authRetry').classList.add('hidden');
       status.classList.remove('hidden');
       auth.signInAnonymously().catch(function(error) {
         console.error('Firebase authentication failed:', error.code);
-        document.getElementById('authStatusText').textContent = '로그인 연결에 실패했습니다. 인터넷 연결과 Firebase 설정을 확인해 주세요. (' + error.code + ')';
+        document.getElementById('authStatusText').textContent = uiText('authFailed') + ' (' + error.code + ')';
         document.getElementById('authRetry').classList.remove('hidden');
       });
     }
@@ -339,7 +339,7 @@
     }, function(error) {
       authReady = false;
       console.error('Auth state error:', error);
-      document.getElementById('authStatusText').textContent = '인증 상태를 확인할 수 없습니다. 다시 시도해 주세요.';
+      document.getElementById('authStatusText').textContent = uiText('authStateFailed');
       document.getElementById('authRetry').classList.remove('hidden');
     });
 
@@ -347,7 +347,7 @@
     var userNickname = localStorage.getItem('my_user_nickname') || '';
 
     var googleApiKey = "AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4";
-    var currentLang = 'ko';
+    var currentLang = ['ko','en','ja','zh-CN'].includes(localStorage.getItem('localtalk_ui_lang')) ? localStorage.getItem('localtalk_ui_lang') : 'ko';
     var autoTranslateEnabled = localStorage.getItem('localtalk_auto_translate') !== 'off';
     var translationCache = new Map();
     var translationPending = new Map();
@@ -389,7 +389,7 @@
       var nick = document.getElementById('modalNickname').value.trim();
 
       if (!nick) {
-        alert('별명을 입력해 주세요!');
+        alert(uiText('nickRequired'));
         return;
       }
 
@@ -548,6 +548,27 @@
       var auto=document.getElementById('autoTranslationLabel');if(auto) auto.textContent=t.translateAuto;
       document.documentElement.lang=currentLang === 'zh-CN' ? 'zh-CN' : currentLang;
     }
+    // v10: consistent UI translations for profile, notices, dialogs and status.
+    var UI_V10 = {
+      ko: {profileTitle:'프로필 설정',profileDescription:'대화방에서 사용할 국가와 별명을 선택해주세요.',profileCountry:'국가 선택',profileNickname:'별명 (닉네임)',profileNicknamePlaceholder:'예: 대구여행자, 로컬맛집탐험가',profileSave:'시작하기',boardMax:'LIVE Q&A (최대 4명)',roomMax:'최대 4명 정원 대화방',roomOccupancy:'명 참여 중',roomFullShort:'꽉참',roomFullAlert:'정원이 가득 찬 채팅방입니다.',roomJoinFailed:'채팅방 입장에 실패했습니다. 잠시 후 다시 시도해 주세요.',joined:'님이 입장했습니다.',left:'님이 퇴장했습니다.',participant:'참여자',nowOnline:'👥 현재 {n}명 참여 중',mine:'나',leaveConfirm:'채팅방을 나가시겠습니까?\n마지막 사람이 나가면 대화 기록 삭제를 시도합니다.',placeRequiresRoom:'채팅방에 입장한 뒤 장소를 공유할 수 있습니다.',placeNotFound:'장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.',placeTooLong:'장소 정보가 너무 깁니다.',sendNotReady:'채팅방 입장 처리 중입니다. 잠시 후 다시 보내주세요.',messageTooLong:'메시지는 2,000자 이하로 입력해 주세요.',sendFailed:'메시지 전송에 실패했습니다. 다시 시도해 주세요.',nickRequired:'별명을 입력해 주세요!',authWait:'연결 중입니다. 잠시 후 다시 시도해 주세요.',authConnecting:'안전한 연결을 준비하고 있습니다...',authFailed:'로그인 연결에 실패했습니다. 인터넷 연결과 Firebase 설정을 확인해 주세요.',authStateFailed:'인증 상태를 확인할 수 없습니다. 다시 시도해 주세요.',authRetry:'다시 시도',postViews:'조회 {n} (클릭하여 보기)',today:'오늘',localResident:'현지인',seoulResident:'서울시민',mapSearchPlaceholder:'장소(예: 현대, 더현대 대구)',mapNoPlace:'장소를 찾을 수 없습니다. (예: 더현대 대구, 반월당역)',geoFailed:'위치 정보를 가져올 수 없습니다. 브라우저 위치 접근을 허용해 주세요.',naverDirections:uiText('naverDirections'),kakaoDirections:uiText('kakaoDirections'),close:'닫기'},
+      en: {profileTitle:'Set up your profile',profileDescription:'Choose your country and nickname for chat.',profileCountry:'Country',profileNickname:'Nickname',profileNicknamePlaceholder:'e.g. DaeguTraveler',profileSave:'Get started',boardMax:'LIVE Q&A (Max 4)',roomMax:'Chat rooms · Max 4 people',roomOccupancy:' people in room',roomFullShort:'Full',roomFullAlert:'This chat room is full.',roomJoinFailed:'Could not join the room. Please try again.',joined:' joined the room.',left:' left the room.',participant:'Guest',nowOnline:'👥 {n} people in room',mine:'Me',leaveConfirm:'Leave this chat room?\nWhen everyone leaves, the chat history will be cleared where possible.',placeRequiresRoom:'Join a chat room before sharing a place.',placeNotFound:'Place not found. Try another name or address.',placeTooLong:'Place information is too long.',sendNotReady:'Joining the room. Please wait a moment.',messageTooLong:'Messages must be 2,000 characters or fewer.',sendFailed:'Could not send the message. Please try again.',nickRequired:'Please enter a nickname.',authWait:'Connecting. Please try again shortly.',authConnecting:'Establishing a secure connection…',authFailed:'Sign-in failed. Check your internet and Firebase settings.',authStateFailed:'Could not verify sign-in. Please try again.',authRetry:'Retry',postViews:'{n} views · Tap to read',today:'Today',localResident:'Local resident',seoulResident:'Seoul resident',mapSearchPlaceholder:'Search a place (e.g. The Hyundai Daegu)',mapNoPlace:'Place not found. Try another search.',geoFailed:'Location unavailable. Please allow location access.',naverDirections:'🧭 Directions in Naver Map',kakaoDirections:'💛 Directions in Kakao Map',close:'Close'},
+      ja: {profileTitle:'プロフィール設定',profileDescription:'チャットで使う国とニックネームを選択してください。',profileCountry:'国を選択',profileNickname:'ニックネーム',profileNicknamePlaceholder:'例：大邱旅行者',profileSave:'始める',boardMax:'LIVE Q&A（最大4人）',roomMax:'チャットルーム（最大4人）',roomOccupancy:'人参加中',roomFullShort:'満員',roomFullAlert:'このチャットルームは満員です。',roomJoinFailed:'入室できませんでした。もう一度お試しください。',joined:'さんが入室しました。',left:'さんが退室しました。',participant:'参加者',nowOnline:'👥 現在{n}人参加中',mine:'自分',leaveConfirm:'チャットルームを退出しますか？\n全員が退出すると履歴の削除を試みます。',placeRequiresRoom:'入室してから場所を共有してください。',placeNotFound:'場所が見つかりません。別の名前や住所をお試しください。',placeTooLong:'場所の情報が長すぎます。',sendNotReady:'入室処理中です。少々お待ちください。',messageTooLong:'メッセージは2,000文字以内にしてください。',sendFailed:'送信できませんでした。再試行してください。',nickRequired:'ニックネームを入力してください。',authWait:'接続中です。少々お待ちください。',authConnecting:'安全に接続しています…',authFailed:'ログインに失敗しました。ネット接続とFirebaseの設定をご確認ください。',authStateFailed:'認証状態を確認できません。再試行してください。',authRetry:'再試行',postViews:'閲覧 {n} · タップして読む',today:'今日',localResident:'地元の人',seoulResident:'ソウル市民',mapSearchPlaceholder:'場所を検索（例：ザ・現代 大邱）',mapNoPlace:'場所が見つかりません。別の検索語をお試しください。',geoFailed:'位置情報を取得できません。位置情報へのアクセスを許可してください。',naverDirections:'🧭 NAVER地図でルート検索',kakaoDirections:'💛 KakaoMapでルート検索',close:'閉じる'},
+      'zh-CN': {profileTitle:'设置个人资料',profileDescription:'请选择聊天室中使用的国家和昵称。',profileCountry:'选择国家',profileNickname:'昵称',profileNicknamePlaceholder:'例如：大邱旅行者',profileSave:'开始使用',boardMax:'实时问答（最多4人）',roomMax:'聊天室（最多4人）',roomOccupancy:'人参与',roomFullShort:'已满',roomFullAlert:'该聊天室已满。',roomJoinFailed:'进入聊天室失败，请稍后重试。',joined:'加入了聊天室。',left:'离开了聊天室。',participant:'参与者',nowOnline:'👥 当前{n}人参与',mine:'我',leaveConfirm:'确定离开聊天室吗？\n所有人离开后将尝试清除聊天记录。',placeRequiresRoom:'请先进入聊天室再分享地点。',placeNotFound:'未找到地点，请尝试其他名称或地址。',placeTooLong:'地点信息过长。',sendNotReady:'正在进入聊天室，请稍候。',messageTooLong:'消息不能超过2,000个字符。',sendFailed:'消息发送失败，请重试。',nickRequired:'请输入昵称。',authWait:'正在连接，请稍后重试。',authConnecting:'正在建立安全连接…',authFailed:'登录失败，请检查网络及Firebase设置。',authStateFailed:'无法验证登录状态，请重试。',authRetry:'重试',postViews:'浏览 {n} · 点击查看',today:'今天',localResident:'当地居民',seoulResident:'首尔居民',mapSearchPlaceholder:'搜索地点（例如：现代百货大邱店）',mapNoPlace:'未找到地点，请更换关键词。',geoFailed:'无法获取位置，请允许浏览器访问位置。',naverDirections:'🧭 在NAVER地图中导航',kakaoDirections:'💛 在Kakao地图中导航',close:'关闭'}
+    };
+    Object.keys(UI_V10).forEach(function(lang) { Object.assign(I18N[lang], UI_V10[lang]); });
+    function uiText(key, n) {
+      var value = (I18N[currentLang] || I18N.ko)[key] || I18N.ko[key] || key;
+      return n === undefined ? value : value.replace('{n}', String(n));
+    }
+    function updateStaticUiV10() {
+      var labels = {profileTitle:'profileTitle',profileDescription:'profileDescription',profileCountryLabel:'profileCountry',profileNicknameLabel:'profileNickname',profileSaveButton:'profileSave',boardMaxBadge:'boardMax',authRetry:'authRetry'};
+      Object.keys(labels).forEach(function(id) { var el=document.getElementById(id); if(el) el.textContent=uiText(labels[id]); });
+      var nick=document.getElementById('modalNickname'); if(nick) nick.placeholder=uiText('profileNicknamePlaceholder');
+      var mapInput=document.getElementById('mapSearchInput'); if(mapInput) mapInput.placeholder=uiText('mapSearchPlaceholder');
+      var close=document.getElementById('closePlacePickerButton'); if(close) close.setAttribute('aria-label',uiText('close'));
+      var cityRoomNotice=document.getElementById('roomListNoticeSub'); if(cityRoomNotice) cityRoomNotice.textContent=I18N[currentLang].roomNoticeSub;
+    }
+
     // 요청하신 9개 지역 구조 (서울, 제주, 부산, 경기, 강원, 경북, 경남, 전북, 전남)
     var CITIES = [
       { 
@@ -634,8 +655,8 @@
           content: {
             ko: '📍 **서울 주요 지역 팁:**\n- 명동: 쇼핑 및 길거리 음식 추천\n- 성수동: 카페거리와 팝업스토어 성지',
             en: '📍 **Seoul Tips:**\n- Myeongdong: Great for shopping & street food\n- Seongsu-dong: Famous cafe street & pop-up stores',
-            ja: '📍 **ソウル主要地域のコツ:**\n- 明洞: ショッピングと屋台グルメ\n- 聖수洞: カフェ通りとポップアップストア',
-            'zh-CN': '📍 **首尔主要区域攻略:**\n- 明洞: 购物与街头小吃推荐\n- 圣수洞: 咖啡街与快闪店圣地'
+            ja: '📍 **ソウル主要地域のコツ:**\n- 明洞: ショッピングと屋台グルメ\n- 聖水洞: カフェ通りとポップアップストア',
+            'zh-CN': '📍 **首尔主要区域攻略:**\n- 明洞: 购物与街头小吃推荐\n- 圣水洞: 咖啡街与快闪店圣地'
           }
         }
       ]
@@ -780,8 +801,8 @@
           content: {
             ko: '📍 **주요 관광 코스:**\n1. 현지 주민 추천 로컬 맛집 및 시장 방문\n2. 랜드마크 명소 및 밤야경 스팟 체험\n3. 대표 먹거리 탐방!',
             en: '📍 **Main Tour Route:**\n1. Visit local markets recommended by residents\n2. Scenic spots and beautiful night views\n3. Enjoy local delicacies!',
-            ja: '📍 **主な観光コース:**\n1. 現地人オススメのローカルグルメと市場訪問\n2. ランドマーク名所と夜景スポット体験\n3. 名물グルメ探訪！',
-            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地人推荐的本土美食& market\n2. 体验地标打卡点及夜景名所\n3. 品尝代表性特色美食！'
+            ja: '📍 **主な観光コース:**\n1. 現地人オススメのローカルグルメと市場訪問\n2. ランドマーク名所と夜景スポット体験\n3. 名物グルメ探訪！',
+            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地人推荐的当地美食与市场\n2. 体验地标打卡点及夜景名所\n3. 品尝代表性特色美食！'
           }
         }
       ];
@@ -802,8 +823,8 @@
               '<i id="arrow-' + p.id + '" class="fas fa-chevron-down text-slate-400 text-xs transition-transform"></i>' +
             '</div>' +
             '<div class="flex justify-between items-center text-xs text-slate-400 mt-1">' +
-              '<span>' + p.author + ' · ' + p.date + '</span>' +
-              '<span>조회 ' + p.views + ' (클릭하여 보기)</span>' +
+              '<span>' + (p.author === '서울시민' ? uiText('seoulResident') : p.author === '현지인' ? uiText('localResident') : p.author) + ' · ' + (p.date === '오늘' ? uiText('today') : p.date) + '</span>' +
+              '<span>' + uiText('postViews', p.views) + '</span>' +
             '</div>' +
           '</div>' +
           '<div id="body-' + p.id + '" class="hidden bg-slate-50 border-t border-slate-100 p-3.5 text-xs text-slate-700 leading-relaxed">' +
@@ -840,7 +861,7 @@
       var t = I18N[currentLang] || I18N['ko'];
 
       document.getElementById('headerTitle').innerText = cityName + t.roomListTitle;
-      document.getElementById('headerSub').innerText = 'Max 4명 정원 대화방';
+      document.getElementById('headerSub').innerText = uiText('roomMax');
       document.getElementById('roomListNoticeTitle').innerText = t.roomNoticeTitle;
       document.getElementById('roomListNoticeSub').innerText = t.roomNoticeSub;
 
@@ -871,10 +892,10 @@
 
         var statusBadge = isFull 
           ? '<span class="text-xs bg-rose-50 text-rose-600 font-bold px-2.5 py-0.5 rounded-full border border-rose-100">' + count + '/' + max + ' ' + t.roomFull + '</span>'
-          : '<span class="text-xs bg-emerald-50 text-emerald-600 font-bold px-2.5 py-0.5 rounded-full border border-emerald-100">' + count + '/' + max + '명 참여 중</span>';
+          : '<span class="text-xs bg-emerald-50 text-emerald-600 font-bold px-2.5 py-0.5 rounded-full border border-emerald-100">' + count + '/' + max + uiText('roomOccupancy') + '</span>';
 
         var btnHtml = isFull
-          ? '<button disabled class="bg-slate-200 text-slate-400 px-4 py-2 rounded-xl font-bold text-xs cursor-not-allowed">꽉참</button>'
+          ? '<button disabled class="bg-slate-200 text-slate-400 px-4 py-2 rounded-xl font-bold text-xs cursor-not-allowed">' + uiText('roomFullShort') + '</button>'
           : '<button onclick="enterSpecificChatRoom(' + rId + ')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl font-bold text-xs transition shadow-sm">' + t.roomEnter + '</button>';
 
         var card = '<div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex justify-between items-center w-full min-w-0">' +
@@ -902,7 +923,7 @@
       // UI-only capacity checks are not authoritative; use Firebase rules and
       // a transactional server-side admission design before public launch.
       if ((roomUserCounts[roomId] || 0) >= 4) {
-        alert('정원이 가득 찬 채팅방입니다.');
+        alert(uiText('roomFullAlert'));
         return;
       }
       stopRoomListeners();
@@ -948,7 +969,7 @@
         if (joinToken === roomJoinToken) roomAdmissionReady = true;
       }).catch(function(err) {
         console.error('Room admission failed:', err);
-        alert('채팅방 입장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        alert(uiText('roomJoinFailed'));
         goBackFromFailedAdmission();
       });
 
@@ -1008,12 +1029,12 @@
           }).length;
           Object.keys(usersData).forEach(function(uid) {
             if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(roomPreviousUsers, uid)) {
-              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'join', text: String(usersData[uid].name || '참여자') + '님이 입장했습니다.' });
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'join', actor: String(usersData[uid].name || uiText('participant')) });
             }
           });
           Object.keys(roomPreviousUsers).forEach(function(uid) {
             if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(usersData, uid)) {
-              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'leave', text: String(roomPreviousUsers[uid].name || '참여자') + '님이 퇴장했습니다.' });
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'leave', actor: String(roomPreviousUsers[uid].name || uiText('participant')) });
             }
           });
           if (roomNoticeQueue.length > 30) roomNoticeQueue.splice(0, roomNoticeQueue.length - 30);
@@ -1022,7 +1043,7 @@
         roomPreviousUsers = usersData;
         
         var cityName = getCityName(currentCity);
-        document.getElementById('headerSub').innerText = '👥 현재 ' + userCount + '명 참여 중';
+        document.getElementById('headerSub').innerText = uiText('nowOnline', userCount);
 
         // Do not delete all messages from a presence callback. A trusted
         // backend retention job should handle any intended expiry policy.
@@ -1135,10 +1156,10 @@
             '<span style="color:#64748b; font-size:11px; display:block; margin-bottom:8px; line-height:1.2;">' + placeName + '</span>' +
             '<div style="display:flex; flex-direction:column; gap:6px;">' +
               '<a href="' + naverMapUrl + '" target="_blank" style="text-align:center; background:#03C75A; color:white; text-decoration:none; padding:8px; border-radius:8px; font-size:12px; font-weight:bold; display:block;">' +
-                '🧭 네이버 지도로 길찾기' +
+                uiText('naverDirections') +
               '</a>' +
               '<a href="' + kakaoMapUrl + '" target="_blank" style="text-align:center; background:#FEE500; color:#191919; text-decoration:none; padding:8px; border-radius:8px; font-size:12px; font-weight:bold; display:block;">' +
-                '💛 카카오맵으로 길찾기' +
+                uiText('kakaoDirections') +
               '</a>' +
             '</div>' +
           '</div>';
@@ -1154,7 +1175,7 @@
           sInfoWindow.open(googleMapInstance, sMarker);
           searchMarkers.push(sMarker);
         } else {
-          alert("장소를 찾을 수 없습니다. (예: 더현대 대구, 반월당역)");
+          alert(uiText('mapNoPlace'));
         }
       });
     }
@@ -1194,7 +1215,7 @@
           }
         }, function(error) {
           if (panToUser) {
-            alert("위치 정보를 가져올 수 없습니다. 브라우저 위치 접근을 허용해 주세요.");
+            alert(uiText('geoFailed'));
           }
         });
       }
@@ -1220,7 +1241,7 @@
 
     function goBack() {
       if (currentView === 'chat') {
-        var leaveConfirm = confirm("채팅방을 나가시겠습니까?\n마지막 사람이 나가면 대화 기록 삭제를 시도합니다.");
+        var leaveConfirm = confirm(uiText('leaveConfirm'));
         if (!leaveConfirm) return;
 
         stopRoomListeners();
@@ -1314,10 +1335,10 @@
     }
     function openPlacePicker() {
       if (!requireAuth() || !currentCity || !currentRoom || !roomAdmissionReady) {
-        alert('채팅방에 입장한 뒤 장소를 공유할 수 있습니다.'); return;
+        alert(uiText('placeRequiresRoom')); return;
       }
       selectedSharePlace = null;
-      document.getElementById('selectedPlaceLabel').textContent = '아직 장소를 선택하지 않았습니다.';
+      document.getElementById('selectedPlaceLabel').textContent = uiText('placeEmpty');
       document.getElementById('confirmSharePlace').disabled = true;
       document.getElementById('placePicker').classList.remove('hidden');
       if (typeof google === 'undefined' || !google.maps) {
@@ -1355,7 +1376,7 @@
       if (!query || !shareGeocoder) return;
       shareGeocoder.geocode({address:query},function(results,status) {
         if (document.getElementById('placePicker').classList.contains('hidden')) return;
-        if (status !== 'OK' || !results[0]) { alert('장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.'); return; }
+        if (status !== 'OK' || !results[0]) { alert(uiText('placeNotFound')); return; }
         var r = results[0], lat=r.geometry.location.lat(), lng=r.geometry.location.lng();
         selectSharePlace(query,r.formatted_address || query,lat,lng);
         shareMap.setZoom(16);
@@ -1364,7 +1385,7 @@
     function sendSharedPlace() {
       if (!selectedSharePlace || !roomAdmissionReady || !currentRoom || !currentCity) return;
       var payload = PLACE_PREFIX + JSON.stringify(selectedSharePlace);
-      if (payload.length > 2000) { alert('장소 정보가 너무 깁니다.'); return; }
+      if (payload.length > 2000) { alert(uiText('placeTooLong')); return; }
       sendChatText(payload);
       closePlacePicker();
     }
@@ -1518,7 +1539,7 @@
           wrap.className = 'flex justify-center my-1 w-full';
           var text = document.createElement('span');
           text.className = 'bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold';
-          text.textContent = (notice.kind === 'join' ? '👋 ' : '🚪 ') + notice.text;
+          text.textContent = (notice.kind === 'join' ? '👋 ' : '🚪 ') + (notice.actor ? notice.actor + uiText(notice.kind === 'join' ? 'joined' : 'left') : notice.text);
           wrap.appendChild(text);
           container.appendChild(wrap);
         });
@@ -1542,7 +1563,7 @@
         wrapper.className = 'flex flex-col w-full ' + (mine ? 'items-end' : 'items-start');
         var sender = document.createElement('span');
         sender.className = 'text-xs font-bold text-slate-500 px-1 mb-0.5';
-        sender.textContent = mine ? getFormattedMySender() + ' (나)' : String(m.sender || '');
+        sender.textContent = mine ? getFormattedMySender() + ' (' + uiText('mine') + ')' : String(m.sender || '');
         wrapper.appendChild(sender);
         var bubble = document.createElement('div');
         bubble.className = 'max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' +
@@ -1583,11 +1604,11 @@
       if (!requireAuth()) return;
       if (!text || !currentCity || !currentRoom) return;
       if (!roomAdmissionReady) {
-        alert('채팅방 입장 처리 중입니다. 잠시 후 다시 보내주세요.');
+        alert(uiText('sendNotReady'));
         return;
       }
       if (text.length > 2000) {
-        alert('메시지는 2,000자 이하로 입력해 주세요.');
+        alert(uiText('messageTooLong'));
         return;
       }
 
@@ -1608,7 +1629,7 @@
         time: timeStr
       }).catch(function(err) {
         console.error('Message send failed:', err);
-        alert('메시지 전송에 실패했습니다. 다시 시도해 주세요.');
+        alert(uiText('sendFailed'));
         if (input) input.value = text;
       });
 
@@ -1616,7 +1637,10 @@
     }
 
     function changeLanguage(lang) {
+      if (!I18N[lang]) return;
       currentLang = lang;
+      localStorage.setItem('localtalk_ui_lang', lang);
+      document.getElementById('langSelect').value = lang;
       translationEpoch++;
       translationPending.clear();
       if (currentView === 'chat') renderMessages(roomLatestMessages || []);
@@ -1654,6 +1678,12 @@
       }
 
       updateStaticUiV9();
+      updateStaticUiV10();
+      if (currentView === 'roomList') document.getElementById('headerSub').textContent = uiText('roomMax');
+      if (currentView === 'chat') {
+        var liveCount = roomPreviousUsers ? Object.keys(roomPreviousUsers).length : 0;
+        document.getElementById('headerSub').textContent = uiText('nowOnline', liveCount);
+      }
       renderCityList(document.getElementById('citySearch').value);
     }
 
@@ -1662,7 +1692,8 @@
       renderCityList(query);
     }
 
-    updateStaticUiV9();
+    document.getElementById('langSelect').value = currentLang;
+    changeLanguage(currentLang);
     checkUserProfile();
     // The database listeners start only after Firebase authentication succeeds.
   </script>
