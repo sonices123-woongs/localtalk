@@ -113,7 +113,7 @@
     </div>
 
     <!-- 0. 최초 프로필 설정 모달 -->
-    <div id="profileModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+    <div id="profileModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
       <div class="bg-white rounded-3xl p-6 w-full max-w-xs max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl space-y-4 border border-slate-100">
         <div class="text-center space-y-1">
           <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
@@ -426,6 +426,7 @@
       myUserId = user.uid;
       authReady = true;
       document.getElementById('authStatus').classList.add('hidden');
+      restoreProfileAfterAuth();
       listenCityUsers();
     }, function(error) {
       authReady = false;
@@ -461,12 +462,42 @@
     var messageListenerRef = null;
     var roomAdmissionReady = false;
 
+    // v17: restore from the same Firebase anonymous UID; browser cache is a fallback.
+    var profileRestoreStarted = false;
+    function restoreProfileAfterAuth() {
+      if (profileRestoreStarted || !myUserId) return;
+      profileRestoreStarted = true;
+      db.ref('userProfiles/' + myUserId).once('value').then(function(snapshot) {
+        var p = snapshot.val();
+        if (p && typeof p === 'object' && typeof p.nickname === 'string' && p.nickname.trim() && typeof p.country === 'string' && p.country) {
+          userCountry = p.country;
+          userNickname = p.nickname;
+          if (['ko','en','ja','zh-CN'].includes(p.language)) currentLang = p.language;
+          if (typeof p.autoTranslate === 'boolean') autoTranslateEnabled = p.autoTranslate;
+          localStorage.setItem('my_user_country', userCountry);
+          localStorage.setItem('my_user_nickname', userNickname);
+          localStorage.setItem('localtalk_ui_lang', currentLang);
+          localStorage.setItem('localtalk_auto_translate', autoTranslateEnabled ? 'on' : 'off');
+          changeLanguage(currentLang);
+        } else if (userCountry && userNickname) {
+          persistProfileV17(); // migrate existing v16 browser profile once.
+        }
+        checkUserProfile();
+      }).catch(function(err) {
+        console.warn('Profile restore unavailable, using browser profile:', err);
+        checkUserProfile();
+      });
+    }
+    function persistProfileV17() {
+      if (!authReady || !myUserId || !userCountry || !userNickname) return Promise.resolve();
+      return db.ref('userProfiles/' + myUserId).set({
+        nickname:userNickname, country:userCountry, language:currentLang,
+        autoTranslate:autoTranslateEnabled, updatedAt:firebase.database.ServerValue.TIMESTAMP
+      }).catch(function(err) { console.warn('Profile cloud save failed; browser copy retained:',err); });
+    }
     function checkUserProfile() {
-      if (!userCountry || !userNickname) {
-        openProfileModal();
-      } else {
-        updateHeaderUserLabel();
-      }
+      if (!userCountry || !userNickname) openProfileModal();
+      else { updateHeaderUserLabel(); document.getElementById('profileModal').classList.add('hidden'); }
     }
 
     function openProfileModal() {
@@ -513,6 +544,7 @@
       document.getElementById('profileModal').classList.add('hidden');
       updateHeaderUserLabel();
       changeLanguage(selectedLanguage);
+      persistProfileV17();
       if (currentRoomUsersRef && authReady) {
         // Preserve original joinedAt so a profile edit does not look like a new entry.
         currentRoomUsersRef.child('name').set(getFormattedMySender()).catch(function(error) {
@@ -2104,6 +2136,7 @@
       if (!I18N[lang]) return;
       currentLang = lang;
       localStorage.setItem('localtalk_ui_lang', lang);
+      if (profileRestoreStarted && userNickname && userCountry) persistProfileV17();
       document.getElementById('langSelect').value = lang;
       translationEpoch++;
       translationPending.clear();
@@ -2162,7 +2195,7 @@
 
     document.getElementById('langSelect').value = currentLang;
     changeLanguage(currentLang);
-    checkUserProfile();
+    // Wait for Firebase authentication and profile restoration before showing setup.
     // The database listeners start only after Firebase authentication succeeds.
   </script>
 </body>
