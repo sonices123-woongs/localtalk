@@ -14,6 +14,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzxJ7cJfV8Jd2uS+IuI+igv+g=" crossorigin="">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     
@@ -289,6 +291,12 @@
             <div class="flex gap-2">
               <input id="communityPlaceQuery" maxlength="150" class="flex-1 min-w-0 border rounded-lg p-2 text-sm" placeholder="장소명 또는 주소 검색">
               <button type="button" id="communityPlaceSearch" onclick="searchCommunityPlace()" class="bg-emerald-700 text-white rounded-lg px-3 text-xs font-bold">검색</button>
+            </div>
+            <button type="button" id="communityPinToggle" onclick="toggleCommunityPinMap()" class="w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800">📍 지도에서 핀 찍기 (선택)</button>
+            <div id="communityPinPanel" class="hidden space-y-2">
+              <p id="communityPinHelp" class="text-xs text-emerald-900">지도를 움직여 원하는 위치를 누르세요. 핀을 찍은 뒤 장소명을 입력해 주세요.</p>
+              <div id="communityPinMap" style="height:260px;z-index:0" class="rounded-xl overflow-hidden border border-emerald-200"></div>
+              <p id="communityPinCoords" class="text-xs text-emerald-900" aria-live="polite"></p>
             </div>
             <p id="communityPlaceResult" class="text-xs text-emerald-900 break-words" aria-live="polite"></p>
             <button type="button" id="communityPlaceRemove" onclick="removeCommunityPlace()" class="hidden text-red-600 text-xs font-bold">첨부 취소</button>
@@ -1052,9 +1060,54 @@
       document.getElementById('communityPlaceQuery').placeholder=t[1];
       document.getElementById('communityPlaceSearch').textContent=t[2];
       document.getElementById('communityPlaceRemove').textContent=t[3];
+      refreshCommunityPinLabels();
+    }
+    // v19.1: OpenStreetMap tiles via Leaflet. No Google Maps API key required.
+    // Do not geocode user-entered names: users manually select exact coordinates.
+    var communityPinMap=null,communityPinMarker=null,communityPinCoords=null;
+    function communityPinText(){
+      return ({ko:['📍 지도에서 핀 찍기 (선택)','지도를 눌러 위치를 지정한 후 장소명을 입력하고 검색을 누르세요.','선택한 위치: ','지도 라이브러리를 불러오지 못했습니다. 장소명 첨부는 계속 가능합니다.'],en:['📍 Pin a location on the map (optional)','Tap the map to set a pin, then enter a place name and press Search.','Pinned location: ','Map could not load. You can still attach a place by name.'],ja:['📍 地図にピンを置く（任意）','地図をタップして位置を選び、場所名を入力して検索してください。','選択した位置：','地図を読み込めません。場所名での添付は可能です。'],'zh-CN':['📍 在地图上标记位置（可选）','点击地图选择位置，再输入地点名称并搜索。','已选位置：','地图无法加载，仍可按名称添加地点。']})[currentLang]||['📍 지도에서 핀 찍기 (선택)','지도를 눌러 위치를 지정한 후 장소명을 입력하고 검색을 누르세요.','선택한 위치: ','지도 라이브러리를 불러오지 못했습니다. 장소명 첨부는 계속 가능합니다.'];
+    }
+    function refreshCommunityPinLabels(){
+      var t=communityPinText();
+      document.getElementById('communityPinToggle').textContent=t[0];
+      document.getElementById('communityPinHelp').textContent=t[1];
+      if(communityPinCoords)document.getElementById('communityPinCoords').textContent=t[2]+communityPinCoords.lat.toFixed(6)+', '+communityPinCoords.lng.toFixed(6);
+    }
+    function toggleCommunityPinMap(){
+      var panel=document.getElementById('communityPinPanel');
+      var show=panel.classList.contains('hidden');
+      panel.classList.toggle('hidden',!show);
+      if(!show)return;
+      refreshCommunityPinLabels();
+      if(typeof L==='undefined'){
+        document.getElementById('communityPinHelp').textContent=communityPinText()[3];return;
+      }
+      if(!communityPinMap){
+        var center=(currentCity&&Number.isFinite(Number(currentCity.lat))&&Number.isFinite(Number(currentCity.lng)))?[Number(currentCity.lat),Number(currentCity.lng)]:[37.5665,126.9780];
+        communityPinMap=L.map('communityPinMap',{scrollWheelZoom:false}).setView(center,12);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(communityPinMap);
+        communityPinMap.on('click',function(ev){
+          communityPinCoords={lat:ev.latlng.lat,lng:ev.latlng.lng};
+          if(!communityPinMarker)communityPinMarker=L.marker(ev.latlng).addTo(communityPinMap);
+          else communityPinMarker.setLatLng(ev.latlng);
+          refreshCommunityPinLabels();
+          // A pin alone is not a saved attachment until Search is pressed.
+          communitySelectedPlace=null;
+          document.getElementById('communityPlaceRemove').classList.add('hidden');
+          document.getElementById('communityPlaceResult').textContent=communityPinText()[1];
+        });
+      }
+      setTimeout(function(){if(communityPinMap)communityPinMap.invalidateSize();},80);
+    }
+    function resetCommunityPin(){
+      communityPinCoords=null;
+      if(communityPinMarker&&communityPinMap){communityPinMap.removeLayer(communityPinMarker);communityPinMarker=null;}
+      document.getElementById('communityPinCoords').textContent='';
     }
     function removeCommunityPlace(){
       communitySelectedPlace=null;
+      resetCommunityPin();
       document.getElementById('communityPlaceResult').textContent='';
       document.getElementById('communityPlaceRemove').classList.add('hidden');
     }
@@ -1065,6 +1118,7 @@
       // The board works even when Google Maps JavaScript API is not loaded.
       // This is a name-based attachment, NOT a verified geocoded place.
       communitySelectedPlace={name:query.slice(0,150),address:query.slice(0,150)};
+      if(communityPinCoords){communitySelectedPlace.lat=communityPinCoords.lat;communitySelectedPlace.lng=communityPinCoords.lng;}
       result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+t[7];
       document.getElementById('communityPlaceRemove').classList.remove('hidden');
     }
@@ -1159,6 +1213,8 @@
           document.getElementById('communityPostTitle').value='';
           document.getElementById('communityPostBody').value='';
           document.getElementById('communityPlaceQuery').value='';
+          resetCommunityPin();
+          document.getElementById('communityPinPanel').classList.add('hidden');
           toggleCommunityComposer(false);
         }).catch(function(err){console.error(err);alert(communityT().error);})
         .finally(function(){btn.disabled=false;});
