@@ -281,6 +281,8 @@
     var roomNoticeQueue = [];
     var roomNoticeSeq = 0;
     var roomLatestMessages = [];
+    var roomEntryMessageKeys = new Set();
+    var roomHistoryReady = false;
     var roomJoinToken = 0;
 
     function requireAuth() {
@@ -860,6 +862,9 @@
       roomJoinToken++;
       roomPreviousUsers = null;
       roomNoticeQueue = [];
+      roomLatestMessages = [];
+      roomEntryMessageKeys = new Set();
+      roomHistoryReady = false;
       roomAdmissionReady = false;
       currentView = 'chat';
 
@@ -871,12 +876,17 @@
       var joinToken = roomJoinToken;
       // Register server disconnect cleanup BEFORE announcing presence.
       joiningRef.onDisconnect().remove().then(function() {
-        // Best-effort stale history cleanup when an empty room is entered.
-        // Not atomic with other simultaneous admissions; see README.
-        return joiningRef.parent.once('value').then(function(snapshot) {
-          if (!snapshot.exists()) {
-            return joiningRef.parent.parent.child('messages').remove();
-          }
+        // Capture all messages already present BEFORE publishing our presence.
+        // This is a display filter, NOT an authorization or privacy boundary.
+        return joiningRef.parent.parent.child('messages').once('value');
+      }).then(function(snapshot) {
+        if (joinToken !== roomJoinToken) return;
+        roomEntryMessageKeys = new Set(Object.keys(snapshot.val() || {}));
+        roomHistoryReady = true;
+        renderMessages(roomLatestMessages);
+        // Best-effort cleanup only if room was empty before our entry.
+        return joiningRef.parent.once('value').then(function(users) {
+          if (!users.exists()) return joiningRef.parent.parent.child('messages').remove();
         });
       }).then(function() {
         if (joinToken !== roomJoinToken) return;
@@ -920,6 +930,8 @@
       roomPreviousUsers = null;
       roomNoticeQueue = [];
       roomLatestMessages = [];
+      roomEntryMessageKeys = new Set();
+      roomHistoryReady = false;
       if (roomPresenceListener) roomPresenceListener.off();
       if (messageListenerRef) messageListenerRef.off();
       roomPresenceListener = null;
@@ -935,12 +947,20 @@
       roomPresenceListener.on('value', function(snapshot) {
         var usersData = snapshot.val() || {};
         var userCount = Object.keys(usersData).length;
-        // Local-only departure notices: do not grant users permission to forge
-        // system messages in the shared database.
-        if (roomPreviousUsers !== null) {
+        // Only transitions after the initial presence snapshot generate notices.
+        // Keep a position in the message timeline, not a permanent footer.
+        if (roomPreviousUsers !== null && roomHistoryReady) {
+          var visibleCount = roomLatestMessages.filter(function(m) {
+            return m && !roomEntryMessageKeys.has(m.id);
+          }).length;
+          Object.keys(usersData).forEach(function(uid) {
+            if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(roomPreviousUsers, uid)) {
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'join', text: String(usersData[uid].name || '참여자') + '님이 입장했습니다.' });
+            }
+          });
           Object.keys(roomPreviousUsers).forEach(function(uid) {
             if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(usersData, uid)) {
-              roomNoticeQueue.push({ id: ++roomNoticeSeq, text: String(roomPreviousUsers[uid].name || '참여자') + '님이 퇴장했습니다.' });
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'leave', text: String(roomPreviousUsers[uid].name || '참여자') + '님이 퇴장했습니다.' });
             }
           });
           if (roomNoticeQueue.length > 30) roomNoticeQueue.splice(0, roomNoticeQueue.length - 30);
@@ -964,7 +984,9 @@
         var data = snapshot.val() || {};
         var msgList = [];
         for (var k in data) {
-          msgList.push(data[k]);
+          if (data[k] && typeof data[k] === 'object') {
+            msgList.push(Object.assign({}, data[k], { id: k }));
+          }
         }
         roomLatestMessages = msgList;
         renderMessages(msgList);
@@ -1226,13 +1248,30 @@
       var container = document.getElementById('messageList');
       container.replaceChildren();
       var t = I18N[currentLang] || I18N['ko'];
-      if (!msgs || msgs.length === 0) {
+      if (!roomHistoryReady) return;
+      var visibleMsgs = (msgs || []).filter(function(m) {
+        return m && !roomEntryMessageKeys.has(m.id);
+      });
+      if (visibleMsgs.length === 0 && roomNoticeQueue.length === 0) {
         var empty = document.createElement('div');
         empty.className = 'text-center py-10 text-slate-400 text-xs';
         empty.textContent = t.noMsg;
         container.appendChild(empty);
       }
-      (msgs || []).forEach(function(m) {
+      function addNotices(position) {
+        roomNoticeQueue.forEach(function(notice) {
+          if (notice.position !== position) return;
+          var wrap = document.createElement('div');
+          wrap.className = 'flex justify-center my-1 w-full';
+          var text = document.createElement('span');
+          text.className = 'bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold';
+          text.textContent = (notice.kind === 'join' ? '👋 ' : '🚪 ') + notice.text;
+          wrap.appendChild(text);
+          container.appendChild(wrap);
+        });
+      }
+      addNotices(0);
+      visibleMsgs.forEach(function(m, index) {
         if (!m || typeof m !== 'object') return;
         if (m.isSystem && m.uid === myUserId) return;
         if (m.isSystem) {
@@ -1282,15 +1321,7 @@
         time.textContent = String(m.time || '');
         wrapper.appendChild(time);
         container.appendChild(wrapper);
-      });
-      roomNoticeQueue.forEach(function(notice) {
-        var wrap = document.createElement('div');
-        wrap.className = 'flex justify-center my-1 w-full';
-        var text = document.createElement('span');
-        text.className = 'bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold';
-        text.textContent = '🚪 ' + notice.text;
-        wrap.appendChild(text);
-        container.appendChild(wrap);
+        addNotices(index + 1);
       });
       var scrollArea = document.getElementById('chatScrollArea');
       scrollArea.scrollTop = scrollArea.scrollHeight;
