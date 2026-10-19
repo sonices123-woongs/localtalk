@@ -992,10 +992,10 @@
     var communityOpenPost=null;
     var communitySelectedPlace=null;
     var communityPlaceLocale={
-      ko:['📍 장소 첨부 (선택)','장소명 또는 주소 검색','검색','첨부 취소','장소를 검색해 주세요.','검색 중...','장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.','지도 기능을 불러오지 못했습니다.','첨부된 장소'],
-      en:['📍 Attach a place (optional)','Search place name or address','Search','Remove place','Enter a place name.','Searching...','Place not found. Try another name or address.','Map service unavailable.','Attached place'],
-      ja:['📍 場所を添付（任意）','場所名または住所を検索','検索','添付を解除','場所名を入力してください。','検索中...','場所が見つかりません。','地図を読み込めません。','添付した場所'],
-      'zh-CN':['📍 添加地点（可选）','搜索地点名称或地址','搜索','移除地点','请输入地点名称。','搜索中...','未找到地点，请重试。','地图服务不可用。','已添加地点']
+      ko:['📍 장소 첨부 (선택)','장소명 또는 주소 검색','검색','첨부 취소','장소를 검색해 주세요.','검색 중...','장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.','지도 API 없이 장소명으로 첨부합니다. 게시글에서 지도 검색 링크를 열 수 있습니다.','첨부된 장소'],
+      en:['📍 Attach a place (optional)','Search place name or address','Search','Remove place','Enter a place name.','Searching...','Place not found. Try another name or address.','Place attached by name; open the map search link in the post.','Attached place'],
+      ja:['📍 場所を添付（任意）','場所名または住所を検索','検索','添付を解除','場所名を入力してください。','検索中...','場所が見つかりません。','場所名で添付します。投稿から地図検索できます。','添付した場所'],
+      'zh-CN':['📍 添加地点（可选）','搜索地点名称或地址','搜索','移除地点','请输入地点名称。','搜索中...','未找到地点，请重试。','按地点名称添加，可从帖子打开地图搜索。','已添加地点']
     };
     function communityPlaceT(){return communityPlaceLocale[currentLang]||communityPlaceLocale.ko;}
     function communityPlaceLabels(){
@@ -1014,26 +1014,22 @@
       var t=communityPlaceT(),query=document.getElementById('communityPlaceQuery').value.trim();
       var result=document.getElementById('communityPlaceResult');
       if(!query){result.textContent=t[4];return;}
-      if(!window.google||!google.maps||!google.maps.Geocoder){result.textContent=t[7];return;}
-      var btn=document.getElementById('communityPlaceSearch');btn.disabled=true;
-      result.textContent=t[5];
-      new google.maps.Geocoder().geocode({address:query},function(results,status){
-        btn.disabled=false;
-        if(status!=='OK'||!results||!results[0]){result.textContent=t[6];return;}
-        var r=results[0];
-        communitySelectedPlace={name:query.slice(0,150),address:String(r.formatted_address||query).slice(0,350),lat:r.geometry.location.lat(),lng:r.geometry.location.lng()};
-        result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+communitySelectedPlace.address;
-        document.getElementById('communityPlaceRemove').classList.remove('hidden');
-      });
+      // The board works even when Google Maps JavaScript API is not loaded.
+      // This is a name-based attachment, NOT a verified geocoded place.
+      communitySelectedPlace={name:query.slice(0,150),address:query.slice(0,150)};
+      result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+t[7];
+      document.getElementById('communityPlaceRemove').classList.remove('hidden');
     }
     function communityPlaceCard(place){
-      if(!place||typeof place.name!=='string'||typeof place.address!=='string'||typeof place.lat!=='number'||typeof place.lng!=='number'||!Number.isFinite(place.lat)||!Number.isFinite(place.lng)||Math.abs(place.lat)>90||Math.abs(place.lng)>180)return null;
+      if(!place||typeof place.name!=='string'||!place.name.trim())return null;
       var wrap=communityEl('div','rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2');
       wrap.appendChild(communityEl('p','text-sm font-bold text-emerald-900 break-words','📍 '+place.name));
-      wrap.appendChild(communityEl('p','text-xs text-emerald-800 break-words',place.address));
+      if(place.address)wrap.appendChild(communityEl('p','text-xs text-emerald-800 break-words',place.address));
       var links=communityEl('div','flex gap-2 flex-wrap');
-      var dest=encodeURIComponent(place.lat+','+place.lng);
-      [[ 'Google Maps','https://www.google.com/maps/search/?api=1&query='+dest ],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(place.name+' '+place.address)]].forEach(function(pair){
+      var hasCoords=typeof place.lat==='number'&&typeof place.lng==='number'&&Number.isFinite(place.lat)&&Number.isFinite(place.lng)&&Math.abs(place.lat)<=90&&Math.abs(place.lng)<=180;
+      var searchText=String(place.name)+(place.address&&place.address!==place.name?' '+place.address:'');
+      var googleQuery=hasCoords?place.lat+','+place.lng:searchText;
+      [['Google Maps','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
         var a=communityEl('a','text-xs font-bold text-emerald-700 underline',pair[0]);
         a.href=pair[1];a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
       });
