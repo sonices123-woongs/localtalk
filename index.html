@@ -271,6 +271,20 @@
       </footer>
     </div>
 
+
+    <!-- v14: safety actions for a selected message -->
+    <div id="safetyModal" class="hidden fixed inset-0 z-[105] bg-slate-900/70 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="safetyTitle">
+      <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
+        <h2 id="safetyTitle" class="text-lg font-bold text-slate-800"></h2>
+        <p id="safetyTarget" class="text-sm text-slate-600 break-words"></p>
+        <label id="safetyReasonLabel" for="safetyReason" class="block text-sm font-semibold text-slate-700"></label>
+        <select id="safetyReason" class="w-full rounded-xl bg-slate-100 p-3 text-sm"></select>
+        <p id="safetyInfo" class="text-xs text-slate-500"></p>
+        <button id="safetyBlock" type="button" onclick="toggleSafetyBlock()" class="w-full rounded-xl bg-amber-100 text-amber-900 p-3 font-bold text-sm"></button>
+        <button id="safetyReport" type="button" onclick="submitSafetyReport()" class="w-full rounded-xl bg-red-600 text-white p-3 font-bold text-sm"></button>
+        <button id="safetyClose" type="button" onclick="closeSafetyModal()" class="w-full rounded-xl bg-slate-100 text-slate-700 p-3 font-bold text-sm"></button>
+      </div>
+    </div>
     <!-- v7: 채팅방에서 나가지 않고 장소를 고르는 지도 -->
     <div id="placePicker" class="hidden fixed inset-0 z-[100] bg-slate-900/60 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="장소 공유">
       <div class="bg-white rounded-2xl w-full max-w-xl h-full max-h-[760px] mx-auto flex flex-col overflow-hidden shadow-2xl">
@@ -1627,8 +1641,76 @@
       else if (!mine && autoTranslateEnabled && text) run(false);
     }
 
+
+    // v14: local-only blocking and append-only reporting.
+    // Blocking is a display filter, NOT a Firebase authorization rule.
+    var safetySelectedMessage = null;
+    var safetyBlocked = new Set();
+    var safetyCopy = {
+      ko:{title:'사용자 관리',reason:'신고 사유',info:'차단은 이 브라우저에서만 메시지를 숨깁니다. 신고 내용은 운영자 검토용으로 저장됩니다.',block:'사용자 차단',unblock:'차단 해제',report:'이 메시지 신고',close:'닫기',menu:'신고·차단',blocked:'차단한 사용자의 메시지',success:'신고가 접수되었습니다.',error:'신고 전송에 실패했습니다.',self:'본인 메시지는 신고할 수 없습니다.',reasons:['괴롭힘·욕설','스팸·광고','부적절한 내용','기타']},
+      en:{title:'User safety',reason:'Report reason',info:'Blocking hides messages only in this browser. Reports are saved for operator review.',block:'Block user',unblock:'Unblock user',report:'Report this message',close:'Close',menu:'Report / block',blocked:'Message from blocked user',success:'Report submitted.',error:'Could not submit report.',self:'You cannot report your own message.',reasons:['Harassment or abuse','Spam or advertising','Inappropriate content','Other']},
+      ja:{title:'ユーザー管理',reason:'通報理由',info:'ブロックはこのブラウザーでのみメッセージを非表示にします。通報は運営者の確認用に保存されます。',block:'ブロック',unblock:'ブロック解除',report:'このメッセージを通報',close:'閉じる',menu:'通報・ブロック',blocked:'ブロックしたユーザーのメッセージ',success:'通報を送信しました。',error:'通報に失敗しました。',self:'自分のメッセージは通報できません。',reasons:['嫌がらせ・暴言','スパム・広告','不適切な内容','その他']},
+      'zh-CN':{title:'用户管理',reason:'举报原因',info:'屏蔽仅在此浏览器隐藏消息。举报将保存供管理员审核。',block:'屏蔽用户',unblock:'取消屏蔽',report:'举报此消息',close:'关闭',menu:'举报/屏蔽',blocked:'已屏蔽用户的消息',success:'举报已提交。',error:'举报失败。',self:'不能举报自己的消息。',reasons:['骚扰或辱骂','垃圾信息或广告','不当内容','其他']}
+    };
+    function safetyText() { return safetyCopy[currentLang] || safetyCopy.ko; }
+    function safetyStorageKey() { return 'localtalk_blocked_v14_' + (myUserId || 'guest'); }
+    function loadSafetyBlocked() {
+      try {
+        var values = JSON.parse(localStorage.getItem(safetyStorageKey()) || '[]');
+        safetyBlocked = new Set(Array.isArray(values) ? values.filter(function(x){return typeof x === 'string';}).slice(0,500) : []);
+      } catch (_) { safetyBlocked = new Set(); }
+    }
+    function openSafetyModal(msgId) {
+      var msg = roomLatestMessages.find(function(m){return m.id === msgId;});
+      if (!msg || !msg.uid || msg.uid === myUserId || msg.isSystem) return;
+      safetySelectedMessage = {id:msg.id, uid:msg.uid, sender:String(msg.sender||''), text:String(msg.text||''), city:currentCity.id, room:String(currentRoom)};
+      var t=safetyText();
+      document.getElementById('safetyTitle').textContent=t.title;
+      document.getElementById('safetyTarget').textContent=safetySelectedMessage.sender;
+      document.getElementById('safetyReasonLabel').textContent=t.reason;
+      document.getElementById('safetyInfo').textContent=t.info;
+      document.getElementById('safetyClose').textContent=t.close;
+      document.getElementById('safetyReport').textContent=t.report;
+      var reason=document.getElementById('safetyReason');
+      reason.replaceChildren();
+      t.reasons.forEach(function(label,i){var opt=document.createElement('option');opt.value=String(i);opt.textContent=label;reason.appendChild(opt);});
+      document.getElementById('safetyBlock').textContent=safetyBlocked.has(msg.uid)?t.unblock:t.block;
+      document.getElementById('safetyModal').classList.remove('hidden');
+    }
+    function closeSafetyModal() {
+      document.getElementById('safetyModal').classList.add('hidden');
+      safetySelectedMessage=null;
+    }
+    function toggleSafetyBlock() {
+      if (!safetySelectedMessage) return;
+      var uid=safetySelectedMessage.uid;
+      if (safetyBlocked.has(uid)) safetyBlocked.delete(uid); else safetyBlocked.add(uid);
+      localStorage.setItem(safetyStorageKey(),JSON.stringify(Array.from(safetyBlocked)));
+      closeSafetyModal();
+      renderMessages(roomLatestMessages);
+    }
+    function submitSafetyReport() {
+      if (!safetySelectedMessage || !requireAuth()) return;
+      var m=safetySelectedMessage;
+      var reason=document.getElementById('safetyReason').value;
+      var btn=document.getElementById('safetyReport');
+      btn.disabled=true;
+      var reportRef=db.ref('reports').push();
+      reportRef.set({
+        reporterUid:myUserId, reportedUid:m.uid, cityId:m.city,
+        roomId:m.room, messageId:m.id, reason:reason,
+        messageText:m.text.slice(0,2000), sender:m.sender.slice(0,100),
+        createdAt:firebase.database.ServerValue.TIMESTAMP
+      }).then(function(){
+        closeSafetyModal(); alert(safetyText().success);
+      }).catch(function(e){
+        console.error('Report failed',e); alert(safetyText().error);
+      }).finally(function(){btn.disabled=false;});
+    }
+
     // All user-controlled content is inserted as text, never parsed as HTML.
     function renderMessages(msgs) {
+      loadSafetyBlocked();
       resetTranslationRoom();
       var container = document.getElementById('messageList');
       container.replaceChildren();
@@ -1660,6 +1742,14 @@
       visibleMsgs.forEach(function(m, index) {
         if (!m || typeof m !== 'object') return;
         if (m.isSystem && m.uid === myUserId) return;
+        if (!m.isSystem && m.uid !== myUserId && safetyBlocked.has(m.uid)) {
+          var placeholder=document.createElement('div');
+          placeholder.className='text-center text-xs text-slate-400 py-2';
+          placeholder.textContent='🚫 '+safetyText().blocked;
+          container.appendChild(placeholder);
+          addNotices(index + 1);
+          return;
+        }
         if (m.isSystem) {
           var sysWrap = document.createElement('div');
           sysWrap.className = 'flex justify-center my-1 w-full';
@@ -1677,6 +1767,14 @@
         sender.className = 'text-xs font-bold text-slate-500 px-1 mb-0.5';
         sender.textContent = mine ? getFormattedMySender() + ' (' + uiText('mine') + ')' : String(m.sender || '');
         wrapper.appendChild(sender);
+        if (!mine && m.uid) {
+          var safetyBtn=document.createElement('button');
+          safetyBtn.type='button';
+          safetyBtn.className='text-xs text-slate-500 underline mb-1 px-1 self-start';
+          safetyBtn.textContent='⚑ '+safetyText().menu;
+          safetyBtn.addEventListener('click',function(){openSafetyModal(m.id);});
+          wrapper.appendChild(safetyBtn);
+        }
         var bubble = document.createElement('div');
         bubble.className = 'max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' +
           (mine ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none');
