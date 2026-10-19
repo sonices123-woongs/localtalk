@@ -113,8 +113,8 @@
     </div>
 
     <!-- 0. 최초 프로필 설정 모달 -->
-    <div id="profileModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div class="bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl space-y-4 border border-slate-100">
+    <div id="profileModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-white rounded-3xl p-6 w-full max-w-xs max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl space-y-4 border border-slate-100">
         <div class="text-center space-y-1">
           <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
             <i class="fas fa-user-globe"></i>
@@ -150,7 +150,7 @@
         <div class="space-y-3 border-t border-slate-100 pt-3">
           <div>
             <label id="profileLanguageLabel" for="profileLanguage" class="text-sm font-bold text-slate-600 block mb-1">앱 표시 언어</label>
-            <select id="profileLanguage" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-base">
+            <select id="profileLanguage" onchange="changeLanguage(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-base">
               <option value="ko">한국어</option><option value="en">English</option><option value="ja">日本語</option><option value="zh-CN">中文</option>
             </select>
           </div>
@@ -433,7 +433,10 @@
       if (userNickname) document.getElementById('modalNickname').value = userNickname;
       document.getElementById('profileLanguage').value = currentLang;
       document.getElementById('profileAutoTranslate').checked = autoTranslateEnabled;
+      updateStaticUiV10();
       updateProfileLabelsV12();
+      updateCountryOptionsV13();
+      updateProfileSaveLabelV13();
       document.getElementById('profileCancelButton').classList.toggle('hidden', !userCountry || !userNickname);
       document.getElementById('profileModal').classList.remove('hidden');
     }
@@ -635,12 +638,40 @@
       'zh-CN':{profileLanguage:'应用显示语言',profileAuto:'自动翻译收到的消息',profilePrivacy:'昵称、国家和语言设置保存在本浏览器中。修改昵称后，聊天室成员列表也会更新。',profileCancel:'关闭',profileSave:'保存更改',nickTooLong:'昵称不能超过30个字符。',profileSyncFailed:'资料已保存，但聊天室更新失败。请重新进入。'}
     };
     Object.keys(PROFILE_V12).forEach(function(lang) { Object.assign(I18N[lang], PROFILE_V12[lang]); });
+    // v13: country labels are presentation-only; saved country values stay unchanged.
+    var COUNTRY_LABELS_V13 = {
+      ko:['대한민국','미국','일본','중국','대만','베트남','태국','영국','프랑스','독일','기타'],
+      en:['South Korea','United States','Japan','China','Taiwan','Vietnam','Thailand','United Kingdom','France','Germany','Other'],
+      ja:['韓国','アメリカ','日本','中国','台湾','ベトナム','タイ','イギリス','フランス','ドイツ','その他'],
+      'zh-CN':['韩国','美国','日本','中国','台湾','越南','泰国','英国','法国','德国','其他']
+    };
+    function updateCountryOptionsV13() {
+      var select=document.getElementById('modalCountry');
+      if (!select) return;
+      var names=COUNTRY_LABELS_V13[currentLang] || COUNTRY_LABELS_V13.ko;
+      Array.from(select.options).forEach(function(option, i) {
+        var flag=option.value.split(' ')[0];
+        option.textContent=flag+' '+(names[i] || option.value);
+      });
+    }
     function updateProfileLabelsV12() {
       var mapping={profileLanguageLabel:'profileLanguage',profileAutoTranslateLabel:'profileAuto',profilePrivacyNote:'profilePrivacy',profileCancelButton:'profileCancel'};
       Object.keys(mapping).forEach(function(id) {
         var el=document.getElementById(id); if(el) el.textContent=uiText(mapping[id]);
       });
     }
+    function updateProfileSaveLabelV13() {
+      var button=document.getElementById('profileSaveButton');
+      if (!button) return;
+      button.textContent = (userCountry && userNickname) ? uiText('profileSaveChangesV13') : uiText('profileStartV13');
+    }
+    var PROFILE_BUTTON_V13={
+      ko:{profileStartV13:'시작하기',profileSaveChangesV13:'변경사항 저장'},
+      en:{profileStartV13:'Get started',profileSaveChangesV13:'Save changes'},
+      ja:{profileStartV13:'始める',profileSaveChangesV13:'変更を保存'},
+      'zh-CN':{profileStartV13:'开始使用',profileSaveChangesV13:'保存更改'}
+    };
+    Object.keys(PROFILE_BUTTON_V13).forEach(function(lang){Object.assign(I18N[lang],PROFILE_BUTTON_V13[lang]);});
     function updateStaticUiV10() {
       var labels = {profileTitle:'profileTitle',profileDescription:'profileDescription',profileCountryLabel:'profileCountry',profileNicknameLabel:'profileNickname',profileSaveButton:'profileSave',boardMaxBadge:'boardMax',authRetry:'authRetry'};
       Object.keys(labels).forEach(function(id) { var el=document.getElementById(id); if(el) el.textContent=uiText(labels[id]); });
@@ -1761,7 +1792,8 @@
       updateStaticUiV9();
       updateStaticUiV10();
       updateProfileLabelsV12();
-      if (userCountry && userNickname) document.getElementById('profileSaveButton').textContent = uiText('profileSave');
+      updateCountryOptionsV13();
+      updateProfileSaveLabelV13();
       if (currentView === 'roomList') document.getElementById('headerSub').textContent = uiText('roomMax');
       if (currentView === 'chat') {
         var liveCount = roomPreviousUsers ? Object.keys(roomPreviousUsers).length : 0;
