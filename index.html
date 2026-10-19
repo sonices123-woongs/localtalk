@@ -214,10 +214,31 @@
 
       <footer id="chatInputBar" class="bg-white border-t border-slate-200 px-3.5 py-2.5 flex gap-2 items-center shrink-0 z-40 w-full">
         <input type="text" id="msgInput" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="질문이나 답변을 입력하세요..." class="flex-1 min-w-0 bg-slate-100 border-none rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <button type="button" onclick="openPlacePicker()" title="지도에서 장소 공유" aria-label="지도에서 장소 공유" class="bg-emerald-50 text-emerald-700 px-3 py-2.5 rounded-xl font-bold text-xs shrink-0 border border-emerald-200">📍 장소</button>
         <button id="sendBtn" onclick="sendMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center transition shadow-sm whitespace-nowrap shrink-0">
           전송
         </button>
       </footer>
+    </div>
+
+    <!-- v7: 채팅방에서 나가지 않고 장소를 고르는 지도 -->
+    <div id="placePicker" class="hidden fixed inset-0 z-[100] bg-slate-900/60 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="장소 공유">
+      <div class="bg-white rounded-2xl w-full max-w-xl h-full max-h-[760px] mx-auto flex flex-col overflow-hidden shadow-2xl">
+        <div class="flex items-center justify-between p-3 border-b gap-2">
+          <strong class="text-sm">📍 채팅방에 장소 공유</strong>
+          <button type="button" onclick="closePlacePicker()" class="px-3 py-2 rounded-lg bg-slate-100 text-sm" aria-label="닫기">✕</button>
+        </div>
+        <div class="flex gap-2 p-3">
+          <input id="placeSearchInput" class="flex-1 min-w-0 bg-slate-100 rounded-xl px-3 py-2 text-sm" placeholder="장소 이름 또는 주소 검색" onkeypress="if(event.key==='Enter') searchSharePlace()" maxlength="150">
+          <button type="button" onclick="searchSharePlace()" class="bg-indigo-600 text-white rounded-xl px-3 text-sm">검색</button>
+        </div>
+        <p class="px-3 pb-2 text-xs text-slate-500">장소를 검색하거나 지도에서 위치를 누르세요.</p>
+        <div id="sharePlaceMap" class="flex-1 min-h-[220px] bg-slate-100"></div>
+        <div class="p-3 border-t space-y-2">
+          <div id="selectedPlaceLabel" class="text-xs text-slate-600 break-words" aria-live="polite">아직 장소를 선택하지 않았습니다.</div>
+          <button type="button" id="confirmSharePlace" onclick="sendSharedPlace()" disabled class="w-full bg-indigo-600 disabled:bg-slate-300 text-white rounded-xl py-3 text-sm font-bold">이 장소를 채팅방에 공유</button>
+        </div>
+      </div>
     </div>
 
     <!-- [화면 5] 구글 지도 화면 -->
@@ -1249,6 +1270,94 @@
       }
     }
 
+    // v7: Existing RTDB schema remains unchanged. A place is encoded in the
+    // existing text field, so the published v5 security rules continue to work.
+    var PLACE_PREFIX = '[LocalTalkPlace:v1]';
+    var shareMap = null, shareMarker = null, selectedSharePlace = null;
+    var shareGeocoder = null;
+    function parseSharedPlace(text) {
+      if (typeof text !== 'string' || text.indexOf(PLACE_PREFIX) !== 0) return null;
+      try {
+        var p = JSON.parse(text.slice(PLACE_PREFIX.length));
+        if (!p || typeof p.name !== 'string' || typeof p.address !== 'string' ||
+            !Number.isFinite(p.lat) || !Number.isFinite(p.lng) ||
+            Math.abs(p.lat) > 90 || Math.abs(p.lng) > 180 ||
+            p.name.length > 150 || p.address.length > 350) return null;
+        return p;
+      } catch (e) { return null; }
+    }
+    function openPlacePicker() {
+      if (!requireAuth() || !currentCity || !currentRoom || !roomAdmissionReady) {
+        alert('채팅방에 입장한 뒤 장소를 공유할 수 있습니다.'); return;
+      }
+      selectedSharePlace = null;
+      document.getElementById('selectedPlaceLabel').textContent = '아직 장소를 선택하지 않았습니다.';
+      document.getElementById('confirmSharePlace').disabled = true;
+      document.getElementById('placePicker').classList.remove('hidden');
+      if (typeof google === 'undefined' || !google.maps) {
+        loadGoogleMapsScript(currentLang, initSharePlaceMap);
+      } else initSharePlaceMap();
+    }
+    function closePlacePicker() {
+      document.getElementById('placePicker').classList.add('hidden');
+    }
+    function initSharePlaceMap() {
+      if (document.getElementById('placePicker').classList.contains('hidden')) return;
+      if (!window.google || !google.maps) return;
+      var center = userLatLng || (currentCity && currentCity.lat && currentCity.lng ? {lat:currentCity.lat,lng:currentCity.lng} : {lat:37.5665,lng:126.9780});
+      shareMap = new google.maps.Map(document.getElementById('sharePlaceMap'), {center:center,zoom:13,streetViewControl:false,mapTypeControl:false});
+      shareGeocoder = new google.maps.Geocoder();
+      shareMap.addListener('click',function(event) {
+        var lat = event.latLng.lat(), lng = event.latLng.lng();
+        shareGeocoder.geocode({location:{lat:lat,lng:lng}},function(results,status) {
+          if (document.getElementById('placePicker').classList.contains('hidden')) return;
+          var label = status === 'OK' && results[0] ? results[0].formatted_address : lat.toFixed(5)+', '+lng.toFixed(5);
+          selectSharePlace(label,label,lat,lng);
+        });
+      });
+    }
+    function selectSharePlace(name,address,lat,lng) {
+      selectedSharePlace = {name:String(name).slice(0,150),address:String(address).slice(0,350),lat:lat,lng:lng};
+      if (shareMarker) shareMarker.setMap(null);
+      shareMarker = new google.maps.Marker({map:shareMap,position:{lat:lat,lng:lng}});
+      shareMap.panTo({lat:lat,lng:lng});
+      document.getElementById('selectedPlaceLabel').textContent = '선택한 장소: ' + selectedSharePlace.name;
+      document.getElementById('confirmSharePlace').disabled = false;
+    }
+    function searchSharePlace() {
+      var query = document.getElementById('placeSearchInput').value.trim();
+      if (!query || !shareGeocoder) return;
+      shareGeocoder.geocode({address:query},function(results,status) {
+        if (document.getElementById('placePicker').classList.contains('hidden')) return;
+        if (status !== 'OK' || !results[0]) { alert('장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.'); return; }
+        var r = results[0], lat=r.geometry.location.lat(), lng=r.geometry.location.lng();
+        selectSharePlace(query,r.formatted_address || query,lat,lng);
+        shareMap.setZoom(16);
+      });
+    }
+    function sendSharedPlace() {
+      if (!selectedSharePlace || !roomAdmissionReady || !currentRoom || !currentCity) return;
+      var payload = PLACE_PREFIX + JSON.stringify(selectedSharePlace);
+      if (payload.length > 2000) { alert('장소 정보가 너무 깁니다.'); return; }
+      sendChatText(payload);
+      closePlacePicker();
+    }
+    function renderPlaceCard(bubble,place,mine) {
+      bubble.className += ' min-w-[210px]';
+      var heading=document.createElement('div');
+      heading.className='font-bold text-sm mb-1';
+      heading.textContent='📍 '+place.name;
+      var address=document.createElement('div');
+      address.className='text-xs opacity-80 break-words mb-2';
+      address.textContent=place.address;
+      var link=document.createElement('a');
+      link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place.lat+','+place.lng);
+      link.target='_blank';link.rel='noopener noreferrer';
+      link.className='inline-block rounded-lg px-3 py-2 text-xs font-bold '+(mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
+      link.textContent='🗺️ Google 지도에서 보기 ↗';
+      bubble.append(heading,address,link);
+    }
+
     // Translation is display-only. It never writes to Firebase or modifies a message.
     // This endpoint is unofficial and may be unavailable, throttled, or blocked by CORS.
     function translationKey(msgId, text, lang) {
@@ -1395,8 +1504,9 @@
         bubble.className = 'max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' +
           (mine ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none');
         var message = document.createElement('div');
-        message.textContent = String(m.text || '');
-        bubble.appendChild(message);
+        var sharedPlace = parseSharedPlace(m.text);
+        if (sharedPlace) renderPlaceCard(bubble,sharedPlace,mine);
+        else { message.textContent = String(m.text || ''); bubble.appendChild(message); }
         var localTranslation = document.createElement('div');
         localTranslation.className = 'hidden mt-1.5 pt-1.5 border-t text-xs font-medium chat-bubble ' +
           (mine ? 'border-indigo-400/50 text-amber-200' : 'border-slate-200 text-indigo-700');
@@ -1407,7 +1517,8 @@
         button.className = 'mt-1 text-xs text-indigo-600 font-bold hover:underline block';
         button.textContent = currentLang === 'ko' ? '[번역하기]' : '[Translate]';
         wrapper.appendChild(button);
-        renderTranslation(m, localTranslation, button, mine);
+        if (sharedPlace) { button.classList.add('hidden'); localTranslation.classList.add('hidden'); }
+        else renderTranslation(m, localTranslation, button, mine);
         var time = document.createElement('span');
         time.className = 'text-[10px] text-slate-400 px-1 mt-0.5';
         time.textContent = String(m.time || '');
@@ -1420,9 +1531,12 @@
     }
 
     function sendMessage() {
-      if (!requireAuth()) return;
       var input = document.getElementById('msgInput');
       var text = input.value.trim();
+      sendChatText(text, input);
+    }
+    function sendChatText(text, input) {
+      if (!requireAuth()) return;
       if (!text || !currentCity || !currentRoom) return;
       if (!roomAdmissionReady) {
         alert('채팅방 입장 처리 중입니다. 잠시 후 다시 보내주세요.');
@@ -1451,11 +1565,10 @@
       }).catch(function(err) {
         console.error('Message send failed:', err);
         alert('메시지 전송에 실패했습니다. 다시 시도해 주세요.');
-        input.value = text;
+        if (input) input.value = text;
       });
 
-      input.value = '';
-      input.focus();
+      if (input) { input.value = ''; input.focus(); }
     }
 
     function changeLanguage(lang) {
