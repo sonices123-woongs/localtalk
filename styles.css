@@ -1,0 +1,135 @@
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    
+    * {
+      box-sizing: border-box !important;
+      -webkit-tap-highlight-color: transparent;
+    }
+    
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      background-color: #0f172a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 430px;
+      height: 100%;
+      max-height: 900px;
+      background-color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    @media (max-width: 640px) {
+      .app-container {
+        max-width: 100% !important;
+        max-height: 100% !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+    }
+
+    .scroll-area {
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .chat-bubble { 
+      word-break: break-all !important; 
+      overflow-wrap: anywhere !important; 
+    }
+
+    /* v11: Increase readable UI typography by approximately 20% without
+       changing the app shell width, city card borders or card padding. */
+    .app-container .text-\[10px\]:not(i) { font-size: 12px !important; }
+    .app-container .text-\[11px\]:not(i) { font-size: 13.2px !important; }
+    .app-container .text-\[12px\]:not(i) { font-size: 14.4px !important; }
+    .app-container .text-xs:not(i) { font-size: 14.4px !important; }
+    .app-container .text-sm:not(i) { font-size: 16.8px !important; }
+    .app-container .text-base:not(i) { font-size: 19.2px !important; }
+    .app-container .text-lg:not(i) { font-size: 21.6px !important; }
+    .app-container .text-xl:not(i) { font-size: 24px !important; }
+    .app-container .text-2xl:not(i) { font-size: 28.8px !important; }
+
+    /* Keep localized strings readable rather than clipping them at one line. */
+    .app-container button:not(.fa),
+    .app-container label,
+    .app-container p,
+    .app-container h2,
+    .app-container h3,
+    .app-container h4 { overflow-wrap: anywhere; }
+    .app-container button { line-height: 1.3; }
+    .app-container input, .app-container select, .app-container textarea { min-width: 0; }
+    .app-container #cityList h3,
+    .app-container #cityList p { white-space: normal !important; text-overflow: clip !important; overflow: visible !important; }
+    .app-container #cityList h3 { line-height: 1.18; }
+    .app-container #cityList p { line-height: 1.25; }
+    .app-container #cityList .city-online-badge { white-space: normal; text-align: center; line-height: 1.15; }
+    .app-container #cityList .city-enter-label { max-width: 72px; text-align: right; white-space: normal; }
+    .app-container #roomList button { white-space: normal; }
+    .app-container #chatMessages { overflow-wrap: anywhere; }
+    @media (max-width: 380px) {
+      .app-container #cityList .city-enter-label { max-width: 55px; }
+      .app-container #cityList .city-online-badge { max-width: 70px; }
+      .app-container #sharePlaceButton { padding-left: 8px; padding-right: 8px; }
+      .app-container #sendBtn { padding-left: 10px; padding-right: 10px; }
+    }
+
+    /* v19: mobile usability only; no changes to chat/board/Firebase logic. */
+    html, body { min-height: 100%; min-height: 100dvh; }
+    .app-container { height: 100dvh; min-height: 0; }
+    .app-container > main, .app-container #chatView, .app-container #chatScrollArea,
+    .app-container #mapView { min-height: 0; }
+    .app-container .scroll-area { overscroll-behavior-y: contain; }
+    .app-container input, .app-container textarea, .app-container select { touch-action: manipulation; }
+    .app-container button { touch-action: manipulation; }
+    .app-container :is(button, input, textarea, select):focus-visible {
+      outline: 2px solid #6366f1; outline-offset: 2px;
+    }
+    /* Do not trigger iOS auto-zoom when focusing fields. */
+    @media (max-width: 640px) {
+      .app-container { height: 100dvh; max-height: none; }
+      .app-container header { padding-top: max(14px, env(safe-area-inset-top, 0px)); }
+      .app-container > nav {
+        padding: 8px max(12px, env(safe-area-inset-right, 0px))
+                 max(8px, env(safe-area-inset-bottom, 0px))
+                 max(12px, env(safe-area-inset-left, 0px));
+        gap: 6px;
+      }
+      .app-container > nav button { min-height: 48px; min-width: 72px; padding: 4px 8px; border-radius: 12px; }
+      .app-container #chatView { padding-bottom: 0 !important; }
+      .app-container #chatInputBar {
+        padding: 8px max(10px, env(safe-area-inset-right, 0px))
+                 8px max(10px, env(safe-area-inset-left, 0px));
+        gap: 6px;
+      }
+      .app-container #msgInput { font-size: 16px !important; min-height: 44px; padding: 10px 12px; }
+      .app-container #sharePlaceButton, .app-container #sendBtn { min-height: 44px; }
+      .app-container #citySearch, .app-container #modalNickname,
+      .app-container #communityPostTitle, .app-container #communityPostBody,
+      .app-container #profileLanguage, .app-container #modalCountry,
+      .app-container #mapSearchInput { font-size: 16px !important; }
+      .app-container #homeView, .app-container #boardView,
+      .app-container #roomListView { padding-bottom: 20px !important; }
+      .app-container #chatScrollArea { padding: 12px !important; }
+      .app-container #communityNewButton,
+      .app-container #communityPublishButton,
+      .app-container #communityCancelButton { min-height: 44px; }
+    }
+    @media (max-width: 360px) {
+      .app-container header { padding-left: 10px; padding-right: 10px; }
+      .app-container #sharePlaceButton { padding-left: 7px; padding-right: 7px; }
+      .app-container #sendBtn { padding-left: 9px; padding-right: 9px; }
+      .app-container > nav button { min-width: 0; flex: 1; }
+    }
