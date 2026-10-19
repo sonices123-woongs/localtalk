@@ -1351,10 +1351,10 @@
       address.className='text-xs opacity-80 break-words mb-2';
       address.textContent=place.address;
       var link=document.createElement('a');
-      link.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(place.lat+','+place.lng);
+      link.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(place.lat+','+place.lng)+'&travelmode=walking&dir_action=navigate';
       link.target='_blank';link.rel='noopener noreferrer';
       link.className='inline-block rounded-lg px-3 py-2 text-xs font-bold '+(mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
-      link.textContent='🗺️ Google 지도에서 보기 ↗';
+      link.textContent='🚶 Google 지도 도보 길찾기 ↗';
       bubble.append(heading,address,link);
     }
 
