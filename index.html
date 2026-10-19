@@ -66,6 +66,42 @@
       word-break: break-all !important; 
       overflow-wrap: anywhere !important; 
     }
+
+    /* v11: Increase readable UI typography by approximately 20% without
+       changing the app shell width, city card borders or card padding. */
+    .app-container .text-\[10px\]:not(i) { font-size: 12px !important; }
+    .app-container .text-\[11px\]:not(i) { font-size: 13.2px !important; }
+    .app-container .text-\[12px\]:not(i) { font-size: 14.4px !important; }
+    .app-container .text-xs:not(i) { font-size: 14.4px !important; }
+    .app-container .text-sm:not(i) { font-size: 16.8px !important; }
+    .app-container .text-base:not(i) { font-size: 19.2px !important; }
+    .app-container .text-lg:not(i) { font-size: 21.6px !important; }
+    .app-container .text-xl:not(i) { font-size: 24px !important; }
+    .app-container .text-2xl:not(i) { font-size: 28.8px !important; }
+
+    /* Keep localized strings readable rather than clipping them at one line. */
+    .app-container button:not(.fa),
+    .app-container label,
+    .app-container p,
+    .app-container h2,
+    .app-container h3,
+    .app-container h4 { overflow-wrap: anywhere; }
+    .app-container button { line-height: 1.3; }
+    .app-container input, .app-container select, .app-container textarea { min-width: 0; }
+    .app-container #cityList h3,
+    .app-container #cityList p { white-space: normal !important; text-overflow: clip !important; overflow: visible !important; }
+    .app-container #cityList h3 { line-height: 1.18; }
+    .app-container #cityList p { line-height: 1.25; }
+    .app-container #cityList .city-online-badge { white-space: normal; text-align: center; line-height: 1.15; }
+    .app-container #cityList .city-enter-label { max-width: 72px; text-align: right; white-space: normal; }
+    .app-container #roomList button { white-space: normal; }
+    .app-container #chatMessages { overflow-wrap: anywhere; }
+    @media (max-width: 380px) {
+      .app-container #cityList .city-enter-label { max-width: 55px; }
+      .app-container #cityList .city-online-badge { max-width: 70px; }
+      .app-container #sharePlaceButton { padding-left: 8px; padding-right: 8px; }
+      .app-container #sendBtn { padding-left: 10px; padding-right: 10px; }
+    }
   </style>
 </head>
 <body>
@@ -732,14 +768,14 @@
               city.iconTag +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
-                  '<h3 class="font-extrabold text-slate-900 text-base leading-tight truncate">' + name + '</h3>' +
-                  '<span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
+                  '<h3 class="font-extrabold text-slate-900 text-base leading-tight">' + name + '</h3>' +
+                  '<span class="text-[10px] city-online-badge bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
                 '</div>' +
-                '<p class="text-[12px] text-slate-600 truncate mt-1 font-medium leading-tight">' + desc + '</p>' +
-                '<p class="text-[11px] text-indigo-600 font-semibold truncate mt-1 bg-indigo-50/80 px-1.5 py-0.5 rounded-md inline-block max-w-full">' + subText + '</p>' +
+                '<p class="text-[12px] text-slate-600 mt-1 font-medium leading-tight">' + desc + '</p>' +
+                '<p class="text-[11px] text-indigo-600 font-semibold mt-1 bg-indigo-50/80 px-1.5 py-0.5 rounded-md inline-block max-w-full">' + subText + '</p>' +
               '</div>' +
             '</div>' +
-            '<div class="text-xs font-bold text-indigo-600 shrink-0 flex items-center gap-1 ml-1">' +
+            '<div class="text-xs font-bold city-enter-label text-indigo-600 shrink-0 flex items-center gap-1 ml-1">' +
               '<span>' + t.enterShort + '</span>' +
               '<i class="fas fa-chevron-right text-[10px]"></i>' +
             '</div>' +
@@ -902,7 +938,7 @@
           '<div class="flex items-center gap-3 min-w-0 flex-1 pr-2">' +
             '<div class="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0"><i class="fas fa-hashtag"></i></div>' +
             '<div class="min-w-0 flex-1">' +
-              '<h4 class="font-extrabold text-slate-900 text-base leading-tight truncate">Room #' + rId + '</h4>' +
+              '<h4 class="font-extrabold text-slate-900 text-base leading-tight">Room #' + rId + '</h4>' +
               '<div class="mt-1">' + statusBadge + '</div>' +
             '</div>' +
           '</div>' +
