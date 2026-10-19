@@ -327,6 +327,12 @@
 
     var googleApiKey = "AIzaSyCDcZIBFRMNB6xXVYO58i6WwMVxEulQqa4";
     var currentLang = 'ko';
+    var autoTranslateEnabled = localStorage.getItem('localtalk_auto_translate') !== 'off';
+    var translationCache = new Map();
+    var translationPending = new Map();
+    var translationEpoch = 0;
+    var translationRoomKey = '';
+    var TRANSLATION_CACHE_LIMIT = 300;
     var currentCity = null;
     var currentRoom = null;
     var currentView = 'home';
@@ -1243,12 +1249,106 @@
       }
     }
 
+    // Translation is display-only. It never writes to Firebase or modifies a message.
+    // This endpoint is unofficial and may be unavailable, throttled, or blocked by CORS.
+    function translationKey(msgId, text, lang) {
+      return JSON.stringify([translationRoomKey, String(msgId), String(text), lang]);
+    }
+    function resetTranslationRoom() {
+      var key = currentCity && currentRoom ? currentCity.id + '/' + currentRoom : '';
+      if (key !== translationRoomKey) {
+        translationRoomKey = key;
+        translationEpoch++;
+        translationPending.clear();
+      }
+    }
+    function setAutoTranslate(enabled) {
+      autoTranslateEnabled = !!enabled;
+      localStorage.setItem('localtalk_auto_translate', enabled ? 'on' : 'off');
+      renderMessages(roomLatestMessages || []);
+    }
+    function getTranslationControls() {
+      var parent = document.getElementById('chatNoticeSub');
+      if (!parent) return;
+      var control = document.getElementById('autoTranslationControl');
+      if (!control) {
+        control = document.createElement('label');
+        control.id = 'autoTranslationControl';
+        control.className = 'flex items-center gap-1.5 mt-2 text-xs font-semibold text-indigo-700 cursor-pointer';
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = 'autoTranslationCheckbox';
+        checkbox.addEventListener('change', function() { setAutoTranslate(this.checked); });
+        var title = document.createElement('span');
+        title.id = 'autoTranslationLabel';
+        control.append(checkbox, title);
+        parent.insertAdjacentElement('afterend', control);
+      }
+      document.getElementById('autoTranslationCheckbox').checked = autoTranslateEnabled;
+      document.getElementById('autoTranslationLabel').textContent =
+        currentLang === 'ko' ? '받은 메시지 자동 번역 (한국어)' : 'Auto-translate received messages (' + currentLang + ')';
+    }
+    function translateMsg(msgId, text, targetLang, force) {
+      var lang = targetLang || currentLang;
+      var key = translationKey(msgId, text, lang);
+      if (!force && translationCache.has(key)) return Promise.resolve(translationCache.get(key));
+      if (translationPending.has(key)) return translationPending.get(key);
+      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' +
+        encodeURIComponent(lang) + '&dt=t&q=' + encodeURIComponent(text);
+      var request = fetch(url).then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      }).then(function(data) {
+        if (!Array.isArray(data) || !Array.isArray(data[0])) throw new Error('Invalid translation response');
+        var translated = data[0].map(function(part) { return part && part[0] || ''; }).join('').trim();
+        if (!translated) throw new Error('Empty translation');
+        translationCache.set(key, translated);
+        if (translationCache.size > TRANSLATION_CACHE_LIMIT) {
+          translationCache.delete(translationCache.keys().next().value);
+        }
+        return translated;
+      }).finally(function() { translationPending.delete(key); });
+      translationPending.set(key, request);
+      return request;
+    }
+    function renderTranslation(m, target, button, mine) {
+      var text = String(m.text || '');
+      var lang = currentLang;
+      var key = translationKey(m.id, text, lang);
+      var epoch = translationEpoch;
+      var roomKey = translationRoomKey;
+      function showResult(result) {
+        if (epoch !== translationEpoch || roomKey !== translationRoomKey || !target.isConnected || currentLang !== lang) return;
+        target.textContent = '🌐 ' + result;
+        target.classList.remove('hidden');
+        button.textContent = currentLang === 'ko' ? '다시 번역' : 'Translate again';
+        button.disabled = false;
+      }
+      function run(force) {
+        button.disabled = true;
+        button.textContent = currentLang === 'ko' ? '번역 중…' : 'Translating…';
+        translateMsg(m.id, text, lang, force).then(showResult).catch(function(err) {
+          console.warn('Translation unavailable:', err);
+          if (epoch !== translationEpoch || !target.isConnected) return;
+          target.textContent = currentLang === 'ko' ? '번역할 수 없습니다. 원문을 확인해 주세요.' : 'Translation unavailable. Original shown above.';
+          target.classList.remove('hidden');
+          button.disabled = false;
+          button.textContent = currentLang === 'ko' ? '다시 시도' : 'Retry translation';
+        });
+      }
+      button.addEventListener('click', function() { run(true); });
+      if (translationCache.has(key)) showResult(translationCache.get(key));
+      else if (!mine && autoTranslateEnabled && text) run(false);
+    }
+
     // All user-controlled content is inserted as text, never parsed as HTML.
     function renderMessages(msgs) {
+      resetTranslationRoom();
       var container = document.getElementById('messageList');
       container.replaceChildren();
       var t = I18N[currentLang] || I18N['ko'];
       if (!roomHistoryReady) return;
+      getTranslationControls();
       var visibleMsgs = (msgs || []).filter(function(m) {
         return m && !roomEntryMessageKeys.has(m.id);
       });
@@ -1297,15 +1397,7 @@
         var message = document.createElement('div');
         message.textContent = String(m.text || '');
         bubble.appendChild(message);
-        if (m.trans) {
-          var translation = document.createElement('div');
-          translation.className = 'mt-1.5 pt-1.5 border-t text-xs font-medium chat-bubble ' +
-            (mine ? 'border-indigo-400/50 text-amber-200' : 'border-slate-200 text-indigo-700');
-          translation.textContent = String(m.trans);
-          bubble.appendChild(translation);
-        }
         var localTranslation = document.createElement('div');
-        localTranslation.id = 'translation-' + String(m.id || '');
         localTranslation.className = 'hidden mt-1.5 pt-1.5 border-t text-xs font-medium chat-bubble ' +
           (mine ? 'border-indigo-400/50 text-amber-200' : 'border-slate-200 text-indigo-700');
         bubble.appendChild(localTranslation);
@@ -1313,9 +1405,9 @@
         var button = document.createElement('button');
         button.type = 'button';
         button.className = 'mt-1 text-xs text-indigo-600 font-bold hover:underline block';
-        button.textContent = '[번역하기]';
-        button.addEventListener('click', function() { translateMsg(m.id, String(m.text || '')); });
+        button.textContent = currentLang === 'ko' ? '[번역하기]' : '[Translate]';
         wrapper.appendChild(button);
+        renderTranslation(m, localTranslation, button, mine);
         var time = document.createElement('span');
         time.className = 'text-[10px] text-slate-400 px-1 mt-0.5';
         time.textContent = String(m.time || '');
@@ -1325,36 +1417,6 @@
       });
       var scrollArea = document.getElementById('chatScrollArea');
       scrollArea.scrollTop = scrollArea.scrollHeight;
-    }
-
-    function translateMsg(msgId, text) {
-      var targetLang = currentLang;
-      if (currentLang === 'ko') {
-        var hasKorean = /[가-힣]/.test(text);
-        targetLang = hasKorean ? 'en' : 'ko';
-      }
-
-      var url = 'https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=' + targetLang + '&dt=t&q=' + encodeURIComponent(text);
-
-      fetch(url)
-        .then(function(res) { return res.json(); })
-        .then(function(data) {
-          if (data && data[0]) {
-            var fullTrans = '';
-            for (var i = 0; i < data[0].length; i++) {
-              if (data[0][i][0]) fullTrans += data[0][i][0];
-            }
-            // Translation is local-only; never mutate another author's message.
-            var resultNode = document.getElementById('translation-' + msgId);
-            if (resultNode) {
-              resultNode.textContent = '[번역] ' + fullTrans;
-              resultNode.classList.remove('hidden');
-            }
-          }
-        })
-        .catch(function(err) {
-          alert('번역 실패: 인터넷 연결을 확인해 주세요.');
-        });
     }
 
     function sendMessage() {
@@ -1398,6 +1460,9 @@
 
     function changeLanguage(lang) {
       currentLang = lang;
+      translationEpoch++;
+      translationPending.clear();
+      if (currentView === 'chat') renderMessages(roomLatestMessages || []);
       var t = I18N[currentLang] || I18N['ko'];
 
       document.getElementById('headerSub').innerText = t.appSub;
