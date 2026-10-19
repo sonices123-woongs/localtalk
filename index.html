@@ -265,8 +265,15 @@
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
 
-    var myUserId = localStorage.getItem('my_chat_uid') || 'user_' + Math.floor(Math.random() * 10000);
-    localStorage.setItem('my_chat_uid', myUserId);
+    // A stable local identifier is not authentication. Enforce permissions server-side.
+    function getOrCreateLocalUserId() {
+      var existing = localStorage.getItem('my_chat_uid');
+      if (existing && /^user_[0-9a-f-]{36}$/i.test(existing)) return existing;
+      var id = 'user_' + crypto.randomUUID();
+      localStorage.setItem('my_chat_uid', id);
+      return id;
+    }
+    var myUserId = getOrCreateLocalUserId();
 
     var userCountry = localStorage.getItem('my_user_country') || '';
     var userNickname = localStorage.getItem('my_user_nickname') || '';
@@ -286,6 +293,7 @@
     var roomUserCounts = {};
     var currentRoomUsersRef = null;
     var roomPresenceListener = null;
+    var messageListenerRef = null;
 
     function checkUserProfile() {
       if (!userCountry || !userNickname) {
@@ -781,8 +789,16 @@
         return;
       }
 
+      // UI-only capacity checks are not authoritative; use Firebase rules and
+      // a transactional server-side admission design before public launch.
+      if ((roomUserCounts[roomId] || 0) >= 4) {
+        alert('정원이 가득 찬 채팅방입니다.');
+        return;
+      }
+      stopRoomListeners();
       if (currentRoomUsersRef) {
         currentRoomUsersRef.remove();
+        currentRoomUsersRef = null;
       }
 
       currentRoom = roomId;
@@ -811,6 +827,13 @@
       listenRealtimeMessages();
     }
 
+    function stopRoomListeners() {
+      if (roomPresenceListener) roomPresenceListener.off();
+      if (messageListenerRef) messageListenerRef.off();
+      roomPresenceListener = null;
+      messageListenerRef = null;
+    }
+
     function listenRoomPresence() {
       if (roomPresenceListener) roomPresenceListener.off();
 
@@ -824,14 +847,15 @@
         var cityName = getCityName(currentCity);
         document.getElementById('headerSub').innerText = '👥 현재 ' + userCount + '명 참여 중';
 
-        if (userCount === 0) {
-          roomRef.child('messages').remove();
-        }
+        // Do not delete all messages from a presence callback. A trusted
+        // backend retention job should handle any intended expiry policy.
       });
     }
 
     function listenRealtimeMessages() {
+      if (messageListenerRef) messageListenerRef.off();
       var msgsRef = db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages');
+      messageListenerRef = msgsRef;
       msgsRef.on('value', function(snapshot) {
         var data = snapshot.val() || {};
         var msgList = [];
@@ -1001,6 +1025,7 @@
         var leaveConfirm = confirm("채팅방을 나가시겠습니까?\n나가시면 이전 대화 내용은 초기화될 수 있습니다.");
         if (!leaveConfirm) return;
 
+        stopRoomListeners();
         if (currentRoomUsersRef) {
           currentRoomUsersRef.remove();
           currentRoomUsersRef = null;
@@ -1064,61 +1089,66 @@
       }
     }
 
+    // All user-controlled content is inserted as text, never parsed as HTML.
     function renderMessages(msgs) {
       var container = document.getElementById('messageList');
-      container.innerHTML = '';
+      container.replaceChildren();
       var t = I18N[currentLang] || I18N['ko'];
-
       if (!msgs || msgs.length === 0) {
-        container.innerHTML = '<div class="text-center py-10 text-slate-400 text-xs">' + t.noMsg + '</div>';
+        var empty = document.createElement('div');
+        empty.className = 'text-center py-10 text-slate-400 text-xs';
+        empty.textContent = t.noMsg;
+        container.appendChild(empty);
         return;
       }
-
-      for (var i = 0; i < msgs.length; i++) {
-        var m = msgs[i];
-
+      msgs.forEach(function(m) {
+        if (!m || typeof m !== 'object') return;
+        if (m.isSystem && m.uid === myUserId) return;
         if (m.isSystem) {
-          if (m.uid && m.uid === myUserId) continue;
-          
-          var sysCard = '<div class="flex justify-center my-1 w-full">' +
-            '<span class="bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold shadow-xs">💬 ' + escapeHtml(m.text) + '</span>' +
-          '</div>';
-          container.innerHTML += sysCard;
-          continue;
+          var sysWrap = document.createElement('div');
+          sysWrap.className = 'flex justify-center my-1 w-full';
+          var sysText = document.createElement('span');
+          sysText.className = 'bg-slate-200/80 text-slate-600 text-xs px-3.5 py-1 rounded-full font-bold';
+          sysText.textContent = '💬 ' + String(m.text || '');
+          sysWrap.appendChild(sysText);
+          container.appendChild(sysWrap);
+          return;
         }
-
-        var isMyMsg = (m.uid === myUserId);
-
-        var transBtnHtml = '<button onclick="translateMsg(\'' + m.id + '\', \'' + escapeHtml(m.text) + '\')" class="mt-1 text-xs text-indigo-600 font-bold hover:underline block">[번역하기]</button>';
-        
-        var transBoxHtml = '';
+        var mine = m.uid === myUserId;
+        var wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-col w-full ' + (mine ? 'items-end' : 'items-start');
+        var sender = document.createElement('span');
+        sender.className = 'text-xs font-bold text-slate-500 px-1 mb-0.5';
+        sender.textContent = mine ? getFormattedMySender() + ' (나)' : String(m.sender || '');
+        wrapper.appendChild(sender);
+        var bubble = document.createElement('div');
+        bubble.className = 'max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' +
+          (mine ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none');
+        var message = document.createElement('div');
+        message.textContent = String(m.text || '');
+        bubble.appendChild(message);
         if (m.trans) {
-          if (isMyMsg) {
-            transBoxHtml = '<div class="mt-1.5 pt-1.5 border-t border-indigo-400/50 text-xs text-amber-200 font-medium chat-bubble">' + m.trans + '</div>';
-          } else {
-            transBoxHtml = '<div class="mt-1.5 pt-1.5 border-t border-slate-200 text-xs text-indigo-700 font-medium chat-bubble">' + m.trans + '</div>';
-          }
+          var translation = document.createElement('div');
+          translation.className = 'mt-1.5 pt-1.5 border-t text-xs font-medium chat-bubble ' +
+            (mine ? 'border-indigo-400/50 text-amber-200' : 'border-slate-200 text-indigo-700');
+          translation.textContent = String(m.trans);
+          bubble.appendChild(translation);
         }
-
-        var senderName = isMyMsg ? getFormattedMySender() + ' (나)' : m.sender;
-
-        var msgCard = '<div class="flex flex-col w-full ' + (isMyMsg ? 'items-end' : 'items-start') + '">' +
-          '<span class="text-xs font-bold text-slate-500 px-1 mb-0.5">' + senderName + '</span>' +
-          '<div class="max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' + (isMyMsg ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white border border-slate-200 text-slate-800 shadow-sm rounded-tl-none') + '">' +
-            escapeHtml(m.text) + transBoxHtml +
-          '</div>' +
-          transBtnHtml +
-          '<span class="text-[10px] text-slate-400 px-1 mt-0.5">' + m.time + '</span>' +
-        '</div>';
-        container.innerHTML += msgCard;
-      }
-
+        wrapper.appendChild(bubble);
+        var button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'mt-1 text-xs text-indigo-600 font-bold hover:underline block';
+        button.textContent = '[번역하기]';
+        button.addEventListener('click', function() { translateMsg(m.id, String(m.text || '')); });
+        wrapper.appendChild(button);
+        var time = document.createElement('span');
+        time.className = 'text-[10px] text-slate-400 px-1 mt-0.5';
+        time.textContent = String(m.time || '');
+        wrapper.appendChild(time);
+        container.appendChild(wrapper);
+      });
       var scrollArea = document.getElementById('chatScrollArea');
       scrollArea.scrollTop = scrollArea.scrollHeight;
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     function translateMsg(msgId, text) {
@@ -1150,6 +1180,10 @@
       var input = document.getElementById('msgInput');
       var text = input.value.trim();
       if (!text || !currentCity || !currentRoom) return;
+      if (text.length > 2000) {
+        alert('메시지는 2,000자 이하로 입력해 주세요.');
+        return;
+      }
 
       var now = new Date();
       var hours = now.getHours();
