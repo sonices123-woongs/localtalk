@@ -12,6 +12,7 @@
   <!-- Firebase SDK (v9 호환 모드) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -70,6 +71,10 @@
 <body>
 
   <div class="app-container sm:rounded-[36px] border-slate-700 sm:border-[8px]">
+    <div id="authStatus" role="status" aria-live="polite" class="absolute inset-0 z-[110] bg-slate-900/90 text-white flex flex-col items-center justify-center p-8 text-center gap-4">
+      <p id="authStatusText" class="text-sm font-bold">안전한 연결을 준비하고 있습니다...</p>
+      <button id="authRetry" type="button" class="hidden bg-indigo-600 rounded-xl px-5 py-3 text-sm font-bold" onclick="startAnonymousAuth()">다시 시도</button>
+    </div>
 
     <!-- 0. 최초 프로필 설정 모달 -->
     <div id="profileModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -265,15 +270,50 @@
     firebase.initializeApp(firebaseConfig);
     var db = firebase.database();
 
-    // A stable local identifier is not authentication. Enforce permissions server-side.
-    function getOrCreateLocalUserId() {
-      var existing = localStorage.getItem('my_chat_uid');
-      if (existing && /^user_[0-9a-f-]{36}$/i.test(existing)) return existing;
-      var id = 'user_' + crypto.randomUUID();
-      localStorage.setItem('my_chat_uid', id);
-      return id;
+    // The Firebase Auth UID, not a localStorage value, is the trusted user ID.
+    var auth = firebase.auth();
+    var myUserId = null;
+    var authReady = false;
+    var cityPresenceRef = null;
+    var cityPresenceListenerRef = null;
+    var roomListListenerRef = null;
+
+    function requireAuth() {
+      if (authReady && auth.currentUser && myUserId === auth.currentUser.uid) return true;
+      alert('연결 중입니다. 잠시 후 다시 시도해 주세요.');
+      return false;
     }
-    var myUserId = getOrCreateLocalUserId();
+
+    function startAnonymousAuth() {
+      var status = document.getElementById('authStatus');
+      document.getElementById('authStatusText').textContent = '안전한 연결을 준비하고 있습니다...';
+      document.getElementById('authRetry').classList.add('hidden');
+      status.classList.remove('hidden');
+      auth.signInAnonymously().catch(function(error) {
+        console.error('Firebase authentication failed:', error.code);
+        document.getElementById('authStatusText').textContent = '로그인 연결에 실패했습니다. 인터넷 연결과 Firebase 설정을 확인해 주세요. (' + error.code + ')';
+        document.getElementById('authRetry').classList.remove('hidden');
+      });
+    }
+
+    auth.onAuthStateChanged(function(user) {
+      if (!user) {
+        authReady = false;
+        myUserId = null;
+        startAnonymousAuth();
+        return;
+      }
+      if (authReady && myUserId === user.uid) return;
+      myUserId = user.uid;
+      authReady = true;
+      document.getElementById('authStatus').classList.add('hidden');
+      listenCityUsers();
+    }, function(error) {
+      authReady = false;
+      console.error('Auth state error:', error);
+      document.getElementById('authStatusText').textContent = '인증 상태를 확인할 수 없습니다. 다시 시도해 주세요.';
+      document.getElementById('authRetry').classList.remove('hidden');
+    });
 
     var userCountry = localStorage.getItem('my_user_country') || '';
     var userNickname = localStorage.getItem('my_user_nickname') || '';
@@ -294,6 +334,7 @@
     var currentRoomUsersRef = null;
     var roomPresenceListener = null;
     var messageListenerRef = null;
+    var roomAdmissionReady = false;
 
     function checkUserProfile() {
       if (!userCountry || !userNickname) {
@@ -327,7 +368,7 @@
       document.getElementById('profileModal').classList.add('hidden');
       updateHeaderUserLabel();
 
-      if (currentRoomUsersRef) {
+      if (currentRoomUsersRef && authReady) {
         var flagOnly = userCountry.split(' ')[0];
         currentRoomUsersRef.set({ name: flagOnly + ' ' + userNickname, joinedAt: Date.now() });
       }
@@ -572,7 +613,9 @@
     }
 
     function listenCityUsers() {
+      if (!authReady || cityPresenceListenerRef) return;
       var presenceRef = db.ref('presence');
+      cityPresenceListenerRef = presenceRef;
       presenceRef.on('value', function(snapshot) {
         var data = snapshot.val() || {};
         var counts = {};
@@ -626,6 +669,7 @@
     }
 
     function openCityBoard(cityId) {
+      if (!requireAuth()) return;
       for (var i = 0; i < CITIES.length; i++) {
         if (CITIES[i].id === cityId) {
           currentCity = CITIES[i];
@@ -634,9 +678,12 @@
       }
       if (!currentCity) return;
 
-      var userPresenceRef = db.ref('presence/' + myUserId);
-      userPresenceRef.set({ cityId: currentCity.id, lastSeen: Date.now() });
-      userPresenceRef.onDisconnect().remove();
+      if (cityPresenceRef) cityPresenceRef.onDisconnect().cancel();
+      cityPresenceRef = db.ref('presence/' + myUserId);
+      cityPresenceRef.onDisconnect().remove();
+      cityPresenceRef.set({ cityId: currentCity.id, lastSeen: firebase.database.ServerValue.TIMESTAMP }).catch(function(err) {
+        console.error('Presence update failed:', err);
+      });
 
       currentView = 'board';
 
@@ -721,7 +768,7 @@
     }
 
     function openChatRoomList() {
-      if (!currentCity) return;
+      if (!currentCity || !requireAuth()) return;
       currentView = 'roomList';
 
       document.getElementById('boardView').classList.add('hidden');
@@ -737,7 +784,9 @@
       document.getElementById('roomListNoticeTitle').innerText = t.roomNoticeTitle;
       document.getElementById('roomListNoticeSub').innerText = t.roomNoticeSub;
 
+      if (roomListListenerRef) roomListListenerRef.off();
       var roomsRef = db.ref('rooms/' + currentCity.id);
+      roomListListenerRef = roomsRef;
       roomsRef.on('value', function(snapshot) {
         var data = snapshot.val() || {};
         roomUserCounts = {};
@@ -784,6 +833,7 @@
     }
 
     function enterSpecificChatRoom(roomId) {
+      if (!requireAuth()) return;
       if (!userCountry || !userNickname) {
         openProfileModal();
         return;
@@ -800,16 +850,24 @@
         currentRoomUsersRef.remove();
         currentRoomUsersRef = null;
       }
+      if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
 
       currentRoom = roomId;
+      roomAdmissionReady = false;
       currentView = 'chat';
 
       var flagOnly = userCountry.split(' ')[0];
       var myDisplayName = flagOnly + ' ' + userNickname;
 
       currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
-      currentRoomUsersRef.set({ name: myDisplayName, joinedAt: Date.now() });
       currentRoomUsersRef.onDisconnect().remove();
+      currentRoomUsersRef.set({ name: myDisplayName, joinedAt: firebase.database.ServerValue.TIMESTAMP }).then(function() {
+        roomAdmissionReady = true;
+      }).catch(function(err) {
+        console.error('Room admission failed:', err);
+        alert('채팅방 입장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        goBackFromFailedAdmission();
+      });
 
       document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
@@ -827,7 +885,17 @@
       listenRealtimeMessages();
     }
 
+    function goBackFromFailedAdmission() {
+      stopRoomListeners();
+      roomAdmissionReady = false;
+      currentRoomUsersRef = null;
+      document.getElementById('chatView').classList.add('hidden');
+      document.getElementById('chatView').classList.remove('flex');
+      openChatRoomList();
+    }
+
     function stopRoomListeners() {
+      roomAdmissionReady = false;
       if (roomPresenceListener) roomPresenceListener.off();
       if (messageListenerRef) messageListenerRef.off();
       roomPresenceListener = null;
@@ -1032,8 +1100,13 @@
         }
         openChatRoomList();
       } else if (currentView === 'roomList') {
+        if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
         openCityBoard(currentCity.id);
       } else {
+        stopRoomListeners();
+        if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
+        if (currentRoomUsersRef) { currentRoomUsersRef.remove(); currentRoomUsersRef = null; }
+        if (cityPresenceRef) { cityPresenceRef.remove(); cityPresenceRef = null; }
         currentCity = null;
         currentRoom = null;
         currentView = 'home';
@@ -1068,6 +1141,13 @@
         goBack();
       } else if (tabName === 'map') {
         tMap.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
+        if (currentRoomUsersRef) {
+          stopRoomListeners();
+          currentRoomUsersRef.remove();
+          currentRoomUsersRef = null;
+          currentRoom = null;
+        }
+        if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
         currentView = 'map';
 
         document.getElementById('homeView').classList.add('hidden');
@@ -1134,6 +1214,11 @@
           translation.textContent = String(m.trans);
           bubble.appendChild(translation);
         }
+        var localTranslation = document.createElement('div');
+        localTranslation.id = 'translation-' + String(m.id || '');
+        localTranslation.className = 'hidden mt-1.5 pt-1.5 border-t text-xs font-medium chat-bubble ' +
+          (mine ? 'border-indigo-400/50 text-amber-200' : 'border-slate-200 text-indigo-700');
+        bubble.appendChild(localTranslation);
         wrapper.appendChild(bubble);
         var button = document.createElement('button');
         button.type = 'button';
@@ -1168,7 +1253,12 @@
             for (var i = 0; i < data[0].length; i++) {
               if (data[0][i][0]) fullTrans += data[0][i][0];
             }
-            db.ref('rooms/' + currentCity.id + '/' + currentRoom + '/messages/' + msgId + '/trans').set('[번역] ' + fullTrans);
+            // Translation is local-only; never mutate another author's message.
+            var resultNode = document.getElementById('translation-' + msgId);
+            if (resultNode) {
+              resultNode.textContent = '[번역] ' + fullTrans;
+              resultNode.classList.remove('hidden');
+            }
           }
         })
         .catch(function(err) {
@@ -1177,9 +1267,14 @@
     }
 
     function sendMessage() {
+      if (!requireAuth()) return;
       var input = document.getElementById('msgInput');
       var text = input.value.trim();
       if (!text || !currentCity || !currentRoom) return;
+      if (!roomAdmissionReady) {
+        alert('채팅방 입장 처리 중입니다. 잠시 후 다시 보내주세요.');
+        return;
+      }
       if (text.length > 2000) {
         alert('메시지는 2,000자 이하로 입력해 주세요.');
         return;
@@ -1200,6 +1295,10 @@
         sender: myDisplayName,
         text: text,
         time: timeStr
+      }).catch(function(err) {
+        console.error('Message send failed:', err);
+        alert('메시지 전송에 실패했습니다. 다시 시도해 주세요.');
+        input.value = text;
       });
 
       input.value = '';
@@ -1250,7 +1349,7 @@
     }
 
     checkUserProfile();
-    listenCityUsers();
+    // The database listeners start only after Firebase authentication succeeds.
   </script>
 </body>
 </html>
