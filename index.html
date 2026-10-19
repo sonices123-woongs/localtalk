@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   
   <title>Local Talk - 실시간 현지인 Q&A</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -101,6 +101,54 @@
       .app-container #cityList .city-online-badge { max-width: 70px; }
       .app-container #sharePlaceButton { padding-left: 8px; padding-right: 8px; }
       .app-container #sendBtn { padding-left: 10px; padding-right: 10px; }
+    }
+
+    /* v19: mobile usability only; no changes to chat/board/Firebase logic. */
+    html, body { min-height: 100%; min-height: 100dvh; }
+    .app-container { height: 100dvh; min-height: 0; }
+    .app-container > main, .app-container #chatView, .app-container #chatScrollArea,
+    .app-container #mapView { min-height: 0; }
+    .app-container .scroll-area { overscroll-behavior-y: contain; }
+    .app-container input, .app-container textarea, .app-container select { touch-action: manipulation; }
+    .app-container button { touch-action: manipulation; }
+    .app-container :is(button, input, textarea, select):focus-visible {
+      outline: 2px solid #6366f1; outline-offset: 2px;
+    }
+    /* Do not trigger iOS auto-zoom when focusing fields. */
+    @media (max-width: 640px) {
+      .app-container { height: 100dvh; max-height: none; }
+      .app-container header { padding-top: max(14px, env(safe-area-inset-top, 0px)); }
+      .app-container > nav {
+        padding: 8px max(12px, env(safe-area-inset-right, 0px))
+                 max(8px, env(safe-area-inset-bottom, 0px))
+                 max(12px, env(safe-area-inset-left, 0px));
+        gap: 6px;
+      }
+      .app-container > nav button { min-height: 48px; min-width: 72px; padding: 4px 8px; border-radius: 12px; }
+      .app-container #chatView { padding-bottom: 0 !important; }
+      .app-container #chatInputBar {
+        padding: 8px max(10px, env(safe-area-inset-right, 0px))
+                 8px max(10px, env(safe-area-inset-left, 0px));
+        gap: 6px;
+      }
+      .app-container #msgInput { font-size: 16px !important; min-height: 44px; padding: 10px 12px; }
+      .app-container #sharePlaceButton, .app-container #sendBtn { min-height: 44px; }
+      .app-container #citySearch, .app-container #modalNickname,
+      .app-container #communityPostTitle, .app-container #communityPostBody,
+      .app-container #profileLanguage, .app-container #modalCountry,
+      .app-container #mapSearchInput { font-size: 16px !important; }
+      .app-container #homeView, .app-container #boardView,
+      .app-container #roomListView { padding-bottom: 20px !important; }
+      .app-container #chatScrollArea { padding: 12px !important; }
+      .app-container #communityNewButton,
+      .app-container #communityPublishButton,
+      .app-container #communityCancelButton { min-height: 44px; }
+    }
+    @media (max-width: 360px) {
+      .app-container header { padding-left: 10px; padding-right: 10px; }
+      .app-container #sharePlaceButton { padding-left: 7px; padding-right: 7px; }
+      .app-container #sendBtn { padding-left: 9px; padding-right: 9px; }
+      .app-container > nav button { min-width: 0; flex: 1; }
     }
   </style>
 </head>
