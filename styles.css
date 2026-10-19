@@ -133,3 +133,28 @@
       .app-container #sendBtn { padding-left: 9px; padding-right: 9px; }
       .app-container > nav button { min-width: 0; flex: 1; }
     }
+
+/* v20.2: fixed board intro/tips and write toolbar; only traveler posts scroll. */
+.app-container #boardView:not(.hidden) {
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+.app-container #boardFixedArea {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 60%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+.app-container #boardScrollablePosts {
+  overflow-y: auto !important;
+  flex: 1 1 0%;
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
