@@ -214,7 +214,7 @@
 
       <footer id="chatInputBar" class="bg-white border-t border-slate-200 px-3.5 py-2.5 flex gap-2 items-center shrink-0 z-40 w-full">
         <input type="text" id="msgInput" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="질문이나 답변을 입력하세요..." class="flex-1 min-w-0 bg-slate-100 border-none rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <button type="button" onclick="openPlacePicker()" title="지도에서 장소 공유" aria-label="지도에서 장소 공유" class="bg-emerald-50 text-emerald-700 px-3 py-2.5 rounded-xl font-bold text-xs shrink-0 border border-emerald-200">📍 장소</button>
+        <button type="button" id="sharePlaceButton" onclick="openPlacePicker()" title="지도에서 장소 공유" aria-label="지도에서 장소 공유" class="bg-emerald-50 text-emerald-700 px-3 py-2.5 rounded-xl font-bold text-xs shrink-0 border border-emerald-200">📍 장소</button>
         <button id="sendBtn" onclick="sendMessage()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold text-xs flex items-center justify-center transition shadow-sm whitespace-nowrap shrink-0">
           전송
         </button>
@@ -230,9 +230,9 @@
         </div>
         <div class="flex gap-2 p-3">
           <input id="placeSearchInput" class="flex-1 min-w-0 bg-slate-100 rounded-xl px-3 py-2 text-sm" placeholder="장소 이름 또는 주소 검색" onkeypress="if(event.key==='Enter') searchSharePlace()" maxlength="150">
-          <button type="button" onclick="searchSharePlace()" class="bg-indigo-600 text-white rounded-xl px-3 text-sm">검색</button>
+          <button type="button" id="placeSearchButton" onclick="searchSharePlace()" class="bg-indigo-600 text-white rounded-xl px-3 text-sm">검색</button>
         </div>
-        <p class="px-3 pb-2 text-xs text-slate-500">장소를 검색하거나 지도에서 위치를 누르세요.</p>
+        <p id="placeHelp" class="px-3 pb-2 text-xs text-slate-500">장소를 검색하거나 지도에서 위치를 누르세요.</p>
         <div id="sharePlaceMap" class="flex-1 min-h-[220px] bg-slate-100"></div>
         <div class="p-3 border-t space-y-2">
           <div id="selectedPlaceLabel" class="text-xs text-slate-600 break-words" aria-live="polite">아직 장소를 선택하지 않았습니다.</div>
@@ -525,78 +525,101 @@
       }
     };
 
+    // v9: localized static interface copy. Translation of user chat messages is separate.
+    var UI_V9 = {
+      ko: {enterShort:'입장', home:'홈', map:'지역지도', my:'마이', place:'📍 장소', placeTitle:'📍 채팅방에 장소 공유', placeSearch:'장소 이름 또는 주소 검색', search:'검색', placeHelp:'장소를 검색하거나 지도에서 위치를 누르세요.', placeEmpty:'아직 장소를 선택하지 않았습니다.', placeShare:'이 장소를 채팅방에 공유', translateAuto:'받은 메시지 자동 번역 (한국어)', selected:'선택한 장소: ', walking:'🚶 Google 도보 길찾기 ↗', driving:'🚗 Google 자동차 길찾기 ↗', naver:'🧭 네이버 지도에서 장소 찾기 ↗', mapTip:'한국에서 Google 경로가 없으면 네이버 지도에서 길찾기를 선택하세요.', translate:'[번역하기]', translating:'번역 중…', retry:'다시 시도', again:'다시 번역', failed:'번역할 수 없습니다. 원문을 확인해 주세요.'},
+      en: {enterShort:'Enter', home:'Home', map:'Map', my:'My', place:'📍 Place', placeTitle:'📍 Share a place in chat', placeSearch:'Search place or address', search:'Search', placeHelp:'Search for a place or tap the map.', placeEmpty:'No place selected yet.', placeShare:'Share this place in chat', translateAuto:'Auto-translate received messages (English)', selected:'Selected place: ', walking:'🚶 Google walking directions ↗', driving:'🚗 Google driving directions ↗', naver:'🧭 Find on Naver Map ↗', mapTip:'In Korea, if Google has no route, open Naver Map and choose Directions.', translate:'[Translate]', translating:'Translating…', retry:'Retry translation', again:'Translate again', failed:'Translation unavailable. Original shown above.'},
+      ja: {enterShort:'入場', home:'ホーム', map:'地図', my:'マイ', place:'📍 場所', placeTitle:'📍 チャットに場所を共有', placeSearch:'場所名または住所を検索', search:'検索', placeHelp:'場所を検索するか地図をタップしてください。', placeEmpty:'場所が未選択です。', placeShare:'この場所を共有', translateAuto:'受信メッセージを自動翻訳（日本語）', selected:'選択した場所：', walking:'🚶 Google 徒歩ルート ↗', driving:'🚗 Google 車ルート ↗', naver:'🧭 NAVER地図で探す ↗', mapTip:'韓国でGoogleの経路が表示されない場合はNAVER地図でルート検索してください。', translate:'[翻訳]', translating:'翻訳中…', retry:'再試行', again:'再翻訳', failed:'翻訳できません。原文をご確認ください。'},
+      'zh-CN': {enterShort:'进入', home:'首页', map:'地图', my:'我的', place:'📍 地点', placeTitle:'📍 在聊天室分享地点', placeSearch:'搜索地点名称或地址', search:'搜索', placeHelp:'搜索地点或点击地图。', placeEmpty:'尚未选择地点。', placeShare:'分享到聊天室', translateAuto:'自动翻译收到的消息（中文）', selected:'已选地点：', walking:'🚶 Google 步行路线 ↗', driving:'🚗 Google 驾车路线 ↗', naver:'🧭 在NAVER地图查找 ↗', mapTip:'在韩国若Google无路线，请在NAVER地图中选择路线导航。', translate:'[翻译]', translating:'翻译中…', retry:'重试', again:'重新翻译', failed:'翻译不可用，请查看原文。'}
+    };
+    Object.keys(UI_V9).forEach(function(lang) { Object.assign(I18N[lang], UI_V9[lang]); });
+    function updateStaticUiV9() {
+      var t = I18N[currentLang] || I18N.ko;
+      var items = [
+        ['#tabHome span',t.home], ['#tabMap span',t.map], ['#tabMy span',t.my],
+        ['#placePicker strong',t.placeTitle], ['#placePicker .p-3.border-t button',t.placeShare]
+      ];
+      items.forEach(function(item) { var el=document.querySelector(item[0]); if(el) el.textContent=item[1]; });
+      var placeBtn=document.getElementById('sharePlaceButton');if(placeBtn) placeBtn.textContent=t.place;
+      var searchBtn=document.getElementById('placeSearchButton');if(searchBtn) searchBtn.textContent=t.search;
+      var placeInput=document.getElementById('placeSearchInput');if(placeInput) placeInput.placeholder=t.placeSearch;
+      var help=document.getElementById('placeHelp');if(help) help.textContent=t.placeHelp;
+      var selected=document.getElementById('selectedPlaceLabel');if(selected) selected.textContent=selectedSharePlace?t.selected+selectedSharePlace.name:t.placeEmpty;
+      var auto=document.getElementById('autoTranslationLabel');if(auto) auto.textContent=t.translateAuto;
+      document.documentElement.lang=currentLang === 'zh-CN' ? 'zh-CN' : currentLang;
+    }
     // 요청하신 9개 지역 구조 (서울, 제주, 부산, 경기, 강원, 경북, 경남, 전북, 전남)
     var CITIES = [
       { 
         id: 'seoul', 
         name: { ko: '서울', en: 'Seoul', ja: 'ソウル', 'zh-CN': '首尔' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M5,32 Q50,22 95,32 L88,25 Q50,18 12,25 Z" fill="#1e293b"/><path d="M12,25 Q50,14 88,25 L82,18 Q50,10 18,18 Z" fill="#334155"/><rect x="18" y="32" width="64" height="16" fill="#881337"/><rect x="22" y="36" width="6" height="8" fill="#fef08a"/><rect x="34" y="36" width="6" height="8" fill="#fef08a"/><rect x="47" y="36" width="6" height="8" fill="#fef08a"/><rect x="60" y="36" width="6" height="8" fill="#fef08a"/><rect x="72" y="36" width="6" height="8" fill="#fef08a"/><rect x="8" y="48" width="84" height="28" fill="#e2e8f0" rx="2"/><path d="M20,76 A10,12 0 0,1 36,76 Z" fill="#991b1b"/><path d="M42,76 A11,14 0 0,1 58,76 Z" fill="#991b1b"/><path d="M64,76 A10,12 0 0,1 80,76 Z" fill="#991b1b"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-rose-50 border-rose-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🏯</div>', 
         desc: { ko: '명동, 홍대, 강남, 성수 핫플레이스', en: 'Myeongdong, Hongdae, Gangnam', ja: '明洞、弘大、江南、聖水スポット', 'zh-CN': '明洞、弘大、江南、圣水热门地' },
-        subCities: '서울 대표 핫플',
+        subCities: { ko: '서울 대표 핫플', en: 'Myeongdong · Hongdae · Gangnam', ja: '明洞・弘大・江南', 'zh-CN': '明洞・弘大・江南' },
         lat: 37.5665, lng: 126.9780
       },
       { 
         id: 'jeju', 
         name: { ko: '제주', en: 'Jeju', ja: '済州', 'zh-CN': '济州' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 60" class="w-full h-full"><ellipse cx="50" cy="32" rx="45" ry="20" fill="#15803d"/><path d="M25,32 Q50,10 75,32 Z" fill="#166534"/><path d="M44,20 L50,15 L56,20 Z" fill="#d97706"/><ellipse cx="50" cy="32" rx="43" ry="18" fill="none" stroke="#22c55e" stroke-width="2" stroke-dasharray="4,2"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-orange-50 border-orange-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🍊</div>', 
         desc: { ko: '렌터카, 날씨, 흑돼지, 감성카페', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚、人気カフェ', 'zh-CN': '租车、天气、黑猪肉、特色咖啡馆' }, 
-        subCities: '제주시, 애월, 서귀포, 성산',
+        subCities: { ko: '제주시 · 애월 · 서귀포 · 성산', en: 'Jeju City · Aewol · Seogwipo', ja: '済州市・涯月・西帰浦', 'zh-CN': '济州市・涯月・西归浦' },
         lat: 33.4996, lng: 126.5312
       },
       { 
         id: 'busan', 
         name: { ko: '부산', en: 'Busan', ja: '釜山', 'zh-CN': '釜山' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M0,50 Q25,40 50,50 T100,50 L100,80 L0,80 Z" fill="#0284c7"/><path d="M0,60 Q25,52 50,60 T100,60 L100,80 L0,80 Z" fill="#0369a1"/><path d="M15,25 Q30,12 45,28 Q30,22 15,25 Z" fill="#ffffff" stroke="#334155" stroke-width="1.5"/><path d="M55,18 Q70,5 85,20 Q70,14 55,18 Z" fill="#ffffff" stroke="#334155" stroke-width="1.5"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border-sky-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🌊</div>', 
         desc: { ko: '해운대, 광안리, 서면, 국밥/해산물', en: 'Haeundae, Gwangalli & Seafood', ja: '海雲台、広安里、西面、クッパ', 'zh-CN': '海云台、广安里、西面、汤饭' }, 
-        subCities: '해운대, 광안리, 서면, 남포동',
+        subCities: { ko: '해운대 · 광안리 · 서면 · 남포동', en: 'Haeundae · Gwangalli · Seomyeon', ja: '海雲台・広安里・西面', 'zh-CN': '海云台・广安里・西面' },
         lat: 35.1796, lng: 129.0756
       },
       { 
         id: 'gyeonggi', 
         name: { ko: '경기', en: 'Gyeonggi Region', ja: '京畿地域', 'zh-CN': '京畿区域' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="15" y="25" width="22" height="50" fill="#475569" rx="2"/><rect x="42" y="15" width="28" height="60" fill="#334155" rx="2"/><rect x="73" y="30" width="16" height="45" fill="#64748b" rx="2"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-indigo-50 border-indigo-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🏰</div>', 
         desc: { ko: '수원화성, 파주 아울렛, 가평 남이섬', en: 'Suwon, Paju, Gapyeong & Yongin', ja: '水原、坡州、加平の質問', 'zh-CN': '水原、坡州、加平资讯' }, 
-        subCities: '대표 도시: 수원, 성남(분당), 고양(일산), 용인, 파주',
+        subCities: { ko: '수원 · 성남 · 고양 · 용인 · 파주', en: 'Suwon · Seongnam · Goyang', ja: '水原・城南・高陽・龍仁', 'zh-CN': '水原・城南・高阳・龙仁' },
         lat: 37.2636, lng: 127.0286
       },
       { 
         id: 'gangwon', 
         name: { ko: '강원', en: 'Gangwon Region', ja: '江原地域', 'zh-CN': '江原区域' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-teal-50 border border-teal-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 L60,75 Z" fill="#0d9488"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-teal-50 border-teal-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🏔️</div>', 
         desc: { ko: '속초 바다, 강릉 커피거리, 춘천 닭갈비', en: 'Sokcho, Gangneung & Chuncheon', ja: '束草、江陵、春川の質問', 'zh-CN': '束草、江陵、春川资讯' }, 
-        subCities: '대표 도시: 강릉, 속초, 춘천, 원주, 평창',
+        subCities: { ko: '강릉 · 속초 · 춘천 · 평창', en: 'Gangneung · Sokcho · Chuncheon', ja: '江陵・束草・春川・平昌', 'zh-CN': '江陵・束草・春川・平昌' },
         lat: 37.8228, lng: 128.1555
       },
       { 
         id: 'gyeongbuk', 
         name: { ko: '경북', en: 'Gyeongbuk Region', ja: '慶北地域', 'zh-CN': '庆北区域' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><rect x="20" y="20" width="60" height="40" fill="#7e22ce" rx="4"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-purple-50 border-purple-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🏛️</div>', 
         desc: { ko: '대구 동성로, 경주 황리단길, 포항 영일대', en: 'Daegu, Gyeongju, Pohang & Andong', ja: '大邱、慶州、浦項、安東', 'zh-CN': '大邱、庆州、浦项、安东' }, 
-        subCities: '대표 도시: 대구, 경주, 포항, 안동, 구미',
+        subCities: { ko: '대구 · 경주 · 포항 · 안동', en: 'Daegu · Gyeongju · Pohang', ja: '大邱・慶州・浦項・安東', 'zh-CN': '大邱・庆州・浦项・安东' },
         lat: 35.8714, lng: 128.6014
       },
       { 
         id: 'gyeongnam', 
         name: { ko: '경남', en: 'Gyeongnam Region', ja: '慶南地域', 'zh-CN': '庆南区域' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border border-sky-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M10,50 L40,42 L75,15 C80,11 88,14 85,20 L70,48 Z" fill="#0284c7"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-blue-50 border-blue-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">⛵</div>', 
         desc: { ko: '울산 대왕암, 거제 바람의언덕, 통영 루지', en: 'Ulsan, Changwon, Geoje & Tongyeong', ja: '蔚山、昌原、巨済、統営', 'zh-CN': '蔚山、昌原、巨济、统营' }, 
-        subCities: '대표 도시: 울산, 창원, 거제, 통영, 진주',
+        subCities: { ko: '울산 · 창원 · 거제 · 통영', en: 'Ulsan · Changwon · Geoje', ja: '蔚山・昌原・巨済・統営', 'zh-CN': '蔚山・昌原・巨济・统营' },
         lat: 35.2285, lng: 128.6811
       },
       { 
         id: 'jeonbuk', 
         name: { ko: '전북', en: 'Jeonbuk Region', ja: '全北地域', 'zh-CN': '全北区域' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><path d="M15,35 Q50,75 85,35 Z" fill="#d97706"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-amber-50 border-amber-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🏘️</div>', 
         desc: { ko: '전주 한옥마을, 군산 선유도, 익산', en: 'Jeonju, Gunsan & Iksan', ja: '全州、群山、益山', 'zh-CN': '全州、群山、益山' }, 
-        subCities: '대표 도시: 전주, 군산, 익산, 남원',
+        subCities: { ko: '전주 · 군산 · 익산 · 남원', en: 'Jeonju · Gunsan · Iksan', ja: '全州・群山・益山・南原', 'zh-CN': '全州・群山・益山・南原' },
         lat: 35.8242, lng: 127.1480
       },
       { 
         id: 'jeonnam', 
         name: { ko: '전남', en: 'Jeonnam Region', ja: '全南地域', 'zh-CN': '全南区域' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center p-1.5 shadow-sm shrink-0"><svg viewBox="0 0 100 80" class="w-full h-full"><circle cx="25" cy="22" r="12" fill="#f59e0b"/><path d="M30,40 Q60,20 90,40 Z" fill="#16a34a"/></svg></div>', 
+        iconTag: '<div class="w-11 h-11 rounded-2xl bg-emerald-50 border-emerald-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🌅</div>', 
         desc: { ko: '여수 밤바다, 순천만국가정원, 목포', en: 'Gwangju, Yeosu, Suncheon & Mokpo', ja: '光州、麗水、順天、木浦', 'zh-CN': '光州、丽水、顺天、木浦' }, 
-        subCities: '대표 도시: 광주, 여수, 순천, 목포, 나주',
+        subCities: { ko: '광주 · 여수 · 순천 · 목포', en: 'Gwangju · Yeosu · Suncheon', ja: '光州・麗水・順天・木浦', 'zh-CN': '光州・丽水・顺天・木浦' },
         lat: 35.1595, lng: 126.8526
       }
     ];
@@ -646,6 +669,7 @@
       return city.desc[currentLang] || city.desc['ko'];
     }
 
+    var lastCityCounts = {};
     function listenCityUsers() {
       if (!authReady || cityPresenceListenerRef) return;
       var presenceRef = db.ref('presence');
@@ -660,6 +684,7 @@
             counts[userObj.cityId] = (counts[userObj.cityId] || 0) + 1;
           }
         }
+        lastCityCounts = counts;
         renderCityList(document.getElementById('citySearch').value, counts);
       });
     }
@@ -676,24 +701,25 @@
         var city = CITIES[i];
         var name = getCityName(city);
         var desc = getCityDesc(city);
-        var subText = city.subCities || '';
-        var realCount = (liveCounts && liveCounts[city.id]) ? liveCounts[city.id] : 0;
+        var subText = typeof city.subCities === 'object' ? (city.subCities[currentLang] || city.subCities.ko) : (city.subCities || '');
+        var activeCounts = liveCounts || lastCityCounts;
+        var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
-        if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
+        if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
           var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition">' +
-            '<div class="flex items-center gap-3.5 min-w-0 flex-1">' +
+            '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               city.iconTag +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
-                  '<h3 class="font-bold text-slate-800 text-sm truncate">' + name + '</h3>' +
-                  '<span class="text-[10px] bg-emerald-50 text-emerald-600 font-bold px-2 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
+                  '<h3 class="font-extrabold text-slate-900 text-base leading-tight truncate">' + name + '</h3>' +
+                  '<span class="text-[10px] bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
                 '</div>' +
-                '<p class="text-xs text-slate-600 truncate mt-0.5 font-medium">' + desc + '</p>' +
-                '<p class="text-[10px] text-indigo-500 font-bold truncate mt-1 bg-indigo-50/80 px-2 py-0.5 rounded-md inline-block">' + subText + '</p>' +
+                '<p class="text-[12px] text-slate-600 truncate mt-1 font-medium leading-tight">' + desc + '</p>' +
+                '<p class="text-[11px] text-indigo-600 font-semibold truncate mt-1 bg-indigo-50/80 px-1.5 py-0.5 rounded-md inline-block max-w-full">' + subText + '</p>' +
               '</div>' +
             '</div>' +
             '<div class="text-xs font-bold text-indigo-600 shrink-0 flex items-center gap-1 ml-1">' +
-              '<span>입장</span>' +
+              '<span>' + t.enterShort + '</span>' +
               '<i class="fas fa-chevron-right text-[10px]"></i>' +
             '</div>' +
           '</div>';
@@ -855,7 +881,7 @@
           '<div class="flex items-center gap-3 min-w-0 flex-1 pr-2">' +
             '<div class="w-9 h-9 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0"><i class="fas fa-hashtag"></i></div>' +
             '<div class="min-w-0 flex-1">' +
-              '<h4 class="font-bold text-slate-800 text-sm truncate">Room #' + rId + '</h4>' +
+              '<h4 class="font-extrabold text-slate-900 text-base leading-tight truncate">Room #' + rId + '</h4>' +
               '<div class="mt-1">' + statusBadge + '</div>' +
             '</div>' +
           '</div>' +
@@ -1321,7 +1347,7 @@
       if (shareMarker) shareMarker.setMap(null);
       shareMarker = new google.maps.Marker({map:shareMap,position:{lat:lat,lng:lng}});
       shareMap.panTo({lat:lat,lng:lng});
-      document.getElementById('selectedPlaceLabel').textContent = '선택한 장소: ' + selectedSharePlace.name;
+      document.getElementById('selectedPlaceLabel').textContent = (I18N[currentLang] || I18N.ko).selected + selectedSharePlace.name;
       document.getElementById('confirmSharePlace').disabled = false;
     }
     function searchSharePlace() {
@@ -1362,17 +1388,17 @@
       }
       var destination=encodeURIComponent(String(place.lat)+','+String(place.lng));
       var googleBase='https://www.google.com/maps/dir/?api=1&destination='+destination;
-      addMapLink(googleBase+'&travelmode=walking','🚶 Google 도보 길찾기 ↗',mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
-      addMapLink(googleBase+'&travelmode=driving','🚗 Google 자동차 길찾기 ↗',mine?'bg-indigo-100 text-indigo-800':'bg-indigo-100 text-indigo-800');
+      addMapLink(googleBase+'&travelmode=walking',(I18N[currentLang] || I18N.ko).walking,mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
+      addMapLink(googleBase+'&travelmode=driving',(I18N[currentLang] || I18N.ko).driving,mine?'bg-indigo-100 text-indigo-800':'bg-indigo-100 text-indigo-800');
       // Naver's public search page works on mobile and desktop. Users select
       // Directions and walking/driving in Naver Maps; do not imply this is
       // an automatic walking-route deep link.
       var naverQuery=String(place.name||'')+' '+String(place.address||'');
       addMapLink('https://map.naver.com/p/search/'+encodeURIComponent(naverQuery.trim()),
-        '🧭 네이버 지도에서 장소 찾기 ↗','bg-[#03C75A] text-white');
+        (I18N[currentLang] || I18N.ko).naver,'bg-[#03C75A] text-white');
       var tip=document.createElement('div');
       tip.className='text-[10px] opacity-75 leading-snug';
-      tip.textContent='한국에서 Google 경로가 없으면 네이버 지도에서 장소를 확인한 뒤 길찾기 → 도보/자동차를 선택하세요.';
+      tip.textContent=(I18N[currentLang] || I18N.ko).mapTip;
       bubble.append(heading,address,actions,tip);
     }
 
@@ -1413,7 +1439,7 @@
       }
       document.getElementById('autoTranslationCheckbox').checked = autoTranslateEnabled;
       document.getElementById('autoTranslationLabel').textContent =
-        currentLang === 'ko' ? '받은 메시지 자동 번역 (한국어)' : 'Auto-translate received messages (' + currentLang + ')';
+        (I18N[currentLang] || I18N.ko).translateAuto;
     }
     function translateMsg(msgId, text, targetLang, force) {
       var lang = targetLang || currentLang;
@@ -1448,19 +1474,19 @@
         if (epoch !== translationEpoch || roomKey !== translationRoomKey || !target.isConnected || currentLang !== lang) return;
         target.textContent = '🌐 ' + result;
         target.classList.remove('hidden');
-        button.textContent = currentLang === 'ko' ? '다시 번역' : 'Translate again';
+        button.textContent = (I18N[currentLang] || I18N.ko).again;
         button.disabled = false;
       }
       function run(force) {
         button.disabled = true;
-        button.textContent = currentLang === 'ko' ? '번역 중…' : 'Translating…';
+        button.textContent = (I18N[currentLang] || I18N.ko).translating;
         translateMsg(m.id, text, lang, force).then(showResult).catch(function(err) {
           console.warn('Translation unavailable:', err);
           if (epoch !== translationEpoch || !target.isConnected) return;
-          target.textContent = currentLang === 'ko' ? '번역할 수 없습니다. 원문을 확인해 주세요.' : 'Translation unavailable. Original shown above.';
+          target.textContent = (I18N[currentLang] || I18N.ko).failed;
           target.classList.remove('hidden');
           button.disabled = false;
-          button.textContent = currentLang === 'ko' ? '다시 시도' : 'Retry translation';
+          button.textContent = (I18N[currentLang] || I18N.ko).retry;
         });
       }
       button.addEventListener('click', function() { run(true); });
@@ -1533,7 +1559,7 @@
         var button = document.createElement('button');
         button.type = 'button';
         button.className = 'mt-1 text-xs text-indigo-600 font-bold hover:underline block';
-        button.textContent = currentLang === 'ko' ? '[번역하기]' : '[Translate]';
+        button.textContent = (I18N[currentLang] || I18N.ko).translate;
         wrapper.appendChild(button);
         if (sharedPlace) { button.classList.add('hidden'); localTranslation.classList.add('hidden'); }
         else renderTranslation(m, localTranslation, button, mine);
@@ -1627,6 +1653,7 @@
         loadGoogleMapsScript(currentLang, renderGoogleMap);
       }
 
+      updateStaticUiV9();
       renderCityList(document.getElementById('citySearch').value);
     }
 
@@ -1635,6 +1662,7 @@
       renderCityList(query);
     }
 
+    updateStaticUiV9();
     checkUserProfile();
     // The database listeners start only after Firebase authentication succeeds.
   </script>
