@@ -160,6 +160,7 @@
           </label>
           <p id="profilePrivacyNote" class="text-xs text-slate-500 leading-relaxed">닉네임과 국가, 언어 설정은 이 브라우저에 저장됩니다. 채팅 중 닉네임을 바꾸면 참여자 목록에도 반영됩니다.</p>
         </div>
+        <button id="manageBlockedButton" type="button" onclick="openBlockedManager()" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2"><i class="fas fa-user-slash"></i><span id="manageBlockedLabel">차단 사용자 관리</span><span id="blockedCountBadge" class="text-xs text-indigo-500"></span></button>
         <button id="profileCancelButton" type="button" onclick="closeProfileModal()" class="w-full bg-slate-100 text-slate-700 font-bold text-sm py-2.5 rounded-xl">닫기</button>
         <button id="profileSaveButton" onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition">
           시작하기
@@ -272,6 +273,15 @@
     </div>
 
 
+    <!-- v15: manage locally blocked users without showing their messages -->
+    <div id="blockedManagerModal" class="hidden fixed inset-0 z-[120] bg-slate-900/70 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="blockedManagerTitle">
+      <div class="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[80dvh] overflow-y-auto shadow-xl space-y-3">
+        <h2 id="blockedManagerTitle" class="text-lg font-bold text-slate-800">차단 사용자 관리</h2>
+        <p id="blockedManagerInfo" class="text-xs text-slate-500"></p>
+        <div id="blockedManagerList" class="space-y-2" aria-live="polite"></div>
+        <button id="blockedManagerClose" type="button" onclick="closeBlockedManager()" class="w-full bg-slate-100 text-slate-700 rounded-xl p-3 font-bold text-sm">닫기</button>
+      </div>
+    </div>
     <!-- v14: safety actions for a selected message -->
     <div id="safetyModal" class="hidden fixed inset-0 z-[105] bg-slate-900/70 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="safetyTitle">
       <div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-3">
@@ -451,7 +461,10 @@
       updateProfileLabelsV12();
       updateCountryOptionsV13();
       updateProfileSaveLabelV13();
+      refreshBlockedManagerLabels();
       document.getElementById('profileCancelButton').classList.toggle('hidden', !userCountry || !userNickname);
+      loadSafetyBlocked();
+      document.getElementById('manageBlockedLabel').textContent=blockedManagerText().title;
       document.getElementById('profileModal').classList.remove('hidden');
     }
 
@@ -1652,6 +1665,71 @@
       ja:{title:'ユーザー管理',reason:'通報理由',info:'ブロックはこのブラウザーでのみメッセージを非表示にします。通報は運営者の確認用に保存されます。',block:'ブロック',unblock:'ブロック解除',report:'このメッセージを通報',close:'閉じる',menu:'通報・ブロック',blocked:'ブロックしたユーザーのメッセージ',success:'通報を送信しました。',error:'通報に失敗しました。',self:'自分のメッセージは通報できません。',reasons:['嫌がらせ・暴言','スパム・広告','不適切な内容','その他']},
       'zh-CN':{title:'用户管理',reason:'举报原因',info:'屏蔽仅在此浏览器隐藏消息。举报将保存供管理员审核。',block:'屏蔽用户',unblock:'取消屏蔽',report:'举报此消息',close:'关闭',menu:'举报/屏蔽',blocked:'已屏蔽用户的消息',success:'举报已提交。',error:'举报失败。',self:'不能举报自己的消息。',reasons:['骚扰或辱骂','垃圾信息或广告','不当内容','其他']}
     };
+    var blockedManagerCopy = {
+      ko:{title:'차단 사용자 관리',info:'차단한 사용자의 메시지는 아무 표시 없이 숨겨집니다. 차단 목록은 이 브라우저에만 저장됩니다.',empty:'차단한 사용자가 없습니다.',unblock:'차단 해제',close:'닫기',unknown:'이름을 알 수 없는 사용자'},
+      en:{title:'Blocked users',info:'Blocked users’ messages are hidden completely. Your block list is stored only in this browser.',empty:'No blocked users.',unblock:'Unblock',close:'Close',unknown:'Unknown user'},
+      ja:{title:'ブロックしたユーザー',info:'ブロックしたユーザーのメッセージは完全に非表示になります。ブロック一覧はこのブラウザーにのみ保存されます。',empty:'ブロックしたユーザーはいません。',unblock:'ブロック解除',close:'閉じる',unknown:'名前不明のユーザー'},
+      'zh-CN':{title:'已屏蔽用户',info:'已屏蔽用户的消息将完全隐藏。屏蔽列表仅保存在本浏览器中。',empty:'没有已屏蔽用户。',unblock:'取消屏蔽',close:'关闭',unknown:'未知用户'}
+    };
+    function blockedManagerText() { return blockedManagerCopy[currentLang] || blockedManagerCopy.ko; }
+    function refreshBlockedManagerLabels() {
+      var el=document.getElementById('manageBlockedLabel');
+      if(el) el.textContent=blockedManagerText().title;
+      if (!document.getElementById('blockedManagerModal').classList.contains('hidden')) openBlockedManager();
+    }
+    function safetyBlockNamesKey() { return safetyStorageKey() + '_names'; }
+    function safetyBlockNames() {
+      try { var x=JSON.parse(localStorage.getItem(safetyBlockNamesKey()) || '{}'); return x && typeof x === 'object' && !Array.isArray(x) ? x : {}; }
+      catch (_) { return {}; }
+    }
+    function saveSafetyBlockName(uid,name) {
+      var names=safetyBlockNames();
+      names[uid]=String(name||'').slice(0,100);
+      localStorage.setItem(safetyBlockNamesKey(),JSON.stringify(names));
+    }
+    function refreshBlockedCount() {
+      var badge=document.getElementById('blockedCountBadge');
+      if (badge) badge.textContent=safetyBlocked.size ? '('+safetyBlocked.size+')' : '';
+    }
+    function openBlockedManager() {
+      loadSafetyBlocked();
+      var modal=document.getElementById('blockedManagerModal');
+      var t=blockedManagerText();
+      document.getElementById('blockedManagerTitle').textContent=t.title;
+      document.getElementById('blockedManagerInfo').textContent=t.info;
+      document.getElementById('blockedManagerClose').textContent=t.close;
+      renderBlockedManager();
+      modal.classList.remove('hidden');
+    }
+    function closeBlockedManager() { document.getElementById('blockedManagerModal').classList.add('hidden'); }
+    function renderBlockedManager() {
+      var list=document.getElementById('blockedManagerList');
+      list.replaceChildren();
+      var t=blockedManagerText();
+      var names=safetyBlockNames();
+      if (!safetyBlocked.size) {
+        var empty=document.createElement('p');
+        empty.className='text-sm text-slate-500 text-center py-6';
+        empty.textContent=t.empty;
+        list.appendChild(empty);
+      }
+      Array.from(safetyBlocked).forEach(function(uid){
+        var row=document.createElement('div');row.className='flex items-center gap-2 p-3 rounded-xl border border-slate-200';
+        var label=document.createElement('div');label.className='flex-1 min-w-0';
+        var name=document.createElement('p');name.className='text-sm font-bold text-slate-800 break-words';name.textContent=names[uid] || t.unknown;
+        var sub=document.createElement('p');sub.className='text-[10px] text-slate-400 break-all';sub.textContent=uid.slice(0,12)+'…';
+        label.appendChild(name);label.appendChild(sub);
+        var btn=document.createElement('button');btn.type='button';btn.className='shrink-0 rounded-lg bg-indigo-600 text-white px-3 py-2 text-xs font-bold';btn.textContent=t.unblock;
+        btn.addEventListener('click',function(){
+          safetyBlocked.delete(uid);
+          localStorage.setItem(safetyStorageKey(),JSON.stringify(Array.from(safetyBlocked)));
+          var n=safetyBlockNames();delete n[uid];localStorage.setItem(safetyBlockNamesKey(),JSON.stringify(n));
+          refreshBlockedCount();renderBlockedManager();
+          if (currentView === 'chat') renderMessages(roomLatestMessages || []);
+        });
+        row.appendChild(label);row.appendChild(btn);list.appendChild(row);
+      });
+    }
     function safetyText() { return safetyCopy[currentLang] || safetyCopy.ko; }
     function safetyStorageKey() { return 'localtalk_blocked_v14_' + (myUserId || 'guest'); }
     function loadSafetyBlocked() {
@@ -1659,6 +1737,7 @@
         var values = JSON.parse(localStorage.getItem(safetyStorageKey()) || '[]');
         safetyBlocked = new Set(Array.isArray(values) ? values.filter(function(x){return typeof x === 'string';}).slice(0,500) : []);
       } catch (_) { safetyBlocked = new Set(); }
+      refreshBlockedCount();
     }
     function openSafetyModal(msgId) {
       var msg = roomLatestMessages.find(function(m){return m.id === msgId;});
@@ -1684,8 +1763,10 @@
     function toggleSafetyBlock() {
       if (!safetySelectedMessage) return;
       var uid=safetySelectedMessage.uid;
-      if (safetyBlocked.has(uid)) safetyBlocked.delete(uid); else safetyBlocked.add(uid);
+      if (safetyBlocked.has(uid)) safetyBlocked.delete(uid);
+      else { safetyBlocked.add(uid); saveSafetyBlockName(uid,safetySelectedMessage.sender); }
       localStorage.setItem(safetyStorageKey(),JSON.stringify(Array.from(safetyBlocked)));
+      refreshBlockedCount();
       closeSafetyModal();
       renderMessages(roomLatestMessages);
     }
@@ -1743,10 +1824,7 @@
         if (!m || typeof m !== 'object') return;
         if (m.isSystem && m.uid === myUserId) return;
         if (!m.isSystem && m.uid !== myUserId && safetyBlocked.has(m.uid)) {
-          var placeholder=document.createElement('div');
-          placeholder.className='text-center text-xs text-slate-400 py-2';
-          placeholder.textContent='🚫 '+safetyText().blocked;
-          container.appendChild(placeholder);
+          // Do not render a bubble, a placeholder, or a translation request.
           addNotices(index + 1);
           return;
         }
@@ -1892,6 +1970,7 @@
       updateProfileLabelsV12();
       updateCountryOptionsV13();
       updateProfileSaveLabelV13();
+      refreshBlockedManagerLabels();
       if (currentView === 'roomList') document.getElementById('headerSub').textContent = uiText('roomMax');
       if (currentView === 'chat') {
         var liveCount = roomPreviousUsers ? Object.keys(roomPreviousUsers).length : 0;
