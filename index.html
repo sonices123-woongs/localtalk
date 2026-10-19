@@ -1350,12 +1350,30 @@
       var address=document.createElement('div');
       address.className='text-xs opacity-80 break-words mb-2';
       address.textContent=place.address;
-      var link=document.createElement('a');
-      link.href='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(place.lat+','+place.lng)+'&travelmode=walking&dir_action=navigate';
-      link.target='_blank';link.rel='noopener noreferrer';
-      link.className='inline-block rounded-lg px-3 py-2 text-xs font-bold '+(mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
-      link.textContent='🚶 Google 지도 도보 길찾기 ↗';
-      bubble.append(heading,address,link);
+      var actions=document.createElement('div');
+      actions.className='flex flex-col gap-2';
+      function addMapLink(url,label,style) {
+        var link=document.createElement('a');
+        link.href=url;
+        link.target='_blank';link.rel='noopener noreferrer';
+        link.className='block text-center rounded-lg px-3 py-2 text-xs font-bold '+style;
+        link.textContent=label;
+        actions.appendChild(link);
+      }
+      var destination=encodeURIComponent(String(place.lat)+','+String(place.lng));
+      var googleBase='https://www.google.com/maps/dir/?api=1&destination='+destination;
+      addMapLink(googleBase+'&travelmode=walking','🚶 Google 도보 길찾기 ↗',mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
+      addMapLink(googleBase+'&travelmode=driving','🚗 Google 자동차 길찾기 ↗',mine?'bg-indigo-100 text-indigo-800':'bg-indigo-100 text-indigo-800');
+      // Naver's public search page works on mobile and desktop. Users select
+      // Directions and walking/driving in Naver Maps; do not imply this is
+      // an automatic walking-route deep link.
+      var naverQuery=String(place.name||'')+' '+String(place.address||'');
+      addMapLink('https://map.naver.com/p/search/'+encodeURIComponent(naverQuery.trim()),
+        '🧭 네이버 지도에서 장소 찾기 ↗','bg-[#03C75A] text-white');
+      var tip=document.createElement('div');
+      tip.className='text-[10px] opacity-75 leading-snug';
+      tip.textContent='한국에서 Google 경로가 없으면 네이버 지도에서 장소를 확인한 뒤 길찾기 → 도보/자동차를 선택하세요.';
+      bubble.append(heading,address,actions,tip);
     }
 
     // Translation is display-only. It never writes to Firebase or modifies a message.
