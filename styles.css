@@ -134,7 +134,7 @@
       .app-container > nav button { min-width: 0; flex: 1; }
     }
 
-/* v20.2: fixed board intro/tips and write toolbar; only traveler posts scroll. */
+/* v20.3: fix only chat banner and write toolbar; tips and traveler posts scroll together. */
 .app-container #boardView:not(.hidden) {
   display: flex !important;
   flex-direction: column;
@@ -142,10 +142,10 @@
   padding: 0 !important;
 }
 .app-container #boardFixedArea {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
-  max-height: 60%;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
   border-bottom: 1px solid #e2e8f0;
