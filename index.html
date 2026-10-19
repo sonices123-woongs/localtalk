@@ -160,11 +160,11 @@
           </label>
           <p id="profilePrivacyNote" class="text-xs text-slate-500 leading-relaxed">닉네임과 국가, 언어 설정은 이 브라우저에 저장됩니다. 채팅 중 닉네임을 바꾸면 참여자 목록에도 반영됩니다.</p>
         </div>
-        <button id="manageBlockedButton" type="button" onclick="openBlockedManager()" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2"><i class="fas fa-user-slash"></i><span id="manageBlockedLabel">차단 사용자 관리</span><span id="blockedCountBadge" class="text-xs text-indigo-500"></span></button>
         <button id="profileCancelButton" type="button" onclick="closeProfileModal()" class="w-full bg-slate-100 text-slate-700 font-bold text-sm py-2.5 rounded-xl">닫기</button>
         <button id="profileSaveButton" onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition">
           시작하기
         </button>
+        <button id="manageBlockedButton" type="button" onclick="openBlockedManager()" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2"><i class="fas fa-user-slash"></i><span id="manageBlockedLabel">차단 사용자 관리</span><span id="blockedCountBadge" class="text-xs text-indigo-500"></span></button>
       </div>
     </div>
 
@@ -1020,6 +1020,12 @@
       result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+t[7];
       document.getElementById('communityPlaceRemove').classList.remove('hidden');
     }
+    // v18.2: request the selected Local Talk UI language in external Google Maps links.
+    // Google Maps app/account preferences may override this hint.
+    function googleMapsLanguageParam(){
+      var supported={'ko':'ko','en':'en','ja':'ja','zh-CN':'zh-CN'};
+      return '&hl='+encodeURIComponent(supported[currentLang]||'ko');
+    }
     function communityPlaceCard(place){
       if(!place||typeof place.name!=='string'||!place.name.trim())return null;
       var wrap=communityEl('div','rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2');
@@ -1029,7 +1035,7 @@
       var hasCoords=typeof place.lat==='number'&&typeof place.lng==='number'&&Number.isFinite(place.lat)&&Number.isFinite(place.lng)&&Math.abs(place.lat)<=90&&Math.abs(place.lng)<=180;
       var searchText=String(place.name)+(place.address&&place.address!==place.name?' '+place.address:'');
       var googleQuery=hasCoords?place.lat+','+place.lng:searchText;
-      [['Google Maps','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
+      [['Google Maps','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam()],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
         var a=communityEl('a','text-xs font-bold text-emerald-700 underline',pair[0]);
         a.href=pair[1];a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
       });
@@ -1816,7 +1822,7 @@
         actions.appendChild(link);
       }
       var destination=encodeURIComponent(String(place.lat)+','+String(place.lng));
-      var googleBase='https://www.google.com/maps/dir/?api=1&destination='+destination;
+      var googleBase='https://www.google.com/maps/dir/?api=1&destination='+destination+googleMapsLanguageParam();
       addMapLink(googleBase+'&travelmode=walking',(I18N[currentLang] || I18N.ko).walking,mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
       addMapLink(googleBase+'&travelmode=driving',(I18N[currentLang] || I18N.ko).driving,mine?'bg-indigo-100 text-indigo-800':'bg-indigo-100 text-indigo-800');
       // Naver's public search page works on mobile and desktop. Users select
@@ -2194,9 +2200,9 @@
     }
 
     function changeLanguage(lang) {
-      if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
       if (!I18N[lang]) return;
       currentLang = lang;
+      if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
       localStorage.setItem('localtalk_ui_lang', lang);
       if (profileRestoreStarted && userNickname && userCountry) persistProfileV17();
       document.getElementById('langSelect').value = lang;
