@@ -617,6 +617,7 @@
     // v19.2: A Google Maps app cannot directly return a pin to this page.
     // Users paste a share URL. Only URLs with explicit coordinates yield precise pins.
     var communityPinCoords=null;
+    var communityGoogleShareUrl=null;
     function refreshCommunityPinLabels(){
       var translations={ko:['Google Maps에서 위치 선택 → 공유 → 링크 복사 후 붙여넣으세요.','Google Maps 열기 ↗','적용'],en:['Select a location in Google Maps, then Share → Copy link and paste it here.','Open Google Maps ↗','Apply'],ja:['Google Mapsで場所を選び、共有 → リンクをコピーして貼り付けてください。','Google Mapsを開く ↗','適用'],'zh-CN':['在 Google Maps 选择位置，点击分享 → 复制链接，然后粘贴。','打开 Google Maps ↗','应用']};
       var t=translations[currentLang]||translations.ko;
@@ -625,7 +626,7 @@
       document.getElementById('communityGoogleApply').textContent=t[2];
     }
     function resetCommunityPin(){
-      communityPinCoords=null;
+      communityPinCoords=null;communityGoogleShareUrl=null;
       document.getElementById('communityGoogleLink').value='';
       document.getElementById('communityGoogleStatus').textContent='';
     }
@@ -644,9 +645,9 @@
       if(m)pair=[Number(m[1]),Number(m[2])];
       if(!pair){for(var key of ['query','q','ll','center']){var val=u.searchParams.get(key);if(val){m=val.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);if(m){pair=[Number(m[1]),Number(m[2])];break;}}}}
       if(!pair){m=decoded.match(/\/maps\/(?:search|place)\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);if(m)pair=[Number(m[1]),Number(m[2])];}
-      if(!pair){status.textContent=t[3];communityPinCoords=null;return;}
+      if(!pair){communityPinCoords=null;communityGoogleShareUrl=u.href;status.textContent=(currentLang==='ko'?'공유 링크가 확인되었습니다. 장소명을 입력하고 검색을 누르면 링크와 함께 첨부됩니다.':'Share link saved. Enter a place name and press Search to attach it.');return;}
       if(!Number.isFinite(pair[0])||!Number.isFinite(pair[1])||Math.abs(pair[0])>90||Math.abs(pair[1])>180){status.textContent=t[1];return;}
-      communityPinCoords={lat:pair[0],lng:pair[1]};
+      communityPinCoords={lat:pair[0],lng:pair[1]};communityGoogleShareUrl=u.href;
       status.textContent=t[2]+pair[0].toFixed(6)+', '+pair[1].toFixed(6);
       // The Search button commits the coordinates together with the place name.
       communitySelectedPlace=null;
@@ -667,6 +668,7 @@
       // This is a name-based attachment, NOT a verified geocoded place.
       communitySelectedPlace={name:query.slice(0,150),address:query.slice(0,150)};
       if(communityPinCoords){communitySelectedPlace.lat=communityPinCoords.lat;communitySelectedPlace.lng=communityPinCoords.lng;}
+      if(communityGoogleShareUrl)communitySelectedPlace.url=communityGoogleShareUrl;
       result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+t[7];
       document.getElementById('communityPlaceRemove').classList.remove('hidden');
     }
@@ -675,6 +677,12 @@
     function googleMapsLanguageParam(){
       var supported={'ko':'ko','en':'en','ja':'ja','zh-CN':'zh-CN'};
       return '&hl='+encodeURIComponent(supported[currentLang]||'ko');
+    }
+    function safeCommunityMapsUrl(raw){
+      if(typeof raw!=='string')return null;
+      try{var u=new URL(raw);if(u.protocol!=='https:')return null;
+        if(u.hostname==='maps.app.goo.gl'||u.hostname==='goo.gl' || u.hostname==='maps.google.com'||/^www\.google\.[a-z.]+$/.test(u.hostname)||/^google\.[a-z.]+$/.test(u.hostname))return u.href;
+      }catch(e){}return null;
     }
     function communityPlaceCard(place){
       if(!place||typeof place.name!=='string'||!place.name.trim())return null;
@@ -685,7 +693,7 @@
       var hasCoords=typeof place.lat==='number'&&typeof place.lng==='number'&&Number.isFinite(place.lat)&&Number.isFinite(place.lng)&&Math.abs(place.lat)<=90&&Math.abs(place.lng)<=180;
       var searchText=String(place.name)+(place.address&&place.address!==place.name?' '+place.address:'');
       var googleQuery=hasCoords?place.lat+','+place.lng:searchText;
-      [['Google Maps','https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam()],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
+      [['Google Maps',safeCommunityMapsUrl(place.url)||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam())],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
         var a=communityEl('a','text-xs font-bold text-emerald-700 underline',pair[0]);
         a.href=pair[1];a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
       });
@@ -780,13 +788,25 @@
       communityEditingPost=id;
       renderCommunityPosts();
     }
-    function saveCommunityEdit(id,titleField,bodyField,saveBtn){
+    function saveCommunityEdit(id,titleField,bodyField,saveBtn,placeNameField,placeUrlField){
       var post=communityData[id];
       if(!post||post.uid!==myUserId||!currentCity)return;
       var title=titleField.value.trim(),body=bodyField.value.trim();
       if(!title||!body||title.length>100||body.length>3000){alert(communityT().required);return;}
+      var placeName=placeNameField.value.trim(),rawUrl=placeUrlField.value.trim();
+      if(rawUrl&&!safeCommunityMapsUrl(rawUrl)){alert('Google Maps HTTPS 링크를 입력해 주세요.');return;}
+      if(rawUrl&&!placeName){alert('장소 이름도 입력해 주세요.');return;}
+      var updates={title:title,body:body};
+      if(placeName){
+        updates.place={name:placeName.slice(0,150),address:placeName.slice(0,150)};
+        if(rawUrl)updates.place.url=rawUrl;
+        // Retain coordinates only when editing the same previously attached place and link.
+        if(post.place&&post.place.name===placeName&&(!rawUrl||rawUrl===post.place.url)&&Number.isFinite(post.place.lat)&&Number.isFinite(post.place.lng)){
+          updates.place.lat=post.place.lat;updates.place.lng=post.place.lng;
+        }
+      }else updates.place=null;
       saveBtn.disabled=true;
-      db.ref('communityPosts/'+currentCity.id+'/'+id).update({title:storedTitle,body:body})
+      db.ref('communityPosts/'+currentCity.id+'/'+id).update(updates)
         .then(function(){communityEditingPost=null;var modal=document.getElementById('communityEditModal');if(modal)modal.remove();renderCommunityPosts();})
         .catch(function(e){console.error(e);alert(communityT().error);})
         .finally(function(){saveBtn.disabled=false;});
@@ -873,9 +893,13 @@
           titleField.maxLength=100;titleField.value=p.title;titleField.placeholder=t.title;
           var bodyField=communityEl('textarea','w-full border rounded-lg p-3 text-sm');
           bodyField.maxLength=3000;bodyField.rows=7;bodyField.value=p.body;bodyField.placeholder=t.body;
-          var saveBtn=communityBtn(t.save,function(){saveCommunityEdit(id,titleField,bodyField,saveBtn);},'bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-bold');
+          var placeLabel=communityEl('label','block text-sm font-bold text-emerald-900','📍 '+(currentLang==='ko'?'첨부 장소 수정 (선택)':'Edit attached place (optional)'));
+          var placeNameField=communityEl('input','w-full border rounded-lg p-3 text-sm');placeNameField.maxLength=150;placeNameField.placeholder='장소명 / Place name';placeNameField.value=(p.place&&p.place.name)||'';
+          var placeUrlField=communityEl('input','w-full border rounded-lg p-3 text-sm');placeUrlField.type='url';placeUrlField.maxLength=2000;placeUrlField.placeholder='Google Maps 공유 링크';placeUrlField.value=(p.place&&p.place.url)||'';
+          var placeHint=communityEl('p','text-xs text-slate-500','장소명을 지우고 저장하면 장소 첨부가 삭제됩니다. / Clear place name to remove.');
+          var saveBtn=communityBtn(t.save,function(){saveCommunityEdit(id,titleField,bodyField,saveBtn,placeNameField,placeUrlField);},'bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-bold');
           var cancelBtn=communityBtn(t.cancel,function(){communityEditingPost=null;editor.remove();renderCommunityPosts();},'bg-white rounded-lg px-4 py-2 text-sm font-bold');
-          editCard.appendChild(communityEl('h3','font-bold text-slate-800',t.edit));editCard.appendChild(titleField);editCard.appendChild(bodyField);editCard.appendChild(saveBtn);editCard.appendChild(cancelBtn);
+          editCard.appendChild(communityEl('h3','font-bold text-slate-800',t.edit));editCard.appendChild(titleField);editCard.appendChild(bodyField);editCard.appendChild(placeLabel);editCard.appendChild(placeNameField);editCard.appendChild(placeUrlField);editCard.appendChild(placeHint);editCard.appendChild(saveBtn);editCard.appendChild(cancelBtn);
           document.body.appendChild(editor);
         }
         var date=typeof p.createdAt==='number'?new Date(p.createdAt).toLocaleDateString(currentLang):'';
