@@ -520,7 +520,7 @@
         var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.91) 29%,rgba(255,255,255,.60) 44%,rgba(255,255,255,.10) 63%,rgba(255,255,255,0) 76%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.97) 29%,rgba(255,255,255,.70) 39%,rgba(255,255,255,.18) 58%,rgba(255,255,255,0) 68%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
