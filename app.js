@@ -464,23 +464,6 @@
       }
     ];
 
-    var BOARD_DATA = {
-      seoul: [
-        { 
-          id: 'p_seoul1',
-          title: { ko: '[팁] 서울 명동, 홍대, 성수 핫플 가이드', en: '[Tip] Seoul Hotspot Guide', ja: '[コツ] ソウル弘大・聖水ガイド', 'zh-CN': '[攻略] 首尔热门景点指南' }, 
-          author: '서울시민', date: '오늘', views: 512, 
-          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' },
-          content: {
-            ko: '📍 **서울 주요 지역 팁:**\n- 명동: 쇼핑 및 길거리 음식 추천\n- 성수동: 카페거리와 팝업스토어 성지',
-            en: '📍 **Seoul Tips:**\n- Myeongdong: Great for shopping & street food\n- Seongsu-dong: Famous cafe street & pop-up stores',
-            ja: '📍 **ソウル主要地域のコツ:**\n- 明洞: ショッピングと屋台グルメ\n- 聖水洞: カフェ通りとポップアップストア',
-            'zh-CN': '📍 **首尔主要区域攻略:**\n- 明洞: 购物与街头小吃推荐\n- 圣水洞: 咖啡街与快闪店圣地'
-          }
-        }
-      ]
-    };
-
     function loadGoogleMapsScript(langCode, callback) {
       var existingScript = document.getElementById("googleMapsScript");
       if (existingScript) {
@@ -1054,64 +1037,11 @@
         card.appendChild(details);wrap.appendChild(card);
       });
     }
+    // Official notices and tips are now created by admins in Firebase.
+    // The old hardcoded demo posts are intentionally no longer rendered.
     function renderBoardPosts() {
       var container = document.getElementById('boardPosts');
-      container.innerHTML = '';
-      
-      var posts = BOARD_DATA[currentCity.id] || [
-        { 
-          id: 'def1',
-          title: { ko: '이 지역 추천 주요 관광 코스', en: 'Recommended Travel Itinerary for this Region', ja: 'この地域のオススメ旅行コース案内', 'zh-CN': '本区域推荐旅游路线指南' }, 
-          author: '현지인', date: '오늘', views: 50, 
-          tag: { ko: '추천', en: 'Rec', ja: '推薦', 'zh-CN': '推荐' },
-          content: {
-            ko: '📍 **주요 관광 코스:**\n1. 현지 주민 추천 로컬 맛집 및 시장 방문\n2. 랜드마크 명소 및 밤야경 스팟 체험\n3. 대표 먹거리 탐방!',
-            en: '📍 **Main Tour Route:**\n1. Visit local markets recommended by residents\n2. Scenic spots and beautiful night views\n3. Enjoy local delicacies!',
-            ja: '📍 **主な観光コース:**\n1. 現地人オススメのローカルグルメと市場訪問\n2. ランドマーク名所と夜景スポット体験\n3. 名物グルメ探訪！',
-            'zh-CN': '📍 **主要游览路线:**\n1. 游览当地人推荐的当地美食与市场\n2. 体验地标打卡点及夜景名所\n3. 品尝代表性特色美食！'
-          }
-        }
-      ];
-
-      for (var i = 0; i < posts.length; i++) {
-        var p = posts[i];
-        var pTitle = p.title[currentLang] || p.title['ko'];
-        var pTag = p.tag[currentLang] || p.tag['ko'];
-        var pContent = p.content[currentLang] || p.content['ko'];
-
-        var formattedContent = pContent.replace(/\n/g, '<br>');
-
-        var item = '<div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden hover:border-indigo-300 transition">' +
-          '<div onclick="togglePostContent(\'' + p.id + '\')" class="p-3.5 cursor-pointer flex flex-col space-y-1">' +
-            '<div class="flex items-center gap-1.5">' +
-              '<span class="text-[10px] bg-indigo-50 text-indigo-600 font-bold px-2 py-0.5 rounded">' + pTag + '</span>' +
-              '<h4 class="text-xs font-bold text-slate-800 truncate flex-1">' + pTitle + '</h4>' +
-              '<i id="arrow-' + p.id + '" class="fas fa-chevron-down text-slate-400 text-xs transition-transform"></i>' +
-            '</div>' +
-            '<div class="flex justify-between items-center text-xs text-slate-400 mt-1">' +
-              '<span>' + (p.author === '서울시민' ? uiText('seoulResident') : p.author === '현지인' ? uiText('localResident') : p.author) + ' · ' + (p.date === '오늘' ? uiText('today') : p.date) + '</span>' +
-              '<span>' + uiText('postViews', p.views) + '</span>' +
-            '</div>' +
-          '</div>' +
-          '<div id="body-' + p.id + '" class="hidden bg-slate-50 border-t border-slate-100 p-3.5 text-xs text-slate-700 leading-relaxed">' +
-            formattedContent +
-          '</div>' +
-        '</div>';
-        container.innerHTML += item;
-      }
-    }
-
-    function togglePostContent(postId) {
-      var body = document.getElementById('body-' + postId);
-      var arrow = document.getElementById('arrow-' + postId);
-
-      if (body.classList.contains('hidden')) {
-        body.classList.remove('hidden');
-        if (arrow) arrow.style.transform = 'rotate(180deg)';
-      } else {
-        body.classList.add('hidden');
-        if (arrow) arrow.style.transform = 'rotate(0deg)';
-      }
+      if (container) container.replaceChildren();
     }
 
     function openChatRoomList() {
