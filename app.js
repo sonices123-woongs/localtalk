@@ -737,7 +737,7 @@
       var box=document.getElementById('communityComposer');
       var show=typeof force==='boolean'?force:box.classList.contains('hidden');
       box.classList.toggle('hidden',!show);
-      if(show)document.getElementById('communityPostTitle').focus();
+      if(show){document.body.appendChild(box);document.getElementById('communityPostTitle').focus();}
       else removeCommunityPlace();
     }
     function stopCommunityListener(){
@@ -802,7 +802,7 @@
       if(!title||!body||title.length>100||body.length>3000){alert(communityT().required);return;}
       saveBtn.disabled=true;
       db.ref('communityPosts/'+currentCity.id+'/'+id).update({title:title,body:body})
-        .then(function(){communityEditingPost=null;renderCommunityPosts();})
+        .then(function(){communityEditingPost=null;var modal=document.getElementById('communityEditModal');if(modal)modal.remove();renderCommunityPosts();})
         .catch(function(e){console.error(e);alert(communityT().error);})
         .finally(function(){saveBtn.disabled=false;});
     }
@@ -824,6 +824,7 @@
     }
     function renderCommunityPosts(){
       communityLabels();
+      var oldEditModal=document.getElementById('communityEditModal');if(oldEditModal)oldEditModal.remove();
       var container=document.getElementById('communityPosts');
       container.replaceChildren();
       if(!currentCity)return;
@@ -839,15 +840,15 @@
         var title=communityEl('h4','font-bold text-slate-800 text-sm break-words',p.title);
         card.appendChild(title);
         if(communityEditingPost===id && p.uid===myUserId){
-          var editor=communityEl('div','space-y-2 border border-indigo-200 rounded-xl p-3 bg-indigo-50');
+          var editor=communityEl('div','lt-modal');editor.id='communityEditModal';var editCard=communityEl('div','lt-modal-card space-y-3');editor.appendChild(editCard);
           var titleField=communityEl('input','w-full border rounded-lg p-3 text-sm');
           titleField.maxLength=100;titleField.value=p.title;titleField.placeholder=t.title;
           var bodyField=communityEl('textarea','w-full border rounded-lg p-3 text-sm');
           bodyField.maxLength=3000;bodyField.rows=7;bodyField.value=p.body;bodyField.placeholder=t.body;
           var saveBtn=communityBtn(t.save,function(){saveCommunityEdit(id,titleField,bodyField,saveBtn);},'bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-bold');
-          var cancelBtn=communityBtn(t.cancel,function(){communityEditingPost=null;renderCommunityPosts();},'bg-white rounded-lg px-4 py-2 text-sm font-bold');
-          editor.appendChild(titleField);editor.appendChild(bodyField);editor.appendChild(saveBtn);editor.appendChild(cancelBtn);
-          card.appendChild(editor);
+          var cancelBtn=communityBtn(t.cancel,function(){communityEditingPost=null;editor.remove();renderCommunityPosts();},'bg-white rounded-lg px-4 py-2 text-sm font-bold');
+          editCard.appendChild(communityEl('h3','font-bold text-slate-800',t.edit));editCard.appendChild(titleField);editCard.appendChild(bodyField);editCard.appendChild(saveBtn);editCard.appendChild(cancelBtn);
+          document.body.appendChild(editor);
         }
         var date=typeof p.createdAt==='number'?new Date(p.createdAt).toLocaleDateString(currentLang):'';
         card.appendChild(communityEl('p','text-xs text-slate-500',String(p.author||t.anonymous)+' · '+date));
@@ -963,6 +964,16 @@
           alert('Google 로그인에 실패했습니다: '+(e.code||e.message));
         });
     }
+    function openOfficialNoticeEditor(){
+      if(!officialIsAdmin)return;officialEditId=null;
+      document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';
+      document.getElementById('officialEditorHeading').textContent='공식 공지 작성';
+      var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
+      document.getElementById('officialTitle').focus();
+    }
+    function closeOfficialNoticeEditor(){
+      officialEditId=null;document.getElementById('officialEditor').classList.add('hidden');
+    }
     function publishOfficialNotice(){
       if(!officialIsAdmin||!currentCity||!auth.currentUser)return;
       var title=document.getElementById('officialTitle').value.trim(),body=document.getElementById('officialBody').value.trim();
@@ -970,7 +981,7 @@
       var ref=db.ref('officialNotices/'+currentCity.id);
       var task=officialEditId?ref.child(officialEditId).update({title:title,body:body}):
         ref.push().set({uid:auth.currentUser.uid,title:title,body:body,createdAt:firebase.database.ServerValue.TIMESTAMP});
-      task.then(function(){officialEditId=null;document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';})
+      task.then(function(){closeOfficialNoticeEditor();document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';})
         .catch(function(e){console.error(e);alert(officialL()[7]);});
     }
     function editOfficialNotice(id){
@@ -978,8 +989,9 @@
       officialEditId=id;
       document.getElementById('officialTitle').value=p.title;
       document.getElementById('officialBody').value=p.body;
+      document.getElementById('officialEditorHeading').textContent='공식 공지 수정';
+      var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
-      document.getElementById('officialEditor').scrollIntoView({block:'nearest'});
     }
     function deleteOfficialNotice(id){
       if(!officialIsAdmin||!officialData[id]||!confirm(officialL()[8]))return;
