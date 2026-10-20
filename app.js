@@ -187,7 +187,7 @@
 
     function updateHeaderUserLabel() {
       var flagOnly = userCountry ? userCountry.split(' ')[0] : '🌐';
-      document.getElementById('headerUserLabel').innerText = flagOnly + ' ' + userNickname;
+      document.getElementById('headerUserLabel').innerText = userNickname;
     }
 
     function getFormattedMySender() {
@@ -198,7 +198,7 @@
     var I18N = {
       ko: {
         appSub: '실시간 현지인 Q&A',
-        searchPlaceholder: '궁금한 도시/지역을 검색하세요 (예: 서울, 대구, 여수)',
+        searchPlaceholder: '도시·지역 검색 (예: 서울)',
         popularTitle: '주요 도시 및 지역 목록',
         online: '명 접속 중',
         enterBoard: '지역 게시판 입장',
@@ -520,7 +520,7 @@
         var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.99) 0%,rgba(255,255,255,.95) 35%,rgba(255,255,255,.38) 75%,rgba(255,255,255,.08) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,1) 0%,rgba(255,255,255,.98) 27%,rgba(255,255,255,.85) 43%,rgba(255,255,255,.35) 73%,rgba(255,255,255,.04) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +

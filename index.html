@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="./styles.css?v=20.5">
 <style>
 /* City photography stays subtle enough for readable labels and status. */
-.city-photo-card {background-size:100% 100%,auto 100%;background-position:center,right center;background-repeat:no-repeat;min-height:110px;position:relative;overflow:hidden}
+.city-photo-card {background-size:100% 100%,cover;background-position:center,right center;background-repeat:no-repeat;min-height:110px;position:relative;overflow:hidden}
 .city-photo-card h3 {font-size:1.18rem}
 .city-photo-card .city-online-badge {background:rgba(255,255,255,.88);color:#166534;border-color:rgba(255,255,255,.8)}
 @media (prefers-reduced-motion:reduce){.city-photo-card{transition:none}}
@@ -134,7 +134,7 @@ header {gap:6px;min-width:0}
           <span id="headerUserLabel" class="max-w-[70px] truncate text-[10px]">설정</span>
         </button>
         
-        <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-xs font-bold py-1 px-1.5 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
+        <div class="language-control"><span class="language-label">Language</span><select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-xs font-bold py-1 px-1.5 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
           <option value="ko">한국어</option>
           <option value="en">English</option>
           <option value="ja">日本語</option>
