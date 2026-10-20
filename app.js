@@ -390,18 +390,18 @@
 
     // 요청하신 9개 지역 구조 (서울, 제주, 부산, 경기, 강원, 경북, 경남, 전북, 전남)
     var CITIES = [
-      {id:'seoul',name:{ko:'서울',en:'Seoul',ja:'ソウル','zh-CN':'首尔'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:37.5665,lng:126.978,photo:'city-photos/seoul.jpg'},
-      {id:'busan',name:{ko:'부산',en:'Busan',ja:'釜山','zh-CN':'釜山'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.1796,lng:129.0756,photo:'city-photos/busan.jpg'},
-      {id:'jeju',name:{ko:'제주',en:'Jeju',ja:'済州','zh-CN':'济州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:33.4996,lng:126.5312,photo:'city-photos/jeju.jpg'},
-      {id:'gyeongju',name:{ko:'경주',en:'Gyeongju',ja:'慶州','zh-CN':'庆州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.8562,lng:129.2247,photo:'city-photos/gyeongju.jpg'},
-      {id:'incheon',name:{ko:'인천',en:'Incheon',ja:'仁川','zh-CN':'仁川'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:37.4563,lng:126.7052,photo:'city-photos/incheon.jpg'},
-      {id:'gangneung',name:{ko:'강릉',en:'Gangneung',ja:'江陵','zh-CN':'江陵'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:37.7519,lng:128.8761,photo:'city-photos/gangneung.jpg'},
-      {id:'jeonju',name:{ko:'전주',en:'Jeonju',ja:'全州','zh-CN':'全州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.8242,lng:127.148,photo:'city-photos/jeonju.jpg'},
-      {id:'sokcho',name:{ko:'속초',en:'Sokcho',ja:'束草','zh-CN':'束草'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:38.207,lng:128.5918,photo:'city-photos/sokcho.jpg'},
-      {id:'yeosu',name:{ko:'여수',en:'Yeosu',ja:'麗水','zh-CN':'丽水'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:34.7604,lng:127.6622,photo:'city-photos/yeosu.jpg'},
-      {id:'daegu',name:{ko:'대구',en:'Daegu',ja:'大邱','zh-CN':'大邱'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.8714,lng:128.6014,photo:'city-photos/daegu.jpg'},
-      {id:'daejeon',name:{ko:'대전',en:'Daejeon',ja:'大田','zh-CN':'大田'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:36.3504,lng:127.3845,photo:'city-photos/daejeon.jpg'},
-      {id:'gwangju',name:{ko:'광주',en:'Gwangju',ja:'光州','zh-CN':'光州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.1595,lng:126.8526,photo:'city-photos/gwangju.jpg'}
+      {id:'seoul',name:{ko:'서울',en:'Seoul',ja:'ソウル','zh-CN':'首尔'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'홍대 · 명동 · 경복궁',en:'Hongdae · Myeongdong · Gyeongbokgung',ja:'弘大 · 明洞 · 景福宮','zh-CN':'弘大 · 明洞 · 景福宫'},lat:37.5665,lng:126.978,photo:'city-photos/seoul.jpg'},
+      {id:'busan',name:{ko:'부산',en:'Busan',ja:'釜山','zh-CN':'釜山'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'해운대 · 광안리 · 감천문화마을',en:'Haeundae · Gwangalli · Gamcheon',ja:'海雲台 · 広安里 · 甘川','zh-CN':'海云台 · 广安里 · 甘川'},lat:35.1796,lng:129.0756,photo:'city-photos/busan.jpg'},
+      {id:'jeju',name:{ko:'제주',en:'Jeju',ja:'済州','zh-CN':'济州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'성산일출봉 · 협재 · 돌하르방',en:'Seongsan · Hyeopjae · Dol Hareubang',ja:'城山日出峰 · 挟才 · トルハルバン','zh-CN':'城山日出峰 · 挟才 · 石爷爷'},lat:33.4996,lng:126.5312,photo:'city-photos/jeju.jpg'},
+      {id:'gyeongju',name:{ko:'경주',en:'Gyeongju',ja:'慶州','zh-CN':'庆州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'불국사 · 황리단길 · 첨성대',en:'Bulguksa · Hwangnidan · Cheomseongdae',ja:'仏国寺 · 皇理団通り · 瞻星台','zh-CN':'佛国寺 · 皇理团路 · 瞻星台'},lat:35.8562,lng:129.2247,photo:'city-photos/gyeongju.jpg'},
+      {id:'incheon',name:{ko:'인천',en:'Incheon',ja:'仁川','zh-CN':'仁川'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'차이나타운 · 송도 · 월미도',en:'Chinatown · Songdo · Wolmido',ja:'チャイナタウン · 松島 · 月尾島','zh-CN':'唐人街 · 松岛 · 月尾岛'},lat:37.4563,lng:126.7052,photo:'city-photos/incheon.jpg'},
+      {id:'gangneung',name:{ko:'강릉',en:'Gangneung',ja:'江陵','zh-CN':'江陵'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'경포대 · 안목해변 · 정동진',en:'Gyeongpo · Anmok Beach · Jeongdongjin',ja:'鏡浦台 · 安木海岸 · 正東津','zh-CN':'镜浦台 · 安木海滩 · 正东津'},lat:37.7519,lng:128.8761,photo:'city-photos/gangneung.jpg'},
+      {id:'jeonju',name:{ko:'전주',en:'Jeonju',ja:'全州','zh-CN':'全州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'한옥마을 · 경기전 · 남부시장',en:'Hanok Village · Gyeonggijeon · Market',ja:'韓屋村 · 慶基殿 · 南部市場','zh-CN':'韩屋村 · 庆基殿 · 南部市场'},lat:35.8242,lng:127.148,photo:'city-photos/jeonju.jpg'},
+      {id:'sokcho',name:{ko:'속초',en:'Sokcho',ja:'束草','zh-CN':'束草'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'설악산 · 속초해변 · 중앙시장',en:'Seoraksan · Sokcho Beach · Market',ja:'雪岳山 · 束草海岸 · 中央市場','zh-CN':'雪岳山 · 束草海滩 · 中央市场'},lat:38.207,lng:128.5918,photo:'city-photos/sokcho.jpg'},
+      {id:'yeosu',name:{ko:'여수',en:'Yeosu',ja:'麗水','zh-CN':'丽水'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'오동도 · 돌산대교 · 낭만포차',en:'Odongdo · Dolsan Bridge · Food Street',ja:'梧桐島 · 突山大橋 · 屋台街','zh-CN':'梧桐岛 · 突山大桥 · 浪漫排档'},lat:34.7604,lng:127.6622,photo:'city-photos/yeosu.jpg'},
+      {id:'daegu',name:{ko:'대구',en:'Daegu',ja:'大邱','zh-CN':'大邱'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'동성로 · 앞산 · 서문시장',en:'Dongseong-ro · Apsan · Seomun Market',ja:'東城路 · 前山 · 西門市場','zh-CN':'东城路 · 前山 · 西门市场'},lat:35.8714,lng:128.6014,photo:'city-photos/daegu.jpg'},
+      {id:'daejeon',name:{ko:'대전',en:'Daejeon',ja:'大田','zh-CN':'大田'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'성심당 · 엑스포 · 한밭수목원',en:'Sungsimdang · Expo · Hanbat Arboretum',ja:'聖心堂 · エキスポ · ハンバッ樹木園','zh-CN':'圣心堂 · 世博园 · 韩巴树木园'},lat:36.3504,lng:127.3845,photo:'city-photos/daejeon.jpg'},
+      {id:'gwangju',name:{ko:'광주',en:'Gwangju',ja:'光州','zh-CN':'光州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'양림동 · 무등산 · 충장로',en:'Yangnim-dong · Mudeungsan · Chungjang-ro',ja:'楊林洞 · 無等山 · 忠壮路','zh-CN':'杨林洞 · 无等山 · 忠壮路'},lat:35.1595,lng:126.8526,photo:'city-photos/gwangju.jpg'}
     ];
     var LEGACY_CITIES = [
       { 
@@ -520,7 +520,7 @@
         var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,1) 0%,rgba(255,255,255,.98) 27%,rgba(255,255,255,.85) 43%,rgba(255,255,255,.35) 73%,rgba(255,255,255,.04) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,1) 0%,rgba(255,255,255,.97) 27%,rgba(255,255,255,.78) 43%,rgba(255,255,255,.25) 73%,rgba(255,255,255,.02) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
@@ -528,7 +528,7 @@
                   '<span class="text-[10px] city-online-badge bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
                 '</div>' +
                 '<p class="text-[12px] text-slate-600 mt-1 font-medium leading-tight">' + desc + '</p>' +
-                '<p class="text-[11px] text-indigo-600 font-semibold mt-1 bg-indigo-50/80 px-1.5 py-0.5 rounded-md inline-block max-w-full">' + subText + '</p>' +
+                '<p class="city-place-highlights text-[11px] font-bold mt-1 leading-snug">' + subText.split(' · ').map(function(item,idx){return '<span class="city-place-item city-place-color-'+(idx%3)+'">'+item+'</span>';}).join('<span class="city-place-separator"> · </span>') + '</p>' +
               '</div>' +
             '</div>' +
             '<div class="text-xs font-bold city-enter-label text-indigo-600 shrink-0 flex items-center gap-1 ml-1">' +
@@ -1633,7 +1633,7 @@
 
         var t = I18N[currentLang] || I18N['ko'];
         
-        document.getElementById('headerTitle').innerHTML = '<svg class="w-5 h-6 fill-indigo-200 shrink-0" viewBox="0 0 100 140"><path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/><circle cx="82" cy="118" r="5"/><circle cx="92" cy="55" r="3"/></svg><span class="truncate">Local Talk</span>';
+        document.getElementById('headerTitle').innerHTML = '<span class="home-brand">Korea<span>Local Talk</span></span>';
         document.getElementById('headerSub').innerText = t.appSub;
       }
     }
