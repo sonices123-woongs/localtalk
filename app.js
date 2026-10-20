@@ -390,30 +390,20 @@
 
     // 요청하신 9개 지역 구조 (서울, 제주, 부산, 경기, 강원, 경북, 경남, 전북, 전남)
     var CITIES = [
-      { 
-        id: 'seoul', 
-        name: { ko: '서울', en: 'Seoul', ja: 'ソウル', 'zh-CN': '首尔' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-rose-50 border-rose-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🏯</div>', 
-        desc: { ko: '명동, 홍대, 강남, 성수 핫플레이스', en: 'Myeongdong, Hongdae, Gangnam', ja: '明洞、弘大、江南、聖水スポット', 'zh-CN': '明洞、弘大、江南、圣水热门地' },
-        subCities: { ko: '서울 대표 핫플', en: 'Myeongdong · Hongdae · Gangnam', ja: '明洞・弘大・江南', 'zh-CN': '明洞・弘大・江南' },
-        lat: 37.5665, lng: 126.9780
-      },
-      { 
-        id: 'jeju', 
-        name: { ko: '제주', en: 'Jeju', ja: '済州', 'zh-CN': '济州' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-orange-50 border-orange-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🍊</div>', 
-        desc: { ko: '렌터카, 날씨, 흑돼지, 감성카페', en: 'Rental Cars, Weather & Black Pork', ja: 'レンタカー、天気、黒豚、人気カフェ', 'zh-CN': '租车、天气、黑猪肉、特色咖啡馆' }, 
-        subCities: { ko: '제주시 · 애월 · 서귀포 · 성산', en: 'Jeju City · Aewol · Seogwipo', ja: '済州市・涯月・西帰浦', 'zh-CN': '济州市・涯月・西归浦' },
-        lat: 33.4996, lng: 126.5312
-      },
-      { 
-        id: 'busan', 
-        name: { ko: '부산', en: 'Busan', ja: '釜山', 'zh-CN': '釜山' },
-        iconTag: '<div class="w-11 h-11 rounded-2xl bg-sky-50 border-sky-100 border flex items-center justify-center shadow-sm shrink-0 text-2xl" aria-hidden="true">🌊</div>', 
-        desc: { ko: '해운대, 광안리, 서면, 국밥/해산물', en: 'Haeundae, Gwangalli & Seafood', ja: '海雲台、広安里、西面、クッパ', 'zh-CN': '海云台、广安里、西面、汤饭' }, 
-        subCities: { ko: '해운대 · 광안리 · 서면 · 남포동', en: 'Haeundae · Gwangalli · Seomyeon', ja: '海雲台・広安里・西面', 'zh-CN': '海云台・广安里・西面' },
-        lat: 35.1796, lng: 129.0756
-      },
+      {id:'seoul',name:{ko:'서울',en:'Seoul',ja:'ソウル','zh-CN':'首尔'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:37.5665,lng:126.978,photo:'city-photos/seoul.jpg'},
+      {id:'busan',name:{ko:'부산',en:'Busan',ja:'釜山','zh-CN':'釜山'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.1796,lng:129.0756,photo:'city-photos/busan.jpg'},
+      {id:'jeju',name:{ko:'제주',en:'Jeju',ja:'済州','zh-CN':'济州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:33.4996,lng:126.5312,photo:'city-photos/jeju.jpg'},
+      {id:'gyeongju',name:{ko:'경주',en:'Gyeongju',ja:'慶州','zh-CN':'庆州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.8562,lng:129.2247,photo:'city-photos/gyeongju.jpg'},
+      {id:'incheon',name:{ko:'인천',en:'Incheon',ja:'仁川','zh-CN':'仁川'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:37.4563,lng:126.7052,photo:'city-photos/incheon.jpg'},
+      {id:'gangneung',name:{ko:'강릉',en:'Gangneung',ja:'江陵','zh-CN':'江陵'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:37.7519,lng:128.8761,photo:'city-photos/gangneung.jpg'},
+      {id:'jeonju',name:{ko:'전주',en:'Jeonju',ja:'全州','zh-CN':'全州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.8242,lng:127.148,photo:'city-photos/jeonju.jpg'},
+      {id:'sokcho',name:{ko:'속초',en:'Sokcho',ja:'束草','zh-CN':'束草'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:38.207,lng:128.5918,photo:'city-photos/sokcho.jpg'},
+      {id:'yeosu',name:{ko:'여수',en:'Yeosu',ja:'麗水','zh-CN':'丽水'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:34.7604,lng:127.6622,photo:'city-photos/yeosu.jpg'},
+      {id:'daegu',name:{ko:'대구',en:'Daegu',ja:'大邱','zh-CN':'大邱'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.8714,lng:128.6014,photo:'city-photos/daegu.jpg'},
+      {id:'daejeon',name:{ko:'대전',en:'Daejeon',ja:'大田','zh-CN':'大田'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:36.3504,lng:127.3845,photo:'city-photos/daejeon.jpg'},
+      {id:'gwangju',name:{ko:'광주',en:'Gwangju',ja:'光州','zh-CN':'光州'},desc:{ko:'여행 정보 · 현지인 채팅',en:'Travel tips · Local chat',ja:'旅行情報・現地チャット','zh-CN':'旅行信息 · 当地聊天'},subCities:{ko:'관광 · 교통 · 맛집',en:'Sightseeing · Transit · Food',ja:'観光・交通・グルメ','zh-CN':'观光 · 交通 · 美食'},lat:35.1595,lng:126.8526,photo:'city-photos/gwangju.jpg'}
+    ];
+    var LEGACY_CITIES = [
       { 
         id: 'gyeonggi', 
         name: { ko: '경기', en: 'Gyeonggi Region', ja: '京畿地域', 'zh-CN': '京畿区域' },
@@ -520,8 +510,9 @@
       listContainer.innerHTML = '';
       var t = I18N[currentLang] || I18N['ko'];
 
-      for (var i = 0; i < CITIES.length; i++) {
-        var city = CITIES[i];
+      var visibleCities = filter.trim() ? CITIES.concat(LEGACY_CITIES) : CITIES;
+      for (var i = 0; i < visibleCities.length; i++) {
+        var city = visibleCities[i];
         var name = getCityName(city);
         var desc = getCityDesc(city);
         var subText = typeof city.subCities === 'object' ? (city.subCities[currentLang] || city.subCities.ko) : (city.subCities || '');
@@ -529,9 +520,8 @@
         var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.93),rgba(255,255,255,.63)),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
-              city.iconTag +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
                   '<h3 class="font-extrabold text-slate-900 text-base leading-tight">' + name + '</h3>' +
@@ -553,9 +543,9 @@
 
     function openCityBoard(cityId) {
       if (!requireAuth()) return;
-      for (var i = 0; i < CITIES.length; i++) {
-        if (CITIES[i].id === cityId) {
-          currentCity = CITIES[i];
+      for (var i = 0, allCities = CITIES.concat(LEGACY_CITIES); i < allCities.length; i++) {
+        if (allCities[i].id === cityId) {
+          currentCity = allCities[i];
           break;
         }
       }
