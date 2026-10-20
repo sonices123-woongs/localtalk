@@ -786,7 +786,7 @@
       var title=titleField.value.trim(),body=bodyField.value.trim();
       if(!title||!body||title.length>100||body.length>3000){alert(communityT().required);return;}
       saveBtn.disabled=true;
-      db.ref('communityPosts/'+currentCity.id+'/'+id).update({title:title,body:body})
+      db.ref('communityPosts/'+currentCity.id+'/'+id).update({title:storedTitle,body:body})
         .then(function(){communityEditingPost=null;var modal=document.getElementById('communityEditModal');if(modal)modal.remove();renderCommunityPosts();})
         .catch(function(e){console.error(e);alert(communityT().error);})
         .finally(function(){saveBtn.disabled=false;});
@@ -960,9 +960,23 @@
           alert('Google 로그인에 실패했습니다: '+(e.code||e.message));
         });
     }
+    // The current Firebase rules prohibit extra fields. Store category in the title
+    // with a stable prefix, preserving the existing database schema and old posts.
+    function officialCategoryFromTitle(title){
+      var m=/^\[(NOTICE|RECOMMEND|TIP)\]\s*/.exec(title||'');
+      return {category:m?({NOTICE:'notice',RECOMMEND:'recommend',TIP:'tip'}[m[1]]):'notice',title:m?title.slice(m[0].length):title};
+    }
+    function officialCategoryTitle(category,title){
+      var prefix={notice:'[NOTICE] ',recommend:'[RECOMMEND] ',tip:'[TIP] '}[category]||'[NOTICE] ';
+      return prefix+title;
+    }
+    function officialCategoryLabel(category){
+      var dict={ko:{notice:'📢 공지',recommend:'⭐ 추천',tip:'💡 팁'},en:{notice:'📢 Notice',recommend:'⭐ Recommended',tip:'💡 Tip'},ja:{notice:'📢 お知らせ',recommend:'⭐ おすすめ',tip:'💡 ヒント'},'zh-CN':{notice:'📢 公告',recommend:'⭐ 推荐',tip:'💡 提示'}};
+      return (dict[currentLang]||dict.ko)[category]||dict.ko.notice;
+    }
     function openOfficialNoticeEditor(){
       if(!officialIsAdmin)return;officialEditId=null;
-      document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';
+      document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';document.getElementById('officialCategory').value='notice';
       document.getElementById('officialEditorHeading').textContent='공식 공지 작성';
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
@@ -973,17 +987,20 @@
     function publishOfficialNotice(){
       if(!officialIsAdmin||!currentCity||!auth.currentUser)return;
       var title=document.getElementById('officialTitle').value.trim(),body=document.getElementById('officialBody').value.trim();
-      if(!title||!body||title.length>120||body.length>4000){alert(officialL()[6]);return;}
+      var storedTitle=officialCategoryTitle(document.getElementById('officialCategory').value,title);
+      if(!title||!body||storedTitle.length>120||body.length>4000){alert(officialL()[6]);return;}
       var ref=db.ref('officialNotices/'+currentCity.id);
       var task=officialEditId?ref.child(officialEditId).update({title:title,body:body}):
-        ref.push().set({uid:auth.currentUser.uid,title:title,body:body,createdAt:firebase.database.ServerValue.TIMESTAMP});
+        ref.push().set({uid:auth.currentUser.uid,title:storedTitle,body:body,createdAt:firebase.database.ServerValue.TIMESTAMP});
       task.then(function(){closeOfficialNoticeEditor();document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';})
         .catch(function(e){console.error(e);alert(officialL()[7]);});
     }
     function editOfficialNotice(id){
       var p=officialData[id];if(!officialIsAdmin||!p)return;
       officialEditId=id;
-      document.getElementById('officialTitle').value=p.title;
+      var parsed=officialCategoryFromTitle(p.title);
+      document.getElementById('officialCategory').value=parsed.category;
+      document.getElementById('officialTitle').value=parsed.title;
       document.getElementById('officialBody').value=p.body;
       document.getElementById('officialEditorHeading').textContent='공식 공지 수정';
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
@@ -1009,11 +1026,12 @@
       wrap.replaceChildren();
       Object.keys(officialData).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);}).forEach(function(id){
         var p=officialData[id];if(!p||typeof p.title!=='string'||typeof p.body!=='string')return;
+        var parsed=officialCategoryFromTitle(p.title);
         var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
         var details=document.createElement('details');details.className='group';
         var summary=document.createElement('summary');summary.className='cursor-pointer list-none flex items-center gap-2 text-sm';
-        var tag=document.createElement('span');tag.className='shrink-0 bg-indigo-50 text-indigo-700 rounded px-2 py-1 text-xs font-bold';tag.textContent='공지';
-        var title=document.createElement('span');title.className='font-bold text-slate-800 flex-1 break-words';title.textContent=p.title;
+        var tag=document.createElement('span');tag.className='shrink-0 bg-indigo-50 text-indigo-700 rounded px-2 py-1 text-xs font-bold';tag.textContent=officialCategoryLabel(parsed.category);
+        var title=document.createElement('span');title.className='font-bold text-slate-800 flex-1 break-words';title.textContent=parsed.title;
         var arrow=document.createElement('span');
         arrow.className='text-indigo-600 font-semibold shrink-0';
         arrow.style.fontSize='13px';
