@@ -846,7 +846,10 @@
         heading.setAttribute('aria-expanded',String(expanded));
         heading.setAttribute('aria-label',p.title+' - '+(expanded?'접기':'펼치기'));
         var title=communityEl('h4','font-bold text-slate-800 text-sm break-words flex-1',p.title);
-        var arrow=communityEl('span','text-slate-500 text-sm shrink-0',expanded?'▲':'▼');
+        var arrow=communityEl('span','text-slate-400 text-sm shrink-0', '⌄');
+        arrow.style.display='inline-block';
+        arrow.style.transition='transform 150ms ease';
+        arrow.style.transform=expanded?'rotate(180deg)':'rotate(0deg)';
         arrow.setAttribute('aria-hidden','true');
         heading.appendChild(title);heading.appendChild(arrow);
         heading.addEventListener('click',function(){communityOpenPost=expanded?null:id;renderCommunityPosts();});
@@ -872,7 +875,6 @@
           actions.appendChild(communityBtn(t.delete,function(){deleteCommunityPost(id);},'text-red-600 text-xs font-bold px-2 py-1'));
         }
         card.appendChild(actions);
-        if(!expanded){var placePreview=communityPlaceCard(p.place);if(placePreview)card.insertBefore(placePreview,actions);}
         if(expanded){
           var body=communityEl('p','text-sm text-slate-700 whitespace-pre-wrap break-words bg-slate-50 rounded-xl p-3',p.body);
           card.insertBefore(body,actions);
