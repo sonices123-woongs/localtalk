@@ -17,10 +17,32 @@
   <link rel="stylesheet" href="./styles.css?v=20.5">
 <style>
 /* City photography stays subtle enough for readable labels and status. */
-.city-photo-card {background-size:cover;background-position:center;min-height:110px;position:relative;overflow:hidden}
+.city-photo-card {background-size:100% 100%,auto 100%;background-position:center,right center;background-repeat:no-repeat;min-height:110px;position:relative;overflow:hidden}
 .city-photo-card h3 {font-size:1.18rem}
 .city-photo-card .city-online-badge {background:rgba(255,255,255,.88);color:#166534;border-color:rgba(255,255,255,.8)}
 @media (prefers-reduced-motion:reduce){.city-photo-card{transition:none}}
+/* Mobile WebView: reserve real space for title, profile and language controls. */
+header {gap:6px;min-width:0}
+#headerTitle {font-size:1rem;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.home-brand {display:flex;flex-direction:column;font-size:.9rem;line-height:1.08;letter-spacing:-.02em}
+.home-brand>span {font-size:1rem;margin-top:2px}
+#headerSub {display:none!important}
+#headerUserLabel {max-width:42px}
+#langSelect {max-width:85px;font-size:11px}
+#boardFixedArea {gap:0}
+#boardMaxBadge {font-size:10px}
+#boardBannerTitle {font-size:14px;line-height:1.25}
+#boardBannerSub {display:none}
+#boardSearchToolbar {margin-top:4px}
+@media(max-width:410px) {
+  header {padding:10px 10px!important}
+  header>div:first-child {gap:5px!important}
+  header>div:last-child {gap:4px!important;margin-left:0!important}
+  #headerUserLabel {max-width:36px}
+  #langSelect {max-width:78px;font-size:10px}
+  #boardFixedArea {padding:10px 10px 4px}
+  #boardNoticeTab,#boardTravelerTab {font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -101,15 +123,8 @@
           <i class="fas fa-arrow-left"></i>
         </button>
         <div class="min-w-0 flex-1">
-          <h1 id="headerTitle" class="text-base sm:text-lg font-bold flex items-center gap-2 truncate">
-            <svg class="w-5 h-6 fill-indigo-200 shrink-0" viewBox="0 0 100 140">
-              <path d="M40,5 Q55,8 60,18 Q68,28 62,38 Q58,45 68,52 Q78,60 70,72 Q62,82 65,95 Q68,110 52,125 Q42,135 38,128 Q32,118 38,102 Q42,92 35,82 Q28,72 32,58 Q35,48 25,35 Q18,25 28,15 Z"/>
-              <circle cx="82" cy="118" r="5"/>
-              <circle cx="92" cy="55" r="3"/>
-            </svg>
-            <span class="truncate">Local Talk</span>
-          </h1>
-          <p id="headerSub" class="text-xs text-indigo-100 truncate">실시간 현지인 Q&A</p>
+          <h1 id="headerTitle" class="font-bold min-w-0 leading-tight"><span class="home-brand">Korea<span>Local Talk</span></span></h1>
+          <p id="headerSub" class="hidden"></p>
         </div>
       </div>
       
@@ -118,7 +133,7 @@
           <i class="fas fa-user-circle"></i>
           <span id="headerUserLabel" class="max-w-[70px] truncate text-[10px]">설정</span>
         </button>
-        <span class="text-xs text-indigo-200 font-bold">Lang:</span>
+        
         <select id="langSelect" onchange="changeLanguage(this.value)" class="bg-indigo-700 text-white text-xs font-bold py-1 px-1.5 rounded-full border border-indigo-500 focus:outline-none cursor-pointer">
           <option value="ko">한국어</option>
           <option value="en">English</option>
@@ -143,21 +158,21 @@
 
     <!-- [화면 2] 지역 게시판 메인 화면 -->
     <main id="boardView" class="hidden flex-1 w-full min-h-0">
-      <div id="boardFixedArea" class="p-4 pb-2 space-y-4 shrink-0">
-      <div onclick="openChatRoomList()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-4 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
+      <div id="boardFixedArea" class="p-3 pb-1 space-y-2 shrink-0">
+      <div onclick="openChatRoomList()" class="bg-gradient-to-r from-indigo-600 to-violet-600 text-white p-3 rounded-2xl shadow-md cursor-pointer flex justify-between items-center hover:opacity-95 transition">
         <div>
           <span id="boardMaxBadge" class="bg-white/20 text-xs px-2.5 py-0.5 rounded-full font-bold">LIVE Q&A (Max 4명)</span>
           <h3 id="boardBannerTitle" class="font-bold text-base mt-1">실시간 대화방 목록</h3>
-          <p id="boardBannerSub" class="text-xs text-indigo-100 mt-0.5">원하는 채팅방을 선택하여 소통해보세요</p>
+          <p id="boardBannerSub" class="hidden text-xs text-indigo-100 mt-0.5">원하는 채팅방을 선택하여 소통해보세요</p>
         </div>
-        <div class="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center text-base shadow shrink-0">
+        <div class="bg-white text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center text-base shadow shrink-0">
           <i class="fas fa-comments"></i>
         </div>
       </div>
 
         <div class="grid grid-cols-2 gap-2" role="tablist" aria-label="게시판 종류">
-          <button id="boardNoticeTab" type="button" role="tab" aria-selected="true" onclick="selectBoardSection('notice')" class="rounded-xl bg-indigo-600 text-white py-3 text-sm font-bold">📢 공지 & 팁</button>
-          <button id="boardTravelerTab" type="button" role="tab" aria-selected="false" onclick="selectBoardSection('traveler')" class="rounded-xl bg-white border py-3 text-sm font-bold">💬 여행자 게시판</button>
+          <button id="boardNoticeTab" type="button" role="tab" aria-selected="true" onclick="selectBoardSection('notice')" class="rounded-xl bg-indigo-600 text-white py-2 text-sm font-bold">📢 공지 & 팁</button>
+          <button id="boardTravelerTab" type="button" role="tab" aria-selected="false" onclick="selectBoardSection('traveler')" class="rounded-xl bg-white border py-2 text-sm font-bold">💬 여행자 게시판</button>
         </div>
         <div id="communityToolbar" class="hidden flex justify-between items-center">
           <h3 id="communityHeading" class="font-bold text-slate-800 text-base">여행자 게시판</h3>
@@ -165,16 +180,16 @@
         </div>
         <div id="boardSearchToolbar" class="px-1 space-y-1">
           <div id="officialSearchControls" class="flex gap-2 items-center">
-            <input id="officialSearchInput" type="search" oninput="officialSearchChanged(this.value)" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm" placeholder="장소나 제목 검색 (예: 명동)" aria-label="공지 검색">
-            <select id="officialSearchCategory" onchange="officialFilterChanged(this.value)" class="w-24 shrink-0 rounded-xl border border-slate-200 bg-white px-2 py-2.5 text-sm" aria-label="공지 종류"><option value="all">전체</option><option value="notice">공지</option><option value="recommend">추천</option><option value="tip">팁</option></select>
+            <input id="officialSearchInput" type="search" oninput="officialSearchChanged(this.value)" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm" placeholder="장소나 제목 검색 (예: 명동)" aria-label="공지 검색">
+            <select id="officialSearchCategory" onchange="officialFilterChanged(this.value)" class="w-24 shrink-0 rounded-xl border border-slate-200 bg-white px-2 py-1.5 text-sm" aria-label="공지 종류"><option value="all">전체</option><option value="notice">공지</option><option value="recommend">추천</option><option value="tip">팁</option></select>
           </div>
           <div id="communitySearchControls" class="hidden">
-            <input id="communitySearchInput" type="search" oninput="communitySearchChanged(this.value)" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm" placeholder="여행자 글 검색" aria-label="여행자 게시판 검색">
+            <input id="communitySearchInput" type="search" oninput="communitySearchChanged(this.value)" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm" placeholder="여행자 글 검색" aria-label="여행자 게시판 검색">
           </div>
           <p id="boardSearchCount" class="text-right text-xs text-slate-400" aria-live="polite"></p>
         </div>
       </div>
-      <section id="boardScrollablePosts" class="space-y-3 px-4 pt-2 pb-5 scroll-area min-h-0 flex-1" aria-label="Community posts">
+      <section id="boardScrollablePosts" class="space-y-3 px-3 pt-1 pb-5 scroll-area min-h-0 flex-1" aria-label="Community posts">
       <div id="boardNoticePanel" class="space-y-3">
         <h3 id="boardPostsTitle" class="text-sm font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
           <i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁
