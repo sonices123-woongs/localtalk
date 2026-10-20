@@ -14,7 +14,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 
-  <link rel="stylesheet" href="./styles.css?v=20.2">
+  <link rel="stylesheet" href="./styles.css?v=20.5">
 </head>
 <body>
 
@@ -76,6 +76,13 @@
         <button id="profileSaveButton" onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2.5 rounded-xl shadow-md transition">
           시작하기
         </button>
+        <details id="profileAdminSection" class="border-t border-slate-100 pt-3">
+          <summary class="text-xs text-slate-500 cursor-pointer select-none">관리자 전용</summary>
+          <div class="mt-3 space-y-2">
+            <p id="profileAdminStatus" class="text-xs text-slate-500" aria-live="polite">공식 공지 관리 계정으로 로그인할 수 있습니다.</p>
+            <button id="profileAdminLoginButton" type="button" onclick="loginOfficialAdmin()" class="w-full border border-indigo-200 bg-indigo-50 text-indigo-700 font-bold text-sm py-3 rounded-xl">Google 관리자 로그인</button>
+          </div>
+        </details>
         <button id="manageBlockedButton" type="button" onclick="openBlockedManager()" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2"><i class="fas fa-user-slash"></i><span id="manageBlockedLabel">차단 사용자 관리</span><span id="blockedCountBadge" class="text-xs text-indigo-500"></span></button>
       </div>
     </div>
@@ -156,19 +163,15 @@
           <i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁
         </h3>
         <div id="boardPosts" class="space-y-2.5"></div>
-        <div class="bg-white border rounded-2xl p-4 space-y-3">
-          <div class="flex items-center justify-between gap-2">
-            <h3 class="font-bold text-slate-800 text-sm" id="officialHeading">공식 공지 & 팁</h3>
-            <button id="adminLoginButton" onclick="loginOfficialAdmin()" type="button" class="text-xs text-indigo-700 font-bold border rounded-lg px-2 py-2">관리자 Google 로그인</button>
-          </div>
-          <p id="adminStatus" class="text-xs text-slate-500" aria-live="polite">공식 공지는 관리자만 작성할 수 있습니다.</p>
-          <div id="officialEditor" class="hidden space-y-2">
+        <div id="officialAdminTools" class="hidden bg-white border border-indigo-200 rounded-2xl p-4 space-y-3">
+          <h3 class="font-bold text-slate-800 text-sm">공식 공지 작성</h3>
+          <div id="officialEditor" class="space-y-2">
             <input id="officialTitle" maxlength="120" class="w-full border rounded-lg p-3 text-sm" placeholder="공지 제목">
             <textarea id="officialBody" maxlength="4000" rows="4" class="w-full border rounded-lg p-3 text-sm" placeholder="공지 내용"></textarea>
             <button type="button" onclick="publishOfficialNotice()" class="bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-bold">공지 등록</button>
           </div>
-          <div id="officialPosts" class="space-y-2"></div>
         </div>
+        <div id="officialPosts" class="space-y-2.5"></div>
       </div>
       <div id="boardTravelerPanel" class="hidden space-y-3">
 
@@ -318,6 +321,6 @@
 
   </div>
 
-  <script src="./app.js?v=20"></script>
+  <script src="./app.js?v=20.5"></script>
 </body>
 </html>
