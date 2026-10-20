@@ -974,9 +974,59 @@
       var dict={ko:{notice:'📢 공지',recommend:'⭐ 추천',tip:'💡 팁'},en:{notice:'📢 Notice',recommend:'⭐ Recommended',tip:'💡 Tip'},ja:{notice:'📢 お知らせ',recommend:'⭐ おすすめ',tip:'💡 ヒント'},'zh-CN':{notice:'📢 公告',recommend:'⭐ 推荐',tip:'💡 提示'}};
       return (dict[currentLang]||dict.ko)[category]||dict.ko.notice;
     }
+    // Photos are encoded inside the existing body field so Spark database rules stay unchanged.
+    // Only Cloudinary HTTPS delivery URLs are accepted. No Cloudinary credentials are stored.
+    var officialPhotoUrls=[];
+    function officialPhotoDecode(body){
+      var match=/\n\[\[LT_PHOTOS_V1:([A-Za-z0-9+/=]+)\]\]$/.exec(body||'');
+      if(!match)return {body:body||'',photos:[]};
+      try{
+        var urls=JSON.parse(decodeURIComponent(escape(atob(match[1]))));
+        if(!Array.isArray(urls))throw Error('Invalid photo list');
+        return {body:body.slice(0,match.index),photos:urls.filter(officialValidPhotoUrl).slice(0,10)};
+      }catch(e){return {body:body||'',photos:[]};}
+    }
+    function officialValidPhotoUrl(value){
+      try{
+        var url=new URL(value);
+        return url.protocol==='https:'&&url.hostname==='res.cloudinary.com'&&
+          url.pathname.indexOf('/image/upload/')!==-1&&url.href.length<=800;
+      }catch(e){return false;}
+    }
+    function officialPhotoEncode(body,photos){
+      if(!photos.length)return body;
+      return body+'\n[[LT_PHOTOS_V1:'+btoa(unescape(encodeURIComponent(JSON.stringify(photos))))+']]';
+    }
+    function officialPhotoRenderEditor(){
+      var list=document.getElementById('officialPhotoList');if(!list)return;
+      list.replaceChildren();
+      officialPhotoUrls.forEach(function(url,index){
+        var row=document.createElement('div');row.className='flex items-center gap-2 rounded-lg border p-2 bg-slate-50';
+        var img=document.createElement('img');img.src=url;img.alt='사진 '+(index+1);img.loading='lazy';img.referrerPolicy='no-referrer';img.className='w-14 h-14 rounded object-cover';
+        var name=document.createElement('span');name.className='text-xs text-slate-600 flex-1 break-all';name.textContent=(index+1)+' / '+officialPhotoUrls.length+' · '+url.split('/').pop().slice(0,30);
+        row.appendChild(img);row.appendChild(name);
+        [['↑',-1],['↓',1],['삭제',0]].forEach(function(item){
+          var button=document.createElement('button');button.type='button';button.textContent=item[0];button.className='text-xs font-bold border rounded px-2 py-2 bg-white';
+          button.disabled=item[1]===-1&&index===0||item[1]===1&&index===officialPhotoUrls.length-1;
+          button.addEventListener('click',function(){
+            if(item[1]===0)officialPhotoUrls.splice(index,1);
+            else {var other=index+item[1],temp=officialPhotoUrls[index];officialPhotoUrls[index]=officialPhotoUrls[other];officialPhotoUrls[other]=temp;}
+            officialPhotoRenderEditor();
+          });row.appendChild(button);
+        });list.appendChild(row);
+      });
+      var count=document.getElementById('officialPhotoCount');if(count)count.textContent=officialPhotoUrls.length+' / 10';
+    }
+    function officialAddPhotoUrl(){
+      var input=document.getElementById('officialPhotoUrl');var url=input.value.trim();
+      if(!officialValidPhotoUrl(url)){alert('Cloudinary의 공개 HTTPS 이미지 URL을 입력해 주세요.');return;}
+      if(officialPhotoUrls.length>=10){alert('사진은 최대 10장까지 등록할 수 있습니다.');return;}
+      if(officialPhotoUrls.indexOf(url)!==-1){alert('이미 추가한 사진입니다.');return;}
+      officialPhotoUrls.push(url);input.value='';officialPhotoRenderEditor();
+    }
     function openOfficialNoticeEditor(){
       if(!officialIsAdmin)return;officialEditId=null;
-      document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';document.getElementById('officialCategory').value='notice';
+      document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';document.getElementById('officialCategory').value='notice';officialPhotoUrls=[];officialPhotoRenderEditor();
       document.getElementById('officialEditorHeading').textContent='공식 공지 작성';
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
@@ -988,10 +1038,11 @@
       if(!officialIsAdmin||!currentCity||!auth.currentUser)return;
       var title=document.getElementById('officialTitle').value.trim(),body=document.getElementById('officialBody').value.trim();
       var storedTitle=officialCategoryTitle(document.getElementById('officialCategory').value,title);
-      if(!title||!body||storedTitle.length>120||body.length>4000){alert(officialL()[6]);return;}
+      var storedBody=officialPhotoEncode(body,officialPhotoUrls);
+      if(!title||!body||storedTitle.length>120||storedBody.length>4000){alert('제목 또는 내용이 너무 깁니다. 사진 URL을 줄이거나 본문을 짧게 작성해 주세요.');return;}
       var ref=db.ref('officialNotices/'+currentCity.id);
-      var task=officialEditId?ref.child(officialEditId).update({title:title,body:body}):
-        ref.push().set({uid:auth.currentUser.uid,title:storedTitle,body:body,createdAt:firebase.database.ServerValue.TIMESTAMP});
+      var task=officialEditId?ref.child(officialEditId).update({title:storedTitle,body:storedBody}):
+        ref.push().set({uid:auth.currentUser.uid,title:storedTitle,body:storedBody,createdAt:firebase.database.ServerValue.TIMESTAMP});
       task.then(function(){closeOfficialNoticeEditor();document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';})
         .catch(function(e){console.error(e);alert(officialL()[7]);});
     }
@@ -1001,7 +1052,7 @@
       var parsed=officialCategoryFromTitle(p.title);
       document.getElementById('officialCategory').value=parsed.category;
       document.getElementById('officialTitle').value=parsed.title;
-      document.getElementById('officialBody').value=p.body;
+      var decoded=officialPhotoDecode(p.body);document.getElementById('officialBody').value=decoded.body;officialPhotoUrls=decoded.photos.slice();officialPhotoRenderEditor();
       document.getElementById('officialEditorHeading').textContent='공식 공지 수정';
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
@@ -1044,8 +1095,17 @@
           arrow.textContent=boardExpandLabel(details.open);
         });
         summary.appendChild(tag);summary.appendChild(title);summary.appendChild(arrow);
-        var content=document.createElement('div');content.className='mt-3 pt-3 border-t text-sm text-slate-700 whitespace-pre-wrap break-words';content.textContent=p.body;
+        var decoded=officialPhotoDecode(p.body);
+        var content=document.createElement('div');content.className='mt-3 pt-3 border-t text-sm text-slate-700 whitespace-pre-wrap break-words';content.textContent=decoded.body;
         details.appendChild(summary);details.appendChild(content);
+        if(decoded.photos.length){
+          var gallery=document.createElement('div');gallery.className='grid grid-cols-2 gap-2 mt-3';
+          decoded.photos.forEach(function(url,index){
+            var img=document.createElement('img');img.src=url;img.alt='첨부 사진 '+(index+1);img.loading='lazy';img.decoding='async';
+            img.className='w-full rounded-xl object-cover cursor-pointer';img.style.aspectRatio='4 / 3';
+            img.addEventListener('click',function(){window.open(url,'_blank','noopener,noreferrer');});gallery.appendChild(img);
+          });details.appendChild(gallery);
+        }
         if(officialIsAdmin){
           var actions=document.createElement('div');actions.className='flex gap-2 mt-2';
           actions.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));
