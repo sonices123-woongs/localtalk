@@ -144,6 +144,7 @@
       loadSafetyBlocked();
       document.getElementById('manageBlockedLabel').textContent=blockedManagerText().title;
       document.getElementById('profileModal').classList.remove('hidden');
+      refreshOfficialAdmin();
     }
 
     function closeProfileModal() {
@@ -932,22 +933,22 @@
       officialIsAdmin=false;
       var user=auth.currentUser;
       var t=officialL();
-      var status=document.getElementById('adminStatus');
-      if(!status)return;
-      document.getElementById('adminLoginButton').textContent=t[2];
-      status.textContent=t[5];
-      document.getElementById('officialEditor').classList.add('hidden');
-      if(!user)return;
-      // Read only own allowlist entry; Firebase rules verify Google provider on writes.
+      var status=document.getElementById('profileAdminStatus');
+      var login=document.getElementById('profileAdminLoginButton');
+      var tools=document.getElementById('officialAdminTools');
+      if(status)status.textContent=t[5];
+      if(login){login.classList.remove('hidden');login.textContent=t[2];}
+      if(tools)tools.classList.add('hidden');
+      if(!user){renderOfficialNotices();return;}
       db.ref('officialAdmins/'+user.uid).once('value').then(function(s){
         if(auth.currentUser&&auth.currentUser.uid===user.uid){
-          officialIsAdmin=s.val()===true;
-          status.textContent=officialIsAdmin?t[3]:(user.providerData.some(function(p){return p.providerId==='google.com';})?t[4]:t[5]);
-          document.getElementById('officialEditor').classList.toggle('hidden',!officialIsAdmin);
-          document.getElementById('adminLoginButton').classList.toggle('hidden',officialIsAdmin);
+          officialIsAdmin=s.val()===true && user.providerData.some(function(p){return p.providerId==='google.com';});
+          if(status)status.textContent=officialIsAdmin?t[3]:(user.providerData.some(function(p){return p.providerId==='google.com';})?t[4]:t[5]);
+          if(login)login.classList.toggle('hidden',officialIsAdmin);
+          if(tools)tools.classList.toggle('hidden',!officialIsAdmin);
           renderOfficialNotices();
         }
-      }).catch(function(e){console.error('Admin lookup',e);});
+      }).catch(function(e){console.error('Admin lookup',e);renderOfficialNotices();});
     }
     function loginOfficialAdmin(){
       var user=auth.currentUser;
@@ -989,18 +990,24 @@
       wrap.replaceChildren();
       Object.keys(officialData).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);}).forEach(function(id){
         var p=officialData[id];if(!p||typeof p.title!=='string'||typeof p.body!=='string')return;
-        var card=document.createElement('article');card.className='bg-indigo-50 rounded-xl p-3 space-y-2';
-        var h=document.createElement('h4');h.className='font-bold text-sm text-slate-800';h.textContent=p.title;
-        var b=document.createElement('p');b.className='whitespace-pre-wrap break-words text-sm text-slate-700';b.textContent=p.body;
-        card.appendChild(h);card.appendChild(b);
+        var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
+        var details=document.createElement('details');details.className='group';
+        var summary=document.createElement('summary');summary.className='cursor-pointer list-none flex items-center gap-2 text-sm';
+        var tag=document.createElement('span');tag.className='shrink-0 bg-indigo-50 text-indigo-700 rounded px-2 py-1 text-xs font-bold';tag.textContent='공지';
+        var title=document.createElement('span');title.className='font-bold text-slate-800 flex-1 break-words';title.textContent=p.title;
+        var arrow=document.createElement('span');arrow.className='text-slate-400';arrow.textContent='⌄';
+        summary.appendChild(tag);summary.appendChild(title);summary.appendChild(arrow);
+        var content=document.createElement('div');content.className='mt-3 pt-3 border-t text-sm text-slate-700 whitespace-pre-wrap break-words';content.textContent=p.body;
+        details.appendChild(summary);details.appendChild(content);
         if(officialIsAdmin){
-          card.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));
-          card.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));
+          var actions=document.createElement('div');actions.className='flex gap-2 mt-2';
+          actions.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));
+          actions.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));
+          details.appendChild(actions);
         }
-        wrap.appendChild(card);
+        card.appendChild(details);wrap.appendChild(card);
       });
     }
-
     function renderBoardPosts() {
       var container = document.getElementById('boardPosts');
       container.innerHTML = '';
