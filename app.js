@@ -844,9 +844,9 @@
         var heading=communityEl('button','w-full flex items-center justify-between gap-3 text-left');
         heading.type='button';
         heading.setAttribute('aria-expanded',String(expanded));
-        heading.setAttribute('aria-label',p.title+' - '+(expanded?'접기':'펼치기'));
+        heading.setAttribute('aria-label',p.title+' - '+boardExpandLabel(expanded));
         var title=communityEl('h4','font-bold text-slate-800 text-sm break-words flex-1',p.title);
-        var arrow=communityEl('span','text-indigo-600 font-semibold shrink-0', expanded?'접기':'내용보기');
+        var arrow=communityEl('span','text-indigo-600 font-semibold shrink-0', boardExpandLabel(expanded));
         arrow.style.fontSize='13px';
         arrow.style.whiteSpace='nowrap';
         heading.appendChild(title);heading.appendChild(arrow);
@@ -1010,6 +1010,17 @@
       if(!officialIsAdmin||!officialData[id]||!confirm(officialL()[8]))return;
       db.ref('officialNotices/'+currentCity.id+'/'+id).remove().catch(function(e){console.error(e);alert(officialL()[7]);});
     }
+    function boardExpandLabel(expanded){
+      var labels={
+        ko:['내용보기','접기'],
+        en:['View content','Collapse'],
+        ja:['内容を見る','閉じる'],
+        'zh-CN':['查看内容','收起']
+      };
+      var pair=labels[currentLang]||labels.ko;
+      return pair[expanded?1:0];
+    }
+    var officialOpenNotices = new Set();
     function renderOfficialNotices(){
       var wrap=document.getElementById('officialPosts');if(!wrap)return;
       wrap.replaceChildren();
@@ -1020,7 +1031,17 @@
         var summary=document.createElement('summary');summary.className='cursor-pointer list-none flex items-center gap-2 text-sm';
         var tag=document.createElement('span');tag.className='shrink-0 bg-indigo-50 text-indigo-700 rounded px-2 py-1 text-xs font-bold';tag.textContent='공지';
         var title=document.createElement('span');title.className='font-bold text-slate-800 flex-1 break-words';title.textContent=p.title;
-        var arrow=document.createElement('span');arrow.className='text-slate-400';arrow.textContent='⌄';
+        var arrow=document.createElement('span');
+        arrow.className='text-indigo-600 font-semibold shrink-0';
+        arrow.style.fontSize='13px';
+        arrow.style.whiteSpace='nowrap';
+        if(officialOpenNotices.has(id))details.open=true;
+        arrow.textContent=boardExpandLabel(details.open);
+        details.addEventListener('toggle',function(){
+          if(details.open)officialOpenNotices.add(id);
+          else officialOpenNotices.delete(id);
+          arrow.textContent=boardExpandLabel(details.open);
+        });
         summary.appendChild(tag);summary.appendChild(title);summary.appendChild(arrow);
         var content=document.createElement('div');content.className='mt-3 pt-3 border-t text-sm text-slate-700 whitespace-pre-wrap break-words';content.textContent=p.body;
         details.appendChild(summary);details.appendChild(content);
@@ -2040,6 +2061,7 @@
       if (!I18N[lang]) return;
       currentLang = lang;
       if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
+      if (currentView === 'board') renderOfficialNotices();
       localStorage.setItem('localtalk_ui_lang', lang);
       if (profileRestoreStarted && userNickname && userCountry) persistProfileV17();
       document.getElementById('langSelect').value = lang;
