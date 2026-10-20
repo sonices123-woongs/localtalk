@@ -846,11 +846,9 @@
         heading.setAttribute('aria-expanded',String(expanded));
         heading.setAttribute('aria-label',p.title+' - '+(expanded?'접기':'펼치기'));
         var title=communityEl('h4','font-bold text-slate-800 text-sm break-words flex-1',p.title);
-        var arrow=communityEl('span','text-slate-400 text-sm shrink-0', '⌄');
-        arrow.style.display='inline-block';
-        arrow.style.transition='transform 150ms ease';
-        arrow.style.transform=expanded?'rotate(180deg)':'rotate(0deg)';
-        arrow.setAttribute('aria-hidden','true');
+        var arrow=communityEl('span','text-indigo-600 font-semibold shrink-0', expanded?'접기':'내용보기');
+        arrow.style.fontSize='13px';
+        arrow.style.whiteSpace='nowrap';
         heading.appendChild(title);heading.appendChild(arrow);
         heading.addEventListener('click',function(){communityOpenPost=expanded?null:id;renderCommunityPosts();});
         card.appendChild(heading);
