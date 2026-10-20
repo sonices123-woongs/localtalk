@@ -614,6 +614,7 @@
     // v16: public, city-scoped community board. Uses textContent for all user input.
     var communityRef=null, communityCallback=null, communityData={};
     var communityOpenPost=null;
+    var communityOpenComments=null;
     var communitySelectedPlace=null;
     var communityPlaceLocale={
       ko:['📍 장소 첨부 (선택)','장소명 또는 주소 검색','검색','첨부 취소','장소를 검색해 주세요.','검색 중...','장소를 찾지 못했습니다. 다른 이름이나 주소로 검색해 주세요.','지도 API 없이 장소명으로 첨부합니다. 게시글에서 지도 검색 링크를 열 수 있습니다.','첨부된 장소'],
@@ -751,6 +752,7 @@
       communityStatus(communityT().loading);
       communityData={};
       communityOpenPost=null;
+      communityOpenComments=null;
       communityRef=db.ref('communityPosts/'+currentCity.id);
       communityCallback=function(snapshot){
         communityData=snapshot.val()||{};
@@ -837,8 +839,18 @@
       entries.forEach(function(item){
         var id=item.id,p=item.post;
         var card=communityEl('article','bg-white border border-slate-200 rounded-2xl p-4 space-y-2 shadow-sm');
-        var title=communityEl('h4','font-bold text-slate-800 text-sm break-words',p.title);
-        card.appendChild(title);
+        var expanded=communityOpenPost===id;
+        var commentsExpanded=communityOpenComments===id;
+        var heading=communityEl('button','w-full flex items-center justify-between gap-3 text-left');
+        heading.type='button';
+        heading.setAttribute('aria-expanded',String(expanded));
+        heading.setAttribute('aria-label',p.title+' - '+(expanded?'접기':'펼치기'));
+        var title=communityEl('h4','font-bold text-slate-800 text-sm break-words flex-1',p.title);
+        var arrow=communityEl('span','text-slate-500 text-sm shrink-0',expanded?'▲':'▼');
+        arrow.setAttribute('aria-hidden','true');
+        heading.appendChild(title);heading.appendChild(arrow);
+        heading.addEventListener('click',function(){communityOpenPost=expanded?null:id;renderCommunityPosts();});
+        card.appendChild(heading);
         if(communityEditingPost===id && p.uid===myUserId){
           var editor=communityEl('div','lt-modal');editor.id='communityEditModal';var editCard=communityEl('div','lt-modal-card space-y-3');editor.appendChild(editCard);
           var titleField=communityEl('input','w-full border rounded-lg p-3 text-sm');
@@ -852,10 +864,9 @@
         }
         var date=typeof p.createdAt==='number'?new Date(p.createdAt).toLocaleDateString(currentLang):'';
         card.appendChild(communityEl('p','text-xs text-slate-500',String(p.author||t.anonymous)+' · '+date));
-        var expanded=communityOpenPost===id;
         var actions=communityEl('div','flex gap-2 items-center flex-wrap');
         var comments=p.comments||{};
-        actions.appendChild(communityBtn(t.comment+' ('+Object.keys(comments).length+')',function(){communityOpenPost=expanded?null:id;renderCommunityPosts();}));
+        actions.appendChild(communityBtn(t.comment+' ('+Object.keys(comments).length+')',function(){communityOpenComments=commentsExpanded?null:id;renderCommunityPosts();}));
         if(p.uid===myUserId){
           actions.appendChild(communityBtn(t.edit,function(){editCommunityPost(id);}));
           actions.appendChild(communityBtn(t.delete,function(){deleteCommunityPost(id);},'text-red-600 text-xs font-bold px-2 py-1'));
@@ -867,6 +878,8 @@
           card.insertBefore(body,actions);
           var placeCard=communityPlaceCard(p.place);
           if(placeCard)card.insertBefore(placeCard,actions);
+        }
+        if(commentsExpanded){
           var commentBox=communityEl('div','space-y-2 border-t pt-3');
           Object.keys(comments).sort(function(a,b){return (comments[a].createdAt||0)-(comments[b].createdAt||0);}).forEach(function(cid){
             var c=comments[cid];
