@@ -645,14 +645,12 @@
       if(m)pair=[Number(m[1]),Number(m[2])];
       if(!pair){for(var key of ['query','q','ll','center']){var val=u.searchParams.get(key);if(val){m=val.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);if(m){pair=[Number(m[1]),Number(m[2])];break;}}}}
       if(!pair){m=decoded.match(/\/maps\/(?:search|place)\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);if(m)pair=[Number(m[1]),Number(m[2])];}
-      if(!pair){communityPinCoords=null;communityGoogleShareUrl=u.href;status.textContent=(currentLang==='ko'?'공유 링크가 확인되었습니다. 장소명을 입력하고 검색을 누르면 링크와 함께 첨부됩니다.':'Share link saved. Enter a place name and press Search to attach it.');return;}
+      if(!pair){communityPinCoords=null;communityGoogleShareUrl=u.href;var name=document.getElementById('communityPlaceQuery').value.trim();if(!name){status.textContent=currentLang==='ko'?'장소명을 먼저 입력해 주세요.':'Enter a place name first.';return;}searchCommunityPlace();status.textContent=currentLang==='ko'?'공유 링크를 장소에 저장했습니다. 짧은 링크는 좌표가 없어 정확한 핀은 표시되지 않습니다.':'Map link attached. Exact pin coordinates are unavailable for short links.';return;}
       if(!Number.isFinite(pair[0])||!Number.isFinite(pair[1])||Math.abs(pair[0])>90||Math.abs(pair[1])>180){status.textContent=t[1];return;}
       communityPinCoords={lat:pair[0],lng:pair[1]};communityGoogleShareUrl=u.href;
-      status.textContent=t[2]+pair[0].toFixed(6)+', '+pair[1].toFixed(6);
-      // The Search button commits the coordinates together with the place name.
-      communitySelectedPlace=null;
-      document.getElementById('communityPlaceResult').textContent='';
-      document.getElementById('communityPlaceRemove').classList.add('hidden');
+      var name=document.getElementById('communityPlaceQuery').value.trim();
+      if(!name){status.textContent=currentLang==='ko'?'좌표 확인 완료. 장소명을 입력한 뒤 검색을 눌러 주세요.':'Coordinates found. Enter a place name and press Search.';return;}
+      searchCommunityPlace();status.textContent=t[2]+pair[0].toFixed(6)+', '+pair[1].toFixed(6);
     }
     function removeCommunityPlace(){
       communitySelectedPlace=null;
@@ -693,7 +691,7 @@
       var hasCoords=typeof place.lat==='number'&&typeof place.lng==='number'&&Number.isFinite(place.lat)&&Number.isFinite(place.lng)&&Math.abs(place.lat)<=90&&Math.abs(place.lng)<=180;
       var searchText=String(place.name)+(place.address&&place.address!==place.name?' '+place.address:'');
       var googleQuery=hasCoords?place.lat+','+place.lng:searchText;
-      [['Google Maps',safeCommunityMapsUrl(place.url)||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam())],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
+      [['Google Maps',(hasCoords?('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam()):(safeCommunityMapsUrl(place.url)||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam())))],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
         var a=communityEl('a','text-xs font-bold text-emerald-700 underline',pair[0]);
         a.href=pair[1];a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
       });
@@ -788,6 +786,13 @@
       communityEditingPost=id;
       renderCommunityPosts();
     }
+    function extractCommunityMapCoordinates(raw){
+      try{var u=new URL(raw),decoded=decodeURIComponent(u.href),m=decoded.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
+        if(!m){for(var k of ['query','q','ll','center']){var val=u.searchParams.get(k);if(val){m=val.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);if(m)break;}}}
+        if(!m)m=decoded.match(/\/maps\/(?:search|place)\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);
+        if(!m)return null;var lat=Number(m[1]),lng=Number(m[2]);return Number.isFinite(lat)&&Number.isFinite(lng)&&Math.abs(lat)<=90&&Math.abs(lng)<=180?{lat:lat,lng:lng}:null;
+      }catch(e){return null;}
+    }
     function saveCommunityEdit(id,titleField,bodyField,saveBtn,placeNameField,placeUrlField){
       var post=communityData[id];
       if(!post||post.uid!==myUserId||!currentCity)return;
@@ -799,9 +804,9 @@
       var updates={title:title,body:body};
       if(placeName){
         updates.place={name:placeName.slice(0,150),address:placeName.slice(0,150)};
-        if(rawUrl)updates.place.url=rawUrl;
+        if(rawUrl){updates.place.url=rawUrl;var parsed=extractCommunityMapCoordinates(rawUrl);if(parsed){updates.place.lat=parsed.lat;updates.place.lng=parsed.lng;}}
         // Retain coordinates only when editing the same previously attached place and link.
-        if(post.place&&post.place.name===placeName&&(!rawUrl||rawUrl===post.place.url)&&Number.isFinite(post.place.lat)&&Number.isFinite(post.place.lng)){
+        if(!Number.isFinite(updates.place.lat)&&post.place&&post.place.name===placeName&&(!rawUrl||rawUrl===post.place.url)&&Number.isFinite(post.place.lat)&&Number.isFinite(post.place.lng)){
           updates.place.lat=post.place.lat;updates.place.lng=post.place.lng;
         }
       }else updates.place=null;
