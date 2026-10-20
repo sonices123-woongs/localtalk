@@ -974,59 +974,71 @@
       var dict={ko:{notice:'📢 공지',recommend:'⭐ 추천',tip:'💡 팁'},en:{notice:'📢 Notice',recommend:'⭐ Recommended',tip:'💡 Tip'},ja:{notice:'📢 お知らせ',recommend:'⭐ おすすめ',tip:'💡 ヒント'},'zh-CN':{notice:'📢 公告',recommend:'⭐ 推荐',tip:'💡 提示'}};
       return (dict[currentLang]||dict.ko)[category]||dict.ko.notice;
     }
-    // Photos are encoded inside the existing body field so Spark database rules stay unchanged.
-    // Only Cloudinary HTTPS delivery URLs are accepted. No Cloudinary credentials are stored.
-    var officialPhotoUrls=[];
+    // Structured blog blocks are encoded in the existing body string, preserving Firebase rules.
+    // Legacy plain text and LT_PHOTOS_V1 posts are read without changing their stored data.
+    var officialBlocks=[];
+    function officialValidPhotoUrl(value){
+      try{var u=new URL(value);return u.protocol==='https:'&&u.hostname==='res.cloudinary.com'&&u.pathname.indexOf('/image/upload/')!==-1&&u.href.length<=800;}catch(e){return false;}
+    }
     function officialPhotoDecode(body){
       var match=/\n\[\[LT_PHOTOS_V1:([A-Za-z0-9+/=]+)\]\]$/.exec(body||'');
       if(!match)return {body:body||'',photos:[]};
-      try{
-        var urls=JSON.parse(decodeURIComponent(escape(atob(match[1]))));
-        if(!Array.isArray(urls))throw Error('Invalid photo list');
-        return {body:body.slice(0,match.index),photos:urls.filter(officialValidPhotoUrl).slice(0,10)};
-      }catch(e){return {body:body||'',photos:[]};}
+      try{var urls=JSON.parse(decodeURIComponent(escape(atob(match[1]))));return {body:body.slice(0,match.index),photos:Array.isArray(urls)?urls.filter(officialValidPhotoUrl).slice(0,10):[]};}
+      catch(e){return {body:body||'',photos:[]};}
     }
-    function officialValidPhotoUrl(value){
-      try{
-        var url=new URL(value);
-        return url.protocol==='https:'&&url.hostname==='res.cloudinary.com'&&
-          url.pathname.indexOf('/image/upload/')!==-1&&url.href.length<=800;
-      }catch(e){return false;}
+    function officialDecodeBlocks(body){
+      var m=/^\[\[LT_BLOCKS_V1:([A-Za-z0-9+/=]+)\]\]$/.exec(body||'');
+      if(m){try{
+        var blocks=JSON.parse(decodeURIComponent(escape(atob(m[1]))));
+        if(Array.isArray(blocks)&&blocks.length<=40&&blocks.every(function(b){return b&&((b.type==='text'&&typeof b.text==='string')||(b.type==='image'&&officialValidPhotoUrl(b.url)));}))return blocks;
+      }catch(e){}}
+      var old=officialPhotoDecode(body);
+      var result=[];
+      if(old.body)result.push({type:'text',text:old.body});
+      old.photos.forEach(function(url){result.push({type:'image',url:url});});
+      return result.length?result:[{type:'text',text:''}];
     }
-    function officialPhotoEncode(body,photos){
-      if(!photos.length)return body;
-      return body+'\n[[LT_PHOTOS_V1:'+btoa(unescape(encodeURIComponent(JSON.stringify(photos))))+']]';
-    }
-    function officialPhotoRenderEditor(){
-      var list=document.getElementById('officialPhotoList');if(!list)return;
-      list.replaceChildren();
-      officialPhotoUrls.forEach(function(url,index){
-        var row=document.createElement('div');row.className='flex items-center gap-2 rounded-lg border p-2 bg-slate-50';
-        var img=document.createElement('img');img.src=url;img.alt='사진 '+(index+1);img.loading='lazy';img.referrerPolicy='no-referrer';img.className='w-14 h-14 rounded object-cover';
-        var name=document.createElement('span');name.className='text-xs text-slate-600 flex-1 break-all';name.textContent=(index+1)+' / '+officialPhotoUrls.length+' · '+url.split('/').pop().slice(0,30);
-        row.appendChild(img);row.appendChild(name);
-        [['↑',-1],['↓',1],['삭제',0]].forEach(function(item){
-          var button=document.createElement('button');button.type='button';button.textContent=item[0];button.className='text-xs font-bold border rounded px-2 py-2 bg-white';
-          button.disabled=item[1]===-1&&index===0||item[1]===1&&index===officialPhotoUrls.length-1;
-          button.addEventListener('click',function(){
-            if(item[1]===0)officialPhotoUrls.splice(index,1);
-            else {var other=index+item[1],temp=officialPhotoUrls[index];officialPhotoUrls[index]=officialPhotoUrls[other];officialPhotoUrls[other]=temp;}
-            officialPhotoRenderEditor();
-          });row.appendChild(button);
-        });list.appendChild(row);
+    function officialEncodeBlocks(blocks){return '[[LT_BLOCKS_V1:'+btoa(unescape(encodeURIComponent(JSON.stringify(blocks))))+']]';}
+    function officialTextBlocks(){
+      document.querySelectorAll('#officialBlockList [data-block-index]').forEach(function(el){
+        var idx=Number(el.dataset.blockIndex);
+        if(officialBlocks[idx]&&officialBlocks[idx].type==='text')officialBlocks[idx].text=el.value;
       });
-      var count=document.getElementById('officialPhotoCount');if(count)count.textContent=officialPhotoUrls.length+' / 10';
     }
+    function officialBlockPhotoCount(){return officialBlocks.filter(function(b){return b.type==='image';}).length;}
+    function officialRenderBlockEditor(){
+      var list=document.getElementById('officialBlockList');if(!list)return;
+      list.replaceChildren();
+      officialBlocks.forEach(function(b,i){
+        var row=document.createElement('div');row.className='rounded-xl border border-slate-200 bg-white p-2 space-y-2';
+        var header=document.createElement('div');header.className='flex items-center gap-2';
+        var label=document.createElement('span');label.className='text-xs font-bold text-slate-600 flex-1';label.textContent=(i+1)+'. '+(b.type==='text'?'글':'사진');header.appendChild(label);
+        [['↑',-1],['↓',1],['삭제',0]].forEach(function(opt){
+          var btn=document.createElement('button');btn.type='button';btn.textContent=opt[0];btn.className='border rounded-lg px-2 py-1 text-xs bg-slate-50';
+          btn.disabled=(opt[1]===-1&&i===0)||(opt[1]===1&&i===officialBlocks.length-1);
+          btn.addEventListener('click',function(){officialTextBlocks();if(opt[1]===0)officialBlocks.splice(i,1);else{var j=i+opt[1],tmp=officialBlocks[i];officialBlocks[i]=officialBlocks[j];officialBlocks[j]=tmp;}officialRenderBlockEditor();});header.appendChild(btn);
+        });row.appendChild(header);
+        if(b.type==='text'){
+          var ta=document.createElement('textarea');ta.className='w-full border rounded-lg p-3 text-sm';ta.rows=3;ta.placeholder='이 위치에 표시할 설명을 작성하세요';ta.value=b.text;ta.dataset.blockIndex=i;
+          ta.addEventListener('input',function(){b.text=ta.value;});row.appendChild(ta);
+        }else{
+          var img=document.createElement('img');img.src=b.url;img.loading='lazy';img.alt='첨부 사진';img.className='w-full rounded-lg object-contain';img.style.maxHeight='180px';row.appendChild(img);
+        }
+        list.appendChild(row);
+      });
+      var count=document.getElementById('officialPhotoCount');if(count)count.textContent=officialBlockPhotoCount()+' / 10';
+    }
+    function officialAddTextBlock(){officialTextBlocks();officialBlocks.push({type:'text',text:''});officialRenderBlockEditor();}
     function officialAddPhotoUrl(){
-      var input=document.getElementById('officialPhotoUrl');var url=input.value.trim();
+      var input=document.getElementById('officialPhotoUrl'),url=input.value.trim();
       if(!officialValidPhotoUrl(url)){alert('Cloudinary의 공개 HTTPS 이미지 URL을 입력해 주세요.');return;}
-      if(officialPhotoUrls.length>=10){alert('사진은 최대 10장까지 등록할 수 있습니다.');return;}
-      if(officialPhotoUrls.indexOf(url)!==-1){alert('이미 추가한 사진입니다.');return;}
-      officialPhotoUrls.push(url);input.value='';officialPhotoRenderEditor();
+      if(officialBlockPhotoCount()>=10){alert('사진은 최대 10장까지 등록할 수 있습니다.');return;}
+      if(officialBlocks.some(function(b){return b.type==='image'&&b.url===url;})){alert('이미 추가한 사진입니다.');return;}
+      officialTextBlocks();officialBlocks.push({type:'image',url:url});input.value='';officialRenderBlockEditor();
     }
     function openOfficialNoticeEditor(){
       if(!officialIsAdmin)return;officialEditId=null;
-      document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';document.getElementById('officialCategory').value='notice';officialPhotoUrls=[];officialPhotoRenderEditor();
+      document.getElementById('officialTitle').value='';document.getElementById('officialCategory').value='notice';officialBlocks=[{type:'text',text:''}];officialRenderBlockEditor();
       document.getElementById('officialEditorHeading').textContent='공식 공지 작성';
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
@@ -1036,14 +1048,16 @@
     }
     function publishOfficialNotice(){
       if(!officialIsAdmin||!currentCity||!auth.currentUser)return;
-      var title=document.getElementById('officialTitle').value.trim(),body=document.getElementById('officialBody').value.trim();
+      officialTextBlocks();
+      var title=document.getElementById('officialTitle').value.trim();
       var storedTitle=officialCategoryTitle(document.getElementById('officialCategory').value,title);
-      var storedBody=officialPhotoEncode(body,officialPhotoUrls);
-      if(!title||!body||storedTitle.length>120||storedBody.length>4000){alert('제목 또는 내용이 너무 깁니다. 사진 URL을 줄이거나 본문을 짧게 작성해 주세요.');return;}
+      var blocks=officialBlocks.filter(function(b){return b.type==='image'||b.text.trim();});
+      var storedBody=officialEncodeBlocks(blocks);
+      if(!title||!blocks.length||storedTitle.length>120||storedBody.length>4000){alert('제목 또는 내용이 너무 깁니다. 사진 URL을 줄이거나 본문을 짧게 작성해 주세요.');return;}
       var ref=db.ref('officialNotices/'+currentCity.id);
       var task=officialEditId?ref.child(officialEditId).update({title:storedTitle,body:storedBody}):
         ref.push().set({uid:auth.currentUser.uid,title:storedTitle,body:storedBody,createdAt:firebase.database.ServerValue.TIMESTAMP});
-      task.then(function(){closeOfficialNoticeEditor();document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';})
+      task.then(function(){closeOfficialNoticeEditor();document.getElementById('officialTitle').value='';})
         .catch(function(e){console.error(e);alert(officialL()[7]);});
     }
     function editOfficialNotice(id){
@@ -1052,7 +1066,7 @@
       var parsed=officialCategoryFromTitle(p.title);
       document.getElementById('officialCategory').value=parsed.category;
       document.getElementById('officialTitle').value=parsed.title;
-      var decoded=officialPhotoDecode(p.body);document.getElementById('officialBody').value=decoded.body;officialPhotoUrls=decoded.photos.slice();officialPhotoRenderEditor();
+      officialBlocks=officialDecodeBlocks(p.body);officialRenderBlockEditor();
       document.getElementById('officialEditorHeading').textContent='공식 공지 수정';
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
@@ -1072,49 +1086,66 @@
       return pair[expanded?1:0];
     }
     var officialOpenNotices = new Set();
+    var officialSearchText='';
+    var officialCategoryFilter='all';
+    function officialSearchCorpus(p){
+      var title=officialCategoryFromTitle(p.title).title;
+      var blocks=officialDecodeBlocks(p.body);
+      var content=blocks.filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join(' ');
+      var text=(title+' '+content).toLowerCase();
+      var aliases=[['명동','myeongdong','myungdong','明洞','ミョンドン'],['홍대','hongdae','hongik','弘大','ホンデ'],['서울역','seoul station','ソウル駅'],['강남','gangnam','江南','カンナム'],['경복궁','gyeongbokgung','景福宮','景福宫'],['동대문','dongdaemun','東大門'],['부산','busan','釜山'],['해운대','haeundae','海雲台'],['제주','jeju','済州','济州']];
+      aliases.forEach(function(group){if(group.some(function(word){return text.indexOf(word.toLowerCase())!==-1;}))text+=' '+group.join(' ').toLowerCase();});
+      return text;
+    }
+    function officialSearchLabels(){
+      return ({ko:['장소나 제목 검색 (예: 명동)','전체','공지','추천','팁','검색 결과가 없습니다.'],en:['Search places or titles (e.g. Myeongdong)','All','Notice','Recommended','Tip','No matching posts.'],ja:['場所・タイトルを検索','すべて','お知らせ','おすすめ','ヒント','検索結果がありません'], 'zh-CN':['搜索地点或标题','全部','公告','推荐','提示','没有搜索结果']})[currentLang]||['장소나 제목 검색 (예: 명동)','전체','공지','추천','팁','검색 결과가 없습니다.'];
+    }
     function renderOfficialNotices(){
       var wrap=document.getElementById('officialPosts');if(!wrap)return;
       wrap.replaceChildren();
-      Object.keys(officialData).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);}).forEach(function(id){
-        var p=officialData[id];if(!p||typeof p.title!=='string'||typeof p.body!=='string')return;
-        var parsed=officialCategoryFromTitle(p.title);
+      var q=officialSearchText.trim().toLowerCase();
+      var aliases=[['명동','myeongdong','myungdong','明洞','ミョンドン'],['홍대','hongdae','hongik','弘大','ホンデ'],['서울역','seoul station','ソウル駅'],['강남','gangnam','江南','カンナム'],['경복궁','gyeongbokgung','景福宮','景福宫'],['동대문','dongdaemun','東大門'],['부산','busan','釜山'],['해운대','haeundae','海雲台'],['제주','jeju','済州','济州']];
+      var normalized=q;
+      aliases.forEach(function(group){if(group.some(function(word){return word.toLowerCase()===q;}))normalized=group[0];});
+      var ids=Object.keys(officialData).filter(function(id){
+        var p=officialData[id];if(!p||typeof p.title!=='string'||typeof p.body!=='string')return false;
+        if(officialCategoryFilter!=='all'&&officialCategoryFromTitle(p.title).category!==officialCategoryFilter)return false;
+        return !q||officialSearchCorpus(p).indexOf(q)!==-1||officialSearchCorpus(p).indexOf(normalized)!==-1;
+      }).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);});
+      var count=document.getElementById('officialSearchCount');if(count)count.textContent=ids.length+'개';
+      if(!ids.length){var empty=document.createElement('p');empty.className='text-sm text-slate-400 text-center py-8';empty.textContent=officialSearchLabels()[5];wrap.appendChild(empty);}
+      ids.forEach(function(id){
+        var p=officialData[id],parsed=officialCategoryFromTitle(p.title);
         var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
         var details=document.createElement('details');details.className='group';
         var summary=document.createElement('summary');summary.className='cursor-pointer list-none flex items-center gap-2 text-sm';
         var tag=document.createElement('span');tag.className='shrink-0 bg-indigo-50 text-indigo-700 rounded px-2 py-1 text-xs font-bold';tag.textContent=officialCategoryLabel(parsed.category);
         var title=document.createElement('span');title.className='font-bold text-slate-800 flex-1 break-words';title.textContent=parsed.title;
-        var arrow=document.createElement('span');
-        arrow.className='text-indigo-600 font-semibold shrink-0';
-        arrow.style.fontSize='13px';
-        arrow.style.whiteSpace='nowrap';
+        var toggle=document.createElement('span');toggle.className='text-indigo-600 font-semibold shrink-0';toggle.style.fontSize='13px';toggle.style.whiteSpace='nowrap';
         if(officialOpenNotices.has(id))details.open=true;
-        arrow.textContent=boardExpandLabel(details.open);
-        details.addEventListener('toggle',function(){
-          if(details.open)officialOpenNotices.add(id);
-          else officialOpenNotices.delete(id);
-          arrow.textContent=boardExpandLabel(details.open);
-        });
-        summary.appendChild(tag);summary.appendChild(title);summary.appendChild(arrow);
-        var decoded=officialPhotoDecode(p.body);
-        var content=document.createElement('div');content.className='mt-3 pt-3 border-t text-sm text-slate-700 whitespace-pre-wrap break-words';content.textContent=decoded.body;
-        details.appendChild(summary);details.appendChild(content);
-        if(decoded.photos.length){
-          var gallery=document.createElement('div');gallery.className='grid grid-cols-2 gap-2 mt-3';
-          decoded.photos.forEach(function(url,index){
-            var img=document.createElement('img');img.src=url;img.alt='첨부 사진 '+(index+1);img.loading='lazy';img.decoding='async';
-            img.className='w-full rounded-xl object-cover cursor-pointer';img.style.aspectRatio='4 / 3';
-            img.addEventListener('click',function(){window.open(url,'_blank','noopener,noreferrer');});gallery.appendChild(img);
-          });details.appendChild(gallery);
-        }
-        if(officialIsAdmin){
-          var actions=document.createElement('div');actions.className='flex gap-2 mt-2';
-          actions.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));
-          actions.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));
-          details.appendChild(actions);
-        }
+        toggle.textContent=boardExpandLabel(details.open);
+        details.addEventListener('toggle',function(){if(details.open)officialOpenNotices.add(id);else officialOpenNotices.delete(id);toggle.textContent=boardExpandLabel(details.open);});
+        summary.appendChild(tag);summary.appendChild(title);summary.appendChild(toggle);details.appendChild(summary);
+        var content=document.createElement('div');content.className='mt-3 pt-3 border-t space-y-3 text-sm text-slate-700';
+        officialDecodeBlocks(p.body).forEach(function(block){
+          if(block.type==='text'){
+            var text=document.createElement('p');text.className='whitespace-pre-wrap break-words';text.textContent=block.text;content.appendChild(text);
+          }else{
+            var img=document.createElement('img');img.src=block.url;img.alt='첨부 사진';img.loading='lazy';img.decoding='async';img.className='w-full rounded-xl object-contain cursor-pointer';
+            img.addEventListener('click',function(){window.open(block.url,'_blank','noopener,noreferrer');});content.appendChild(img);
+          }
+        });details.appendChild(content);
+        if(officialIsAdmin){var actions=document.createElement('div');actions.className='flex gap-2 mt-2';actions.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));actions.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));details.appendChild(actions);}
         card.appendChild(details);wrap.appendChild(card);
       });
     }
+    function updateOfficialSearchUI(){
+      var labels=officialSearchLabels(),input=document.getElementById('officialSearchInput'),select=document.getElementById('officialSearchCategory');
+      if(input)input.placeholder=labels[0];
+      if(select)Array.from(select.options).forEach(function(opt,i){opt.textContent=labels[i+1];});
+    }
+    function officialSearchChanged(value){officialSearchText=value;renderOfficialNotices();}
+    function officialFilterChanged(value){officialCategoryFilter=value;renderOfficialNotices();}
     // Official notices and tips are now created by admins in Firebase.
     // The old hardcoded demo posts are intentionally no longer rendered.
     function renderBoardPosts() {
@@ -2069,7 +2100,7 @@
       if (!I18N[lang]) return;
       currentLang = lang;
       if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
-      if (currentView === 'board') renderOfficialNotices();
+      if (currentView === 'board') { updateOfficialSearchUI();renderOfficialNotices(); }
       localStorage.setItem('localtalk_ui_lang', lang);
       if (profileRestoreStarted && userNickname && userCountry) persistProfileV17();
       document.getElementById('langSelect').value = lang;
