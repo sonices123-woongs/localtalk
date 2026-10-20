@@ -57,6 +57,7 @@
       document.getElementById('authStatus').classList.add('hidden');
       restoreProfileAfterAuth();
       listenCityUsers();
+      refreshOfficialAdmin();
     }, function(error) {
       authReady = false;
       console.error('Auth state error:', error);
@@ -604,6 +605,8 @@
 
       renderBoardPosts();
       startCommunityListener();
+      selectBoardSection('notice');
+      startOfficialNotices();
     }
 
 
@@ -879,6 +882,122 @@
           commentBox.appendChild(field);commentBox.appendChild(submit);card.appendChild(commentBox);
         }
         container.appendChild(card);
+      });
+    }
+
+
+    // v20.4 official notices: Google provider + server-side UID allowlist.
+    var officialRef=null,officialListener=null,officialData={},officialIsAdmin=false,officialEditId=null;
+    var boardSection='notice';
+    function officialL(){
+      return ({
+        ko:['📢 공지 & 팁','💬 여행자 게시판','관리자 Google 로그인','관리자 인증 완료','관리자 계정이 허용 목록에 없습니다. Firebase 관리자 UID 등록이 필요합니다.','공식 공지는 관리자만 작성할 수 있습니다.','제목과 내용을 입력하세요.','저장에 실패했습니다.','삭제할까요?','수정','삭제','저장','취소','공지 등록'],
+        en:['📢 Notices & tips','💬 Traveler board','Admin Google sign-in','Admin verified','This Google UID is not approved in Firebase.','Only administrators can publish official notices.','Enter a title and content.','Could not save.','Delete this notice?','Edit','Delete','Save','Cancel','Publish notice'],
+        ja:['📢 お知らせ・ヒント','💬 旅行者掲示板','管理者Googleログイン','管理者認証済み','このGoogleアカウントは管理者登録されていません。','公式お知らせは管理者のみ投稿できます。','タイトルと本文を入力してください。','保存できませんでした。','削除しますか？','編集','削除','保存','キャンセル','お知らせ投稿'],
+        'zh-CN':['📢 公告与提示','💬 旅行者论坛','管理员Google登录','管理员已验证','此Google账号未被授权。','只有管理员可以发布公告。','请输入标题和内容。','保存失败。','确定删除吗？','编辑','删除','保存','取消','发布公告']
+      })[currentLang]||({ko:['📢 공지 & 팁','💬 여행자 게시판','관리자 Google 로그인','관리자 인증 완료','관리자 계정이 허용 목록에 없습니다. Firebase 관리자 UID 등록이 필요합니다.','공식 공지는 관리자만 작성할 수 있습니다.','제목과 내용을 입력하세요.','저장에 실패했습니다.','삭제할까요?','수정','삭제','저장','취소','공지 등록']}).ko;
+    }
+    function selectBoardSection(section){
+      boardSection=section==='traveler'?'traveler':'notice';
+      var n=boardSection==='notice', t=officialL();
+      document.getElementById('boardNoticePanel').classList.toggle('hidden',!n);
+      document.getElementById('boardTravelerPanel').classList.toggle('hidden',n);
+      document.getElementById('communityToolbar').classList.toggle('hidden',n);
+      ['boardNoticeTab','boardTravelerTab'].forEach(function(id,i){
+        var selected=i===(n?0:1), el=document.getElementById(id);
+        el.className='rounded-xl py-3 text-sm font-bold '+(selected?'bg-indigo-600 text-white':'bg-white border text-slate-700');
+        el.setAttribute('aria-selected',String(selected));
+        el.textContent=t[i];
+      });
+      document.getElementById('boardScrollablePosts').scrollTop=0;
+    }
+    function officialButton(label,handler,red){
+      var b=document.createElement('button');b.type='button';b.textContent=label;
+      b.className=(red?'text-red-600':'text-indigo-700')+' text-xs font-bold px-2 py-2';
+      b.onclick=handler;return b;
+    }
+    function startOfficialNotices(){
+      stopOfficialNotices();
+      if(!currentCity||!authReady)return;
+      officialRef=db.ref('officialNotices/'+currentCity.id);
+      officialListener=function(s){officialData=s.val()||{};renderOfficialNotices();};
+      officialRef.on('value',officialListener,function(err){console.error('Official notice read',err);});
+      refreshOfficialAdmin();
+    }
+    function stopOfficialNotices(){
+      if(officialRef&&officialListener)officialRef.off('value',officialListener);
+      officialRef=null;officialListener=null;officialData={};
+    }
+    function refreshOfficialAdmin(){
+      officialIsAdmin=false;
+      var user=auth.currentUser;
+      var t=officialL();
+      var status=document.getElementById('adminStatus');
+      if(!status)return;
+      document.getElementById('adminLoginButton').textContent=t[2];
+      status.textContent=t[5];
+      document.getElementById('officialEditor').classList.add('hidden');
+      if(!user)return;
+      // Read only own allowlist entry; Firebase rules verify Google provider on writes.
+      db.ref('officialAdmins/'+user.uid).once('value').then(function(s){
+        if(auth.currentUser&&auth.currentUser.uid===user.uid){
+          officialIsAdmin=s.val()===true;
+          status.textContent=officialIsAdmin?t[3]:(user.providerData.some(function(p){return p.providerId==='google.com';})?t[4]:t[5]);
+          document.getElementById('officialEditor').classList.toggle('hidden',!officialIsAdmin);
+          document.getElementById('adminLoginButton').classList.toggle('hidden',officialIsAdmin);
+          renderOfficialNotices();
+        }
+      }).catch(function(e){console.error('Admin lookup',e);});
+    }
+    function loginOfficialAdmin(){
+      var user=auth.currentUser;
+      if(!user)return;
+      var provider=new firebase.auth.GoogleAuthProvider();
+      // Link preserves anonymous UID, existing posts and profile ownership.
+      var promise=user.isAnonymous?user.linkWithPopup(provider):auth.signInWithPopup(provider);
+      promise.then(function(){return auth.currentUser.getIdToken(true);})
+        .then(function(){myUserId=auth.currentUser.uid;refreshOfficialAdmin();})
+        .catch(function(e){
+          console.error('Google admin sign-in',e);
+          alert('Google 로그인에 실패했습니다: '+(e.code||e.message));
+        });
+    }
+    function publishOfficialNotice(){
+      if(!officialIsAdmin||!currentCity||!auth.currentUser)return;
+      var title=document.getElementById('officialTitle').value.trim(),body=document.getElementById('officialBody').value.trim();
+      if(!title||!body||title.length>120||body.length>4000){alert(officialL()[6]);return;}
+      var ref=db.ref('officialNotices/'+currentCity.id);
+      var task=officialEditId?ref.child(officialEditId).update({title:title,body:body}):
+        ref.push().set({uid:auth.currentUser.uid,title:title,body:body,createdAt:firebase.database.ServerValue.TIMESTAMP});
+      task.then(function(){officialEditId=null;document.getElementById('officialTitle').value='';document.getElementById('officialBody').value='';})
+        .catch(function(e){console.error(e);alert(officialL()[7]);});
+    }
+    function editOfficialNotice(id){
+      var p=officialData[id];if(!officialIsAdmin||!p)return;
+      officialEditId=id;
+      document.getElementById('officialTitle').value=p.title;
+      document.getElementById('officialBody').value=p.body;
+      document.getElementById('officialTitle').focus();
+      document.getElementById('officialEditor').scrollIntoView({block:'nearest'});
+    }
+    function deleteOfficialNotice(id){
+      if(!officialIsAdmin||!officialData[id]||!confirm(officialL()[8]))return;
+      db.ref('officialNotices/'+currentCity.id+'/'+id).remove().catch(function(e){console.error(e);alert(officialL()[7]);});
+    }
+    function renderOfficialNotices(){
+      var wrap=document.getElementById('officialPosts');if(!wrap)return;
+      wrap.replaceChildren();
+      Object.keys(officialData).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);}).forEach(function(id){
+        var p=officialData[id];if(!p||typeof p.title!=='string'||typeof p.body!=='string')return;
+        var card=document.createElement('article');card.className='bg-indigo-50 rounded-xl p-3 space-y-2';
+        var h=document.createElement('h4');h.className='font-bold text-sm text-slate-800';h.textContent=p.title;
+        var b=document.createElement('p');b.className='whitespace-pre-wrap break-words text-sm text-slate-700';b.textContent=p.body;
+        card.appendChild(h);card.appendChild(b);
+        if(officialIsAdmin){
+          card.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));
+          card.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));
+        }
+        wrap.appendChild(card);
       });
     }
 
@@ -1351,6 +1470,7 @@
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
         if (currentRoomUsersRef) leaveCurrentRoom();
         if (cityPresenceRef) { cityPresenceRef.remove(); cityPresenceRef = null; }
+        stopOfficialNotices();
         currentCity = null;
         currentRoom = null;
         currentView = 'home';
@@ -1881,6 +2001,10 @@
     }
 
     function changeLanguage(lang) {
+      if (document.getElementById('boardNoticeTab')) {
+        // Labels are refreshed below once currentLang is assigned.
+        setTimeout(function(){selectBoardSection(boardSection);refreshOfficialAdmin();},0);
+      }
       if (!I18N[lang]) return;
       currentLang = lang;
       if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
