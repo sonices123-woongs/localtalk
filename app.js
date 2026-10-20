@@ -520,14 +520,13 @@
         var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,1) 0%,rgba(255,255,255,.97) 27%,rgba(255,255,255,.78) 43%,rgba(255,255,255,.25) 73%,rgba(255,255,255,.02) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.91) 29%,rgba(255,255,255,.60) 44%,rgba(255,255,255,.10) 63%,rgba(255,255,255,0) 76%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
                   '<h3 class="font-extrabold text-slate-900 text-base leading-tight">' + name + '</h3>' +
                   '<span class="text-[10px] city-online-badge bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
                 '</div>' +
-                '<p class="text-[12px] text-slate-600 mt-1 font-medium leading-tight">' + desc + '</p>' +
                 '<p class="city-place-highlights text-[11px] font-bold mt-1 leading-snug">' + subText.split(' · ').map(function(item,idx){return '<span class="city-place-item city-place-color-'+(idx%3)+'">'+item+'</span>';}).join('<span class="city-place-separator"> · </span>') + '</p>' +
               '</div>' +
             '</div>' +
@@ -2167,6 +2166,8 @@
       document.getElementById('headerSub').innerText = t.appSub;
       document.getElementById('citySearch').placeholder = t.searchPlaceholder;
       document.getElementById('popularTitle').innerText = t.popularTitle;
+      var popularHint = document.getElementById('popularHint');
+      if (popularHint) popularHint.textContent = currentLang === 'ko' ? '(여행 정보 · 현지인 채팅)' : currentLang === 'ja' ? '(旅行情報 · 現地チャット)' : currentLang === 'zh-CN' ? '(旅行信息 · 当地聊天)' : '(Travel info · Local chat)';
       document.getElementById('msgInput').placeholder = t.inputPlaceholder;
       document.getElementById('sendBtn').innerText = t.send;
 

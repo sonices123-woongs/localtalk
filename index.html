@@ -51,11 +51,11 @@ header {gap:6px;min-width:0}
 @media (max-width: 768px) {
   .app-container > header {
     box-sizing:border-box!important;
-    padding-top:calc(45px + env(safe-area-inset-top, 0px))!important;
+    padding-top:calc(33px + env(safe-area-inset-top, 0px))!important;
     padding-bottom:12px!important;
     padding-left:12px!important;
     padding-right:12px!important;
-    min-height:110px!important;
+    min-height:90px!important;
     align-items:center!important;
     gap:6px!important;
   }
@@ -195,14 +195,17 @@ header {gap:6px;min-width:0}
     </header>
 
     <!-- [화면 1] 도시 및 지역 선택 메인 화면 -->
-    <main id="homeView" class="p-4 space-y-4 flex-1 scroll-area w-full pb-16">
+    <main id="homeView" class="p-4 flex-1 w-full min-h-0 flex flex-col gap-3 overflow-hidden">
       <div class="relative w-full">
         <i class="fas fa-search absolute left-4 top-3.5 text-slate-400 text-sm"></i>
         <input type="text" id="citySearch" onkeyup="filterCities()" placeholder="궁금한 도시/지역을 검색하세요 (예: 서울, 대구, 여수)" class="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
       </div>
 
-      <div class="w-full">
-        <h2 id="popularTitle" class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">주요 도시 및 지역 목록</h2>
+      <div class="w-full shrink-0 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <h2 id="popularTitle" class="text-xs font-bold text-slate-500 uppercase tracking-wider">주요 도시 및 지역 목록</h2>
+        <span id="popularHint" class="text-[10px] font-medium text-slate-500">여행 정보 · 현지인 채팅</span>
+      </div>
+      <div id="cityScrollArea" class="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
         <div id="cityList" class="flex flex-col gap-3 w-full"></div>
       </div>
     </main>
