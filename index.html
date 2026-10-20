@@ -141,18 +141,36 @@
         </div>
       </div>
 
-        <div class="flex justify-between items-center" id="communityToolbar">
+        <div class="grid grid-cols-2 gap-2" role="tablist" aria-label="게시판 종류">
+          <button id="boardNoticeTab" type="button" role="tab" aria-selected="true" onclick="selectBoardSection('notice')" class="rounded-xl bg-indigo-600 text-white py-3 text-sm font-bold">📢 공지 & 팁</button>
+          <button id="boardTravelerTab" type="button" role="tab" aria-selected="false" onclick="selectBoardSection('traveler')" class="rounded-xl bg-white border py-3 text-sm font-bold">💬 여행자 게시판</button>
+        </div>
+        <div id="communityToolbar" class="hidden flex justify-between items-center">
           <h3 id="communityHeading" class="font-bold text-slate-800 text-base">여행자 게시판</h3>
           <button type="button" id="communityNewButton" onclick="toggleCommunityComposer()" class="bg-indigo-600 text-white rounded-xl px-4 py-2 text-sm font-bold">+ 글쓰기</button>
         </div>
       </div>
       <section id="boardScrollablePosts" class="space-y-3 px-4 pt-2 pb-5 scroll-area min-h-0 flex-1" aria-label="Community posts">
-      <div>
+      <div id="boardNoticePanel" class="space-y-3">
         <h3 id="boardPostsTitle" class="text-sm font-bold text-slate-700 mb-2.5 flex items-center gap-1.5">
           <i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁
         </h3>
         <div id="boardPosts" class="space-y-2.5"></div>
+        <div class="bg-white border rounded-2xl p-4 space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-bold text-slate-800 text-sm" id="officialHeading">공식 공지 & 팁</h3>
+            <button id="adminLoginButton" onclick="loginOfficialAdmin()" type="button" class="text-xs text-indigo-700 font-bold border rounded-lg px-2 py-2">관리자 Google 로그인</button>
+          </div>
+          <p id="adminStatus" class="text-xs text-slate-500" aria-live="polite">공식 공지는 관리자만 작성할 수 있습니다.</p>
+          <div id="officialEditor" class="hidden space-y-2">
+            <input id="officialTitle" maxlength="120" class="w-full border rounded-lg p-3 text-sm" placeholder="공지 제목">
+            <textarea id="officialBody" maxlength="4000" rows="4" class="w-full border rounded-lg p-3 text-sm" placeholder="공지 내용"></textarea>
+            <button type="button" onclick="publishOfficialNotice()" class="bg-indigo-600 text-white rounded-lg px-4 py-2 text-sm font-bold">공지 등록</button>
+          </div>
+          <div id="officialPosts" class="space-y-2"></div>
+        </div>
       </div>
+      <div id="boardTravelerPanel" class="hidden space-y-3">
 
         <div id="communityComposer" class="hidden bg-white border border-indigo-200 rounded-2xl p-4 space-y-3">
           <input id="communityPostTitle" maxlength="100" class="w-full border rounded-xl p-3 text-sm" placeholder="제목 (최대 100자)">
@@ -180,6 +198,7 @@
         </div>
         <p id="communityStatus" class="text-xs text-slate-500" aria-live="polite"></p>
         <div id="communityPosts" class="space-y-3"></div>
+      </div>
       </section>
 
     </main>
