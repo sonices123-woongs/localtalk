@@ -393,6 +393,22 @@ header {gap:6px;min-width:0}
       </div>
     </div>
 
+    <!-- v20.23: read-only map viewer, never leaves the APK WebView -->
+    <div id="placeViewer" class="hidden fixed inset-0 z-[10040] bg-slate-900/70 p-3 sm:p-8" role="dialog" aria-modal="true" aria-label="공유된 장소 보기">
+      <div class="bg-white rounded-2xl w-full max-w-xl h-full max-h-[760px] mx-auto flex flex-col overflow-hidden shadow-2xl">
+        <div class="flex items-center justify-between p-3 border-b gap-2">
+          <strong id="viewPlaceName" class="text-sm break-words">📍 공유된 장소</strong>
+          <button type="button" onclick="closePlaceViewer()" class="px-4 py-2 rounded-lg bg-slate-100 text-sm font-bold" aria-label="닫기">✕ 닫기</button>
+        </div>
+        <p id="viewPlaceAddress" class="px-3 py-2 text-xs text-slate-600 break-words"></p>
+        <div id="viewPlaceMap" class="flex-1 min-h-[220px] bg-slate-100"></div>
+        <div id="viewPlaceNoCoords" class="hidden flex-1 p-5 text-sm text-slate-600 flex items-center justify-center text-center">이전에 이름만으로 공유한 장소는 정확한 좌표가 없습니다. 작성자가 지도에서 핀을 다시 선택해야 합니다.</div>
+        <div class="p-3 border-t">
+          <button type="button" onclick="closePlaceViewer()" class="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-bold">게시글 / 채팅으로 돌아가기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- [화면 5] 구글 지도 화면 -->
     <main id="mapView" class="hidden flex-1 w-full h-full relative pb-12">
       <div class="absolute top-3 left-3 right-3 z-50 flex flex-col gap-1.5">
@@ -434,6 +450,6 @@ header {gap:6px;min-width:0}
 .lt-modal.hidden{display:none!important}
 .lt-modal-card{background:#fff;border-radius:18px;padding:20px;width:min(100%,560px);max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25)}
 </style>
-  <script src="./app.js?v=20.22"></script>
+  <script src="./app.js?v=20.23"></script>
 </body>
 </html>

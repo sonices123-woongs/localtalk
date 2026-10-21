@@ -638,20 +638,50 @@
         if(u.hostname==='maps.app.goo.gl'||u.hostname==='goo.gl' || u.hostname==='maps.google.com'||/^www\.google\.[a-z.]+$/.test(u.hostname)||/^google\.[a-z.]+$/.test(u.hostname))return u.href;
       }catch(e){}return null;
     }
+    // v20.23: View saved coordinates inside Local Talk; never navigate the APK WebView.
+    function validSavedPlace(place){
+      return place && Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng)) &&
+        Math.abs(Number(place.lat))<=90 && Math.abs(Number(place.lng))<=180;
+    }
+    var viewedPlace=null, viewedMap=null, viewedMarker=null;
+    function viewPlaceInsideApp(place){
+      if(!place)return;
+      viewedPlace=place;
+      var dialog=document.getElementById('placeViewer');
+      document.getElementById('viewPlaceName').textContent='📍 '+String(place.name||'공유된 장소');
+      document.getElementById('viewPlaceAddress').textContent=String(place.address||'');
+      var valid=validSavedPlace(place);
+      document.getElementById('viewPlaceNoCoords').classList.toggle('hidden',valid);
+      document.getElementById('viewPlaceMap').classList.toggle('hidden',!valid);
+      dialog.classList.remove('hidden');
+      if(!valid)return;
+      function draw(){
+        if(dialog.classList.contains('hidden'))return;
+        if(!window.google||!google.maps){
+          document.getElementById('viewPlaceNoCoords').classList.remove('hidden');
+          document.getElementById('viewPlaceNoCoords').textContent='지도를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+          document.getElementById('viewPlaceMap').classList.add('hidden');return;
+        }
+        var pos={lat:Number(place.lat),lng:Number(place.lng)};
+        viewedMap=new google.maps.Map(document.getElementById('viewPlaceMap'),{
+          center:pos,zoom:16,streetViewControl:false,mapTypeControl:false,fullscreenControl:false
+        });
+        viewedMarker=new google.maps.Marker({map:viewedMap,position:pos,title:String(place.name||'공유된 장소')});
+      }
+      if(window.google&&google.maps)draw();else loadGoogleMapsScript(currentLang,draw);
+    }
+    function closePlaceViewer(){
+      document.getElementById('placeViewer').classList.add('hidden');
+      viewedPlace=null;viewedMap=null;viewedMarker=null;
+    }
     function communityPlaceCard(place){
       if(!place||typeof place.name!=='string'||!place.name.trim())return null;
       var wrap=communityEl('div','rounded-xl border border-emerald-200 bg-emerald-50 p-3 space-y-2');
       wrap.appendChild(communityEl('p','text-sm font-bold text-emerald-900 break-words','📍 '+place.name));
       if(place.address)wrap.appendChild(communityEl('p','text-xs text-emerald-800 break-words',place.address));
-      var links=communityEl('div','flex gap-2 flex-wrap');
-      var hasCoords=typeof place.lat==='number'&&typeof place.lng==='number'&&Number.isFinite(place.lat)&&Number.isFinite(place.lng)&&Math.abs(place.lat)<=90&&Math.abs(place.lng)<=180;
-      var searchText=String(place.name)+(place.address&&place.address!==place.name?' '+place.address:'');
-      var googleQuery=hasCoords?place.lat+','+place.lng:searchText;
-      [['Google Maps',(hasCoords?('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam()):(safeCommunityMapsUrl(place.url)||('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(googleQuery)+googleMapsLanguageParam())))],['Naver Map','https://map.naver.com/p/search/'+encodeURIComponent(searchText)]].forEach(function(pair){
-        var a=communityEl('a','text-xs font-bold text-emerald-700 underline',pair[0]);
-        a.href=pair[1];a.target='_blank';a.rel='noopener noreferrer';links.appendChild(a);
-      });
-      wrap.appendChild(links);return wrap;
+      var btn=communityBtn(currentLang==='ko'?'지도에서 위치 보기':'View on map',function(){viewPlaceInsideApp(place);},
+        'w-full rounded-lg bg-emerald-700 text-white text-sm font-bold px-3 py-3');
+      wrap.appendChild(btn);return wrap;
     }
     var communityLocale={
       ko:{heading:'여행자 게시판',newPost:'+ 글쓰기',title:'제목 (최대 100자)',body:'여행 질문이나 정보를 공유해 주세요 (최대 3,000자)',cancel:'취소',publish:'등록',empty:'아직 게시글이 없습니다. 첫 글을 남겨보세요!',loading:'게시글을 불러오는 중...',auth:'로그인 연결 후 다시 시도해 주세요.',required:'제목과 내용을 입력해 주세요.',error:'저장에 실패했습니다. 잠시 후 다시 시도해 주세요.',delete:'삭제',edit:'수정',save:'저장',comment:'댓글',commentHint:'댓글을 입력해 주세요 (최대 1,000자)',send:'댓글 등록',deleteAsk:'정말 삭제하시겠습니까?',anonymous:'여행자',replyEmpty:'아직 댓글이 없습니다.',mine:'내 글',editing:'게시글 수정'},
@@ -1739,30 +1769,13 @@
       var address=document.createElement('div');
       address.className='text-xs opacity-80 break-words mb-2';
       address.textContent=place.address;
-      var actions=document.createElement('div');
-      actions.className='flex flex-col gap-2';
-      function addMapLink(url,label,style) {
-        var link=document.createElement('a');
-        link.href=url;
-        link.target='_blank';link.rel='noopener noreferrer';
-        link.className='block text-center rounded-lg px-3 py-2 text-xs font-bold '+style;
-        link.textContent=label;
-        actions.appendChild(link);
-      }
-      var destination=encodeURIComponent(String(place.lat)+','+String(place.lng));
-      var googleBase='https://www.google.com/maps/dir/?api=1&destination='+destination+googleMapsLanguageParam();
-      addMapLink(googleBase+'&travelmode=walking',(I18N[currentLang] || I18N.ko).walking,mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
-      addMapLink(googleBase+'&travelmode=driving',(I18N[currentLang] || I18N.ko).driving,mine?'bg-indigo-100 text-indigo-800':'bg-indigo-100 text-indigo-800');
-      // Naver's public search page works on mobile and desktop. Users select
-      // Directions and walking/driving in Naver Maps; do not imply this is
-      // an automatic walking-route deep link.
-      var naverQuery=String(place.name||'')+' '+String(place.address||'');
-      addMapLink('https://map.naver.com/p/search/'+encodeURIComponent(naverQuery.trim()),
-        (I18N[currentLang] || I18N.ko).naver,'bg-[#03C75A] text-white');
-      var tip=document.createElement('div');
-      tip.className='text-[10px] opacity-75 leading-snug';
-      tip.textContent=(I18N[currentLang] || I18N.ko).mapTip;
-      bubble.append(heading,address,actions,tip);
+      var button=document.createElement('button');
+      button.type='button';
+      button.className='block w-full text-center rounded-lg px-3 py-3 text-xs font-bold '+
+        (mine?'bg-white text-indigo-700':'bg-indigo-600 text-white');
+      button.textContent=currentLang==='ko'?'지도에서 위치 보기':'View on map';
+      button.addEventListener('click',function(){viewPlaceInsideApp(place);});
+      bubble.append(heading,address,button);
     }
 
     // Translation is display-only. It never writes to Firebase or modifies a message.
