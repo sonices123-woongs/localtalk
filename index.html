@@ -403,8 +403,9 @@ header {gap:6px;min-width:0}
         <p id="viewPlaceAddress" class="px-3 py-2 text-xs text-slate-600 break-words"></p>
         <div id="viewPlaceMap" class="flex-1 min-h-[220px] bg-slate-100"></div>
         <div id="viewPlaceNoCoords" class="hidden flex-1 p-5 text-sm text-slate-600 flex items-center justify-center text-center">이전에 이름만으로 공유한 장소는 정확한 좌표가 없습니다. 작성자가 지도에서 핀을 다시 선택해야 합니다.</div>
-        <div class="p-3 border-t">
-          <button type="button" onclick="closePlaceViewer()" class="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-bold">게시글 / 채팅으로 돌아가기</button>
+        <div class="p-3 border-t space-y-2">
+          <button type="button" id="viewPlaceDistanceButton" onclick="checkViewedPlaceDistance()" class="w-full bg-indigo-600 text-white rounded-xl py-3 text-sm font-bold">📍 내 위치에서 거리 확인</button>
+          <p id="viewPlaceDistanceResult" class="text-center text-xs text-slate-600" role="status" aria-live="polite">버튼을 누를 때만 위치 권한을 요청합니다. (직선거리)</p>
         </div>
       </div>
     </div>
