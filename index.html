@@ -398,7 +398,7 @@ header {gap:6px;min-width:0}
       <div class="bg-white rounded-2xl w-full max-w-xl h-full max-h-[760px] mx-auto flex flex-col overflow-hidden shadow-2xl">
         <div class="flex items-center justify-between p-3 border-b gap-2">
           <strong id="viewPlaceName" class="text-sm break-words">📍 공유된 장소</strong>
-          <button type="button" onclick="closePlaceViewer()" class="px-4 py-2 rounded-lg bg-slate-100 text-sm font-bold" aria-label="닫기">✕ 닫기</button>
+          <button type="button" onclick="closePlaceViewer()" id="viewPlaceCloseButton" class="shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-xl font-bold" aria-label="닫기">✕</button>
         </div>
         <p id="viewPlaceAddress" class="px-3 py-2 text-xs text-slate-600 break-words"></p>
         <div id="viewPlaceMap" class="flex-1 min-h-[220px] bg-slate-100"></div>

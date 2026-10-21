@@ -643,17 +643,27 @@
       return place && place.lat!=null && place.lng!=null && place.lat!=='' && place.lng!=='' && Number.isFinite(Number(place.lat)) && Number.isFinite(Number(place.lng)) &&
         Math.abs(Number(place.lat))<=90 && Math.abs(Number(place.lng))<=180;
     }
+    // v20.25: Map viewer labels follow the selected Local Talk language.
+    var viewerTranslations={
+      ko:{place:'공유된 장소',close:'닫기',check:'📍 내 위치에서 거리 확인',again:'📍 거리 다시 확인',checking:'위치 확인 중…',hint:'버튼을 누를 때만 위치 권한을 요청합니다. (직선거리)',waiting:'휴대폰에서 위치 권한을 허용해 주세요.',unsupported:'이 기기에서는 위치 확인을 지원하지 않습니다.',denied:'위치 권한이 허용되지 않았습니다. 휴대폰의 앱 위치 권한 설정을 확인해 주세요.',timeout:'위치 확인 시간이 초과되었습니다. 다시 시도해 주세요.',unavailable:'현재 위치를 확인할 수 없습니다. 휴대폰 위치 서비스 및 앱 권한을 확인해 주세요.',insecure:'이 환경에서는 위치 확인이 제한되어 있습니다.',distance:'현재 위치에서 직선거리 약 ',suffix:' · 실제 이동거리는 다를 수 있습니다.',missing:'이전에 이름만으로 공유한 장소는 정확한 좌표가 없습니다. 작성자가 지도에서 핀을 다시 선택해야 합니다.',mapError:viewerT().mapError},
+      en:{place:'Shared place',close:'Close',check:'📍 Check distance from my location',again:'📍 Check distance again',checking:'Finding location…',hint:'Location is requested only when you tap this button. (Straight-line distance)',waiting:'Please allow location access on your phone.',unsupported:'Location is not supported on this device.',denied:'Location access was denied. Check the app location permission in your phone settings.',timeout:'Location request timed out. Please try again.',unavailable:'Unable to get your location. Check phone location services and app permissions.',insecure:'Location is restricted in this environment.',distance:'Straight-line distance from your location: approx. ',suffix:' · Actual travel distance may differ.',missing:'This older place has no exact coordinates. The author needs to select a map pin.',mapError:'Could not load the map. Please try again.'},
+      ja:{place:'共有された場所',close:'閉じる',check:'📍 現在地からの距離を確認',again:'📍 距離を再確認',checking:'位置を確認中…',hint:'ボタンを押した時だけ位置情報を要求します。（直線距離）',waiting:'端末の位置情報へのアクセスを許可してください。',unsupported:'この端末は位置情報に対応していません。',denied:'位置情報へのアクセスが拒否されました。アプリの権限設定を確認してください。',timeout:'位置情報の取得がタイムアウトしました。',unavailable:'現在地を取得できません。位置情報サービスとアプリの権限を確認してください。',insecure:'この環境では位置情報を利用できません。',distance:'現在地からの直線距離：約',suffix:' · 実際の移動距離とは異なります。',missing:'この場所には正確な座標がありません。',mapError:'地図を読み込めませんでした。'},
+      'zh-CN':{place:'分享的位置',close:'关闭',check:'📍 查看距当前位置的距离',again:'📍 重新查看距离',checking:'正在获取位置…',hint:'仅点击按钮时请求定位权限。（直线距离）',waiting:'请允许手机访问位置信息。',unsupported:'此设备不支持定位。',denied:'定位权限被拒绝。请检查手机中的应用定位权限。',timeout:'定位超时，请重试。',unavailable:'无法获取当前位置。请检查手机定位服务和应用权限。',insecure:'当前环境限制定位功能。',distance:'距当前位置的直线距离约 ',suffix:' · 实际行程距离可能不同。',missing:'此旧地点没有准确坐标，请作者重新选取地图标记。',mapError:'地图加载失败，请重试。'}
+    };
+    function viewerT(){return viewerTranslations[currentLang]||viewerTranslations.ko;}
     var viewedPlace=null, viewedMap=null, viewedMarker=null;
     function viewPlaceInsideApp(place){
       if(!place)return;
       viewedPlace=place;
       var result=document.getElementById('viewPlaceDistanceResult');
-      if(result)result.textContent='버튼을 누를 때만 위치 권한을 요청합니다. (직선거리)';
+      if(result)result.textContent=viewerT().hint;
       var distanceButton=document.getElementById('viewPlaceDistanceButton');
-      if(distanceButton){distanceButton.disabled=false;distanceButton.textContent='📍 내 위치에서 거리 확인';distanceButton.classList.toggle('hidden',!validSavedPlace(place));}
+      if(distanceButton){distanceButton.disabled=false;distanceButton.textContent=viewerT().check;distanceButton.classList.toggle('hidden',!validSavedPlace(place));}
       var dialog=document.getElementById('placeViewer');
-      document.getElementById('viewPlaceName').textContent='📍 '+String(place.name||'공유된 장소');
+      document.getElementById('viewPlaceName').textContent='📍 '+String(place.name||viewerT().place);
       document.getElementById('viewPlaceAddress').textContent=String(place.address||'');
+      var closeBtn=document.getElementById('viewPlaceCloseButton');if(closeBtn){closeBtn.setAttribute('aria-label',viewerT().close);closeBtn.title=viewerT().close;}
+      document.getElementById('viewPlaceNoCoords').textContent=viewerT().missing;
       var valid=validSavedPlace(place);
       document.getElementById('viewPlaceNoCoords').classList.toggle('hidden',valid);
       document.getElementById('viewPlaceMap').classList.toggle('hidden',!valid);
@@ -663,14 +673,14 @@
         if(dialog.classList.contains('hidden'))return;
         if(!window.google||!google.maps){
           document.getElementById('viewPlaceNoCoords').classList.remove('hidden');
-          document.getElementById('viewPlaceNoCoords').textContent='지도를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.';
+          document.getElementById('viewPlaceNoCoords').textContent=viewerT().mapError;
           document.getElementById('viewPlaceMap').classList.add('hidden');return;
         }
         var pos={lat:Number(place.lat),lng:Number(place.lng)};
         viewedMap=new google.maps.Map(document.getElementById('viewPlaceMap'),{
           center:pos,zoom:16,streetViewControl:false,mapTypeControl:false,fullscreenControl:false
         });
-        viewedMarker=new google.maps.Marker({map:viewedMap,position:pos,title:String(place.name||'공유된 장소')});
+        viewedMarker=new google.maps.Marker({map:viewedMap,position:pos,title:String(place.name||viewerT().place)});
       }
       if(window.google&&google.maps)draw();else loadGoogleMapsScript(currentLang,draw);
     }
@@ -681,10 +691,11 @@
       var output=document.getElementById('viewPlaceDistanceResult');
       var button=document.getElementById('viewPlaceDistanceButton');
       if(!output||!button)return;
-      if(!navigator.geolocation){output.textContent='이 기기에서는 위치 확인을 지원하지 않습니다.';return;}
+      if(!navigator.geolocation){output.textContent=viewerT().unsupported;return;}
       button.disabled=true;
-      button.textContent='위치 확인 중…';
-      output.textContent='휴대폰에서 위치 권한을 허용해 주세요.';
+      button.textContent=viewerT().checking;
+      output.textContent=viewerT().waiting;
+      if(!window.isSecureContext){output.textContent=viewerT().insecure;button.disabled=false;button.textContent=viewerT().again;return;}
       navigator.geolocation.getCurrentPosition(function(position){
         if(viewedPlace!==place)return;
         var rad=Math.PI/180;
@@ -692,12 +703,12 @@
         var dLat=lat2-lat1,dLng=(Number(place.lng)-position.coords.longitude)*rad;
         var a=Math.sin(dLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLng/2)**2;
         var km=6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));
-        output.textContent='현재 위치에서 직선거리 약 '+(km<1?Math.round(km*1000).toLocaleString()+'m':km.toFixed(1)+'km')+' · 실제 이동거리는 다를 수 있습니다.';
-        button.textContent='📍 거리 다시 확인';button.disabled=false;
+        output.textContent=viewerT().distance+(km<1?Math.round(km*1000).toLocaleString()+'m':km.toFixed(1)+'km')+viewerT().suffix;
+        button.textContent=viewerT().again;button.disabled=false;
       },function(error){
         if(viewedPlace!==place)return;
-        output.textContent=error.code===1?'위치 권한이 허용되지 않았습니다. 지도는 계속 이용할 수 있습니다.':error.code===3?'위치 확인 시간이 초과되었습니다. 다시 시도해 주세요.':'현재 위치를 확인할 수 없습니다. 다시 시도해 주세요.';
-        button.textContent='📍 거리 다시 확인';button.disabled=false;
+        output.textContent=error.code===1?viewerT().denied:error.code===3?viewerT().timeout:viewerT().unavailable;
+        button.textContent=viewerT().again;button.disabled=false;
       },{enableHighAccuracy:false,timeout:12000,maximumAge:60000});
     }
     function closePlaceViewer(){
