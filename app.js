@@ -603,61 +603,28 @@
       document.getElementById('communityPlaceRemove').textContent=t[3];
       refreshCommunityPinLabels();
     }
-    // v19.2: A Google Maps app cannot directly return a pin to this page.
-    // Users paste a share URL. Only URLs with explicit coordinates yield precise pins.
-    var communityPinCoords=null;
-    var communityGoogleShareUrl=null;
-    function refreshCommunityPinLabels(){
-      var translations={ko:['Google Maps에서 위치 선택 → 공유 → 링크 복사 후 붙여넣으세요.','Google Maps 열기 ↗','적용'],en:['Select a location in Google Maps, then Share → Copy link and paste it here.','Open Google Maps ↗','Apply'],ja:['Google Mapsで場所を選び、共有 → リンクをコピーして貼り付けてください。','Google Mapsを開く ↗','適用'],'zh-CN':['在 Google Maps 选择位置，点击分享 → 复制链接，然后粘贴。','打开 Google Maps ↗','应用']};
-      var t=translations[currentLang]||translations.ko;
-      document.getElementById('communityGoogleHelp').textContent=t[0];
-      document.getElementById('communityGoogleOpen').textContent=t[1];
-      document.getElementById('communityGoogleApply').textContent=t[2];
-    }
-    function resetCommunityPin(){
-      communityPinCoords=null;communityGoogleShareUrl=null;
-      document.getElementById('communityGoogleLink').value='';
-      document.getElementById('communityGoogleStatus').textContent='';
-    }
-    function applyCommunityGoogleLink(){
-      var raw=document.getElementById('communityGoogleLink').value.trim();
-      var status=document.getElementById('communityGoogleStatus');
-      var msgs={ko:['Google Maps 공유 링크를 입력해 주세요.','Google Maps 링크만 사용할 수 있습니다.','좌표를 확인했습니다: ','이 링크에는 좌표가 없습니다. 장소명으로 첨부할 수 있지만 정확한 핀은 보장되지 않습니다. Google Maps에서 핀을 길게 누른 뒤 공유해 보세요.'],en:['Paste a Google Maps share link.','Only Google Maps links are supported.','Coordinates found: ','This link has no coordinates. Name-based search is still available; try sharing a dropped pin.'],ja:['Google Mapsの共有リンクを入力してください。','Google Mapsのリンクのみ対応します。','座標を取得しました：','座標が含まれていません。ピンを置いて共有してください。'], 'zh-CN':['请粘贴 Google Maps 分享链接。','仅支持 Google Maps 链接。','已获取坐标：','链接不含坐标，请尝试分享地图图钉。']};
-      var t=msgs[currentLang]||msgs.ko;
-      if(!raw){status.textContent=t[0];return;}
-      var u;try{u=new URL(raw);}catch(e){status.textContent=t[1];return;}
-      if(u.protocol!=='https:'||!/(^|\.)(google\.[a-z.]+|goo\.gl)$/.test(u.hostname)||(!u.pathname.includes('/maps')&&!u.hostname.startsWith('maps.'))){status.textContent=t[1];return;}
-      var decoded;try{decoded=decodeURIComponent(u.href);}catch(e){decoded=u.href;}
-      var pair=null;
-      // Priority: a dropped pin's !3dLAT!4dLNG, then explicit query coordinates.
-      var m=decoded.match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/);
-      if(m)pair=[Number(m[1]),Number(m[2])];
-      if(!pair){for(var key of ['query','q','ll','center']){var val=u.searchParams.get(key);if(val){m=val.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/);if(m){pair=[Number(m[1]),Number(m[2])];break;}}}}
-      if(!pair){m=decoded.match(/\/maps\/(?:search|place)\/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/);if(m)pair=[Number(m[1]),Number(m[2])];}
-      if(!pair){communityPinCoords=null;communityGoogleShareUrl=u.href;var name=document.getElementById('communityPlaceQuery').value.trim();if(!name){status.textContent=currentLang==='ko'?'장소명을 먼저 입력해 주세요.':'Enter a place name first.';return;}searchCommunityPlace();status.textContent=currentLang==='ko'?'공유 링크를 장소에 저장했습니다. 짧은 링크는 좌표가 없어 정확한 핀은 표시되지 않습니다.':'Map link attached. Exact pin coordinates are unavailable for short links.';return;}
-      if(!Number.isFinite(pair[0])||!Number.isFinite(pair[1])||Math.abs(pair[0])>90||Math.abs(pair[1])>180){status.textContent=t[1];return;}
-      communityPinCoords={lat:pair[0],lng:pair[1]};communityGoogleShareUrl=u.href;
-      var name=document.getElementById('communityPlaceQuery').value.trim();
-      if(!name){status.textContent=currentLang==='ko'?'좌표 확인 완료. 장소명을 입력한 뒤 검색을 눌러 주세요.':'Coordinates found. Enter a place name and press Search.';return;}
-      searchCommunityPlace();status.textContent=t[2]+pair[0].toFixed(6)+', '+pair[1].toFixed(6);
-    }
+    // v20.21: The board and chat share one in-app coordinate-based map picker.
+    // A name-only attachment is deliberately not accepted.
+    function refreshCommunityPinLabels(){}
+    function resetCommunityPin(){}
+    function applyCommunityGoogleLink(){openBoardPlacePicker();}
     function removeCommunityPlace(){
       communitySelectedPlace=null;
-      resetCommunityPin();
       document.getElementById('communityPlaceResult').textContent='';
       document.getElementById('communityPlaceRemove').classList.add('hidden');
     }
-    function searchCommunityPlace(){
-      var t=communityPlaceT(),query=document.getElementById('communityPlaceQuery').value.trim();
-      var result=document.getElementById('communityPlaceResult');
-      if(!query){result.textContent=t[4];return;}
-      // The board works even when Google Maps JavaScript API is not loaded.
-      // This is a name-based attachment, NOT a verified geocoded place.
-      communitySelectedPlace={name:query.slice(0,150),address:query.slice(0,150)};
-      if(communityPinCoords){communitySelectedPlace.lat=communityPinCoords.lat;communitySelectedPlace.lng=communityPinCoords.lng;}
-      if(communityGoogleShareUrl)communitySelectedPlace.url=communityGoogleShareUrl;
-      result.textContent=t[8]+': '+communitySelectedPlace.name+' · '+t[7];
-      document.getElementById('communityPlaceRemove').classList.remove('hidden');
+    function searchCommunityPlace(){openBoardPlacePicker();}
+    function openBoardPlacePicker(){
+      placePickerMode='board';
+      selectedSharePlace=null;
+      document.getElementById('selectedPlaceLabel').textContent=uiText('placeEmpty');
+      document.getElementById('confirmSharePlace').disabled=true;
+      document.getElementById('confirmSharePlace').textContent=currentLang==='ko'?'이 장소 첨부':currentLang==='en'?'Attach this place':currentLang==='ja'?'この場所を添付':'添加此地点';
+      document.querySelector('#placePicker strong').textContent=currentLang==='ko'?'📍 게시글에 장소 첨부':'📍 Select a place';
+      document.getElementById('placeSearchInput').value=document.getElementById('communityPlaceQuery').value;
+      document.getElementById('placePicker').classList.remove('hidden');
+      if(typeof google==='undefined'||!google.maps)loadGoogleMapsScript(currentLang,initSharePlaceMap);
+      else initSharePlaceMap();
     }
     // v18.2: request the selected Local Talk UI language in external Google Maps links.
     // Google Maps app/account preferences may override this hint.
@@ -751,7 +718,7 @@
       var btn=document.getElementById('communityPublishButton');btn.disabled=true;
       var ref=db.ref('communityPosts/'+currentCity.id).push();
       var data={uid:myUserId,author:communityAuthor().slice(0,100),title:title.slice(0,100),body:body.slice(0,3000),createdAt:firebase.database.ServerValue.TIMESTAMP};
-      if(communitySelectedPlace)data.place=Object.assign({},communitySelectedPlace);
+      if(communitySelectedPlace&&Number.isFinite(communitySelectedPlace.lat)&&Number.isFinite(communitySelectedPlace.lng))data.place=Object.assign({},communitySelectedPlace);
       ref.set(data)
         .then(function(){
           document.getElementById('communityPostTitle').value='';
@@ -1694,7 +1661,11 @@
         return p;
       } catch (e) { return null; }
     }
+    var placePickerMode="chat";
     function openPlacePicker() {
+      placePickerMode="chat";
+      document.querySelector('#placePicker strong').textContent=(I18N[currentLang]||I18N.ko).placeTitle;
+      document.getElementById("confirmSharePlace").textContent=(I18N[currentLang]||I18N.ko).placeShare;
       if (!requireAuth() || !currentCity || !currentRoom || !roomAdmissionReady) {
         alert(uiText('placeRequiresRoom')); return;
       }
@@ -1711,7 +1682,9 @@
     }
     function initSharePlaceMap() {
       if (document.getElementById('placePicker').classList.contains('hidden')) return;
-      if (!window.google || !google.maps) return;
+      if (!window.google || !google.maps){
+        document.getElementById('selectedPlaceLabel').textContent='지도를 불러오지 못했습니다. Google Maps API 설정과 연결 상태를 확인해 주세요.';return;
+      }
       var center = userLatLng || (currentCity && currentCity.lat && currentCity.lng ? {lat:currentCity.lat,lng:currentCity.lng} : {lat:37.5665,lng:126.9780});
       shareMap = new google.maps.Map(document.getElementById('sharePlaceMap'), {center:center,zoom:13,streetViewControl:false,mapTypeControl:false});
       shareGeocoder = new google.maps.Geocoder();
@@ -1744,6 +1717,14 @@
       });
     }
     function sendSharedPlace() {
+      if(placePickerMode==='board'){
+        if(!selectedSharePlace||!Number.isFinite(selectedSharePlace.lat)||!Number.isFinite(selectedSharePlace.lng))return;
+        communitySelectedPlace=Object.assign({},selectedSharePlace);
+        document.getElementById('communityPlaceQuery').value=communitySelectedPlace.name;
+        document.getElementById('communityPlaceResult').textContent='📍 '+communitySelectedPlace.name+' ('+communitySelectedPlace.lat.toFixed(5)+', '+communitySelectedPlace.lng.toFixed(5)+')';
+        document.getElementById('communityPlaceRemove').classList.remove('hidden');
+        closePlacePicker();return;
+      }
       if (!selectedSharePlace || !roomAdmissionReady || !currentRoom || !currentCity) return;
       var payload = PLACE_PREFIX + JSON.stringify(selectedSharePlace);
       if (payload.length > 2000) { alert(uiText('placeTooLong')); return; }

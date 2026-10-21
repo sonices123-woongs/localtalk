@@ -289,17 +289,16 @@ header {gap:6px;min-width:0}
           <textarea id="communityPostBody" maxlength="3000" rows="5" class="w-full border rounded-xl p-3 text-sm" placeholder="여행 질문이나 정보를 공유해 주세요 (최대 3,000자)"></textarea>
           <div class="rounded-xl border border-emerald-200 p-3 space-y-2 bg-emerald-50">
             <label id="communityPlaceLabel" class="block text-sm font-bold text-emerald-900">📍 장소 첨부 (선택)</label>
+            <p class="text-xs text-emerald-900">앱 안에서 지도를 열어 검색하거나 핀을 찍어 정확한 위치를 선택하세요.</p>
             <div class="flex gap-2">
-              <input id="communityPlaceQuery" maxlength="150" class="flex-1 min-w-0 border rounded-lg p-2 text-sm" placeholder="장소명 또는 주소 검색">
-              <button type="button" id="communityPlaceSearch" onclick="searchCommunityPlace()" class="bg-emerald-700 text-white rounded-lg px-3 text-xs font-bold">검색</button>
+              <input id="communityPlaceQuery" maxlength="150" class="flex-1 min-w-0 border rounded-lg p-2 text-sm" placeholder="장소 검색 (지도에서 위치 확인)" readonly onclick="openBoardPlacePicker()">
+              <button type="button" id="communityPlaceSearch" onclick="openBoardPlacePicker()" class="bg-emerald-700 text-white rounded-lg px-3 text-xs font-bold">지도에서 선택</button>
             </div>
-            <p id="communityGoogleHelp" class="text-xs text-emerald-900">Google Maps에서 장소를 선택한 뒤 '공유 → 링크 복사'를 눌러 아래에 붙여넣으세요. (선택)</p>
-            <a id="communityGoogleOpen" href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" class="inline-block rounded-lg bg-white border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800">Google Maps 열기 ↗</a>
-            <div class="flex gap-2">
-              <input id="communityGoogleLink" maxlength="2000" type="url" class="flex-1 min-w-0 border rounded-lg p-2 text-sm" placeholder="Google Maps 공유 링크 붙여넣기 (선택)">
-              <button type="button" id="communityGoogleApply" onclick="applyCommunityGoogleLink()" class="rounded-lg bg-emerald-700 text-white px-3 text-xs font-bold">적용</button>
-            </div>
-            <p id="communityGoogleStatus" class="text-xs text-emerald-900 break-words" aria-live="polite"></p>
+            <p id="communityGoogleHelp" class="hidden"></p>
+            <a id="communityGoogleOpen" class="hidden"></a>
+            <input id="communityGoogleLink" class="hidden">
+            <button id="communityGoogleApply" class="hidden" type="button"></button>
+            <p id="communityGoogleStatus" class="hidden"></p>
             <p id="communityPlaceResult" class="text-xs text-emerald-900 break-words" aria-live="polite"></p>
             <button type="button" id="communityPlaceRemove" onclick="removeCommunityPlace()" class="hidden text-red-600 text-xs font-bold">첨부 취소</button>
           </div>
