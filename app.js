@@ -52,6 +52,7 @@
         return;
       }
       if (authReady && myUserId === user.uid) return;
+      if (myUserId && myUserId !== user.uid) profileRestoreStarted = false;
       myUserId = user.uid;
       authReady = true;
       document.getElementById('authStatus').classList.add('hidden');
@@ -1042,14 +1043,27 @@
       var user=auth.currentUser;
       if(!user)return;
       var provider=new firebase.auth.GoogleAuthProvider();
-      // Link preserves anonymous UID, existing posts and profile ownership.
+      // Prefer linking a new Google identity to the anonymous UID so that
+      // anonymous posts and profile ownership remain intact. An existing
+      // Google identity cannot be linked to a different anonymous UID.
       var promise=user.isAnonymous?user.linkWithPopup(provider):auth.signInWithPopup(provider);
-      promise.then(function(){return auth.currentUser.getIdToken(true);})
-        .then(function(){myUserId=auth.currentUser.uid;refreshOfficialAdmin();})
-        .catch(function(e){
-          console.error('Google admin sign-in',e);
-          alert('Google 로그인에 실패했습니다: '+(e.code||e.message));
-        });
+      promise.catch(function(e){
+        if(user.isAnonymous && e && e.code==='auth/credential-already-in-use'){
+          // Sign in to the already-existing Google account instead. Its UID
+          // (and ownership of anonymous posts) is necessarily different.
+          // Firebase will not merge the two accounts automatically.
+          return auth.signInWithPopup(provider);
+        }
+        throw e;
+      }).then(function(result){
+        return result.user.getIdToken(true).then(function(){return result.user;});
+      }).then(function(signedInUser){
+        myUserId=signedInUser.uid;
+        refreshOfficialAdmin();
+      }).catch(function(e){
+        console.error('Google admin sign-in',e);
+        alert('Google 로그인에 실패했습니다: '+(e.code||e.message));
+      });
     }
     // The current Firebase rules prohibit extra fields. Store category in the title
     // with a stable prefix, preserving the existing database schema and old posts.
