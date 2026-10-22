@@ -1447,6 +1447,7 @@
     }
 
     function stopRoomListeners() {
+      clearPendingRoomLeaves();
       if (roomConnectionRef && roomConnectionCallback) {
         roomConnectionRef.off('value', roomConnectionCallback);
       }
@@ -1466,6 +1467,17 @@
       messageListenerRef = null;
     }
 
+    // A brief WebView suspension removes Firebase presence. Wait before
+    // showing a departure, and discard it if the same UID returns.
+    var pendingRoomLeaves = Object.create(null);
+    var ROOM_LEAVE_NOTICE_GRACE_MS = 45000;
+    function clearPendingRoomLeaves() {
+      Object.keys(pendingRoomLeaves).forEach(function(uid) {
+        clearTimeout(pendingRoomLeaves[uid].timer);
+        delete pendingRoomLeaves[uid];
+      });
+    }
+
     function listenRoomPresence() {
       if (roomPresenceListener) roomPresenceListener.off();
 
@@ -1482,14 +1494,33 @@
             return m && !roomEntryMessageKeys.has(m.id);
           }).length;
           Object.keys(usersData).forEach(function(uid) {
-            if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(roomPreviousUsers, uid)) {
+            if (uid === myUserId) return;
+            if (pendingRoomLeaves[uid]) {
+              // Same participant reconnected before the departure notice.
+              clearTimeout(pendingRoomLeaves[uid].timer);
+              delete pendingRoomLeaves[uid];
+              return;
+            }
+            if (!Object.prototype.hasOwnProperty.call(roomPreviousUsers, uid)) {
               roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'join', actor: String(usersData[uid].name || uiText('participant')) });
             }
           });
           Object.keys(roomPreviousUsers).forEach(function(uid) {
-            if (uid !== myUserId && !Object.prototype.hasOwnProperty.call(usersData, uid)) {
-              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'leave', actor: String(roomPreviousUsers[uid].name || uiText('participant')) });
-            }
+            if (uid === myUserId || Object.prototype.hasOwnProperty.call(usersData, uid) || pendingRoomLeaves[uid]) return;
+            var actor = String(roomPreviousUsers[uid].name || uiText('participant'));
+            var noticeToken = roomJoinToken;
+            var pending = { timer: null };
+            pendingRoomLeaves[uid] = pending;
+            pending.timer = setTimeout(function() {
+              if (pendingRoomLeaves[uid] !== pending || roomJoinToken !== noticeToken || currentView !== 'chat') return;
+              delete pendingRoomLeaves[uid];
+              // A later snapshot may already show the participant again.
+              if (roomPreviousUsers && Object.prototype.hasOwnProperty.call(roomPreviousUsers, uid)) return;
+              var at = roomLatestMessages.filter(function(m) { return m && !roomEntryMessageKeys.has(m.id); }).length;
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: at, kind: 'leave', actor: actor });
+              if (roomNoticeQueue.length > 30) roomNoticeQueue.splice(0, roomNoticeQueue.length - 30);
+              renderMessages(roomLatestMessages || []);
+            }, ROOM_LEAVE_NOTICE_GRACE_MS);
           });
           if (roomNoticeQueue.length > 30) roomNoticeQueue.splice(0, roomNoticeQueue.length - 30);
           if (currentView === 'chat') renderMessages(roomLatestMessages || []);
