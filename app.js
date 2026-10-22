@@ -92,6 +92,9 @@
     var roomPresenceListener = null;
     var messageListenerRef = null;
     var roomAdmissionReady = false;
+    var roomConnectionRef = null;
+    var roomConnectionCallback = null;
+    var roomReconnectBusy = false;
 
     // v17: restore from the same Firebase anonymous UID; browser cache is a fallback.
     var profileRestoreStarted = false;
@@ -1369,7 +1372,10 @@
         if (joinToken !== roomJoinToken) return;
         return joiningRef.set({ name: myDisplayName, joinedAt: firebase.database.ServerValue.TIMESTAMP });
       }).then(function() {
-        if (joinToken === roomJoinToken) roomAdmissionReady = true;
+        if (joinToken === roomJoinToken) {
+          roomAdmissionReady = true;
+          watchRoomConnection(joiningRef, joinToken, myDisplayName);
+        }
       }).catch(function(err) {
         console.error('Room admission failed:', err);
         alert(uiText('roomJoinFailed'));
@@ -1392,6 +1398,45 @@
       listenRealtimeMessages();
     }
 
+    // Firebase onDisconnect registrations are one-shot. After a WebView is
+    // suspended and its connection drops, re-arm cleanup and restore only
+    // this user's missing presence, without clearing message history.
+    function watchRoomConnection(joiningRef, joinToken, displayName) {
+      if (roomConnectionRef && roomConnectionCallback) {
+        roomConnectionRef.off('value', roomConnectionCallback);
+      }
+      roomConnectionRef = db.ref('.info/connected');
+      roomConnectionCallback = function(snapshot) {
+        if (joinToken !== roomJoinToken || currentRoomUsersRef !== joiningRef) return;
+        if (snapshot.val() !== true) {
+          roomAdmissionReady = false;
+          return;
+        }
+        if (roomReconnectBusy) return;
+        roomReconnectBusy = true;
+        joiningRef.onDisconnect().remove().then(function() {
+          if (joinToken !== roomJoinToken || currentRoomUsersRef !== joiningRef) return;
+          return joiningRef.once('value').then(function(userSnapshot) {
+            if (joinToken !== roomJoinToken || currentRoomUsersRef !== joiningRef) return;
+            if (!userSnapshot.exists()) {
+              return joiningRef.set({
+                name: displayName,
+                joinedAt: firebase.database.ServerValue.TIMESTAMP
+              });
+            }
+          });
+        }).then(function() {
+          if (joinToken === roomJoinToken && currentRoomUsersRef === joiningRef) {
+            roomAdmissionReady = true;
+          }
+        }).catch(function(error) {
+          console.error('Room reconnect failed:', error);
+          roomAdmissionReady = false;
+        }).then(function() { roomReconnectBusy = false; });
+      };
+      roomConnectionRef.on('value', roomConnectionCallback);
+    }
+
     function goBackFromFailedAdmission() {
       stopRoomListeners();
       roomAdmissionReady = false;
@@ -1402,6 +1447,12 @@
     }
 
     function stopRoomListeners() {
+      if (roomConnectionRef && roomConnectionCallback) {
+        roomConnectionRef.off('value', roomConnectionCallback);
+      }
+      roomConnectionRef = null;
+      roomConnectionCallback = null;
+      roomReconnectBusy = false;
       roomAdmissionReady = false;
       roomJoinToken++;
       roomPreviousUsers = null;
