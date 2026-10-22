@@ -1040,22 +1040,13 @@
       }).catch(function(e){console.error('Admin lookup',e);renderOfficialNotices();});
     }
     function loginOfficialAdmin(){
-      var user=auth.currentUser;
-      if(!user)return;
+      if(!auth.currentUser)return;
       var provider=new firebase.auth.GoogleAuthProvider();
-      // Prefer linking a new Google identity to the anonymous UID so that
-      // anonymous posts and profile ownership remain intact. An existing
-      // Google identity cannot be linked to a different anonymous UID.
-      var promise=user.isAnonymous?user.linkWithPopup(provider):auth.signInWithPopup(provider);
-      promise.catch(function(e){
-        if(user.isAnonymous && e && e.code==='auth/credential-already-in-use'){
-          // Sign in to the already-existing Google account instead. Its UID
-          // (and ownership of anonymous posts) is necessarily different.
-          // Firebase will not merge the two accounts automatically.
-          return auth.signInWithPopup(provider);
-        }
-        throw e;
-      }).then(function(result){
+      // Use one popup directly from the button click. Retrying a second
+      // popup asynchronously after a failed linkWithPopup is blocked by
+      // browser popup protection (auth/popup-blocked).
+      // Existing Google admins must sign in to their established UID.
+      auth.signInWithPopup(provider).then(function(result){
         return result.user.getIdToken(true).then(function(){return result.user;});
       }).then(function(signedInUser){
         myUserId=signedInUser.uid;
