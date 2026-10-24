@@ -36,6 +36,10 @@ jobs:
 
           DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
           TOKEN = os.environ["ACCESS_TOKEN"]
+
+          DRY_RUN = True
+          MAX_DELETE_RECORDS = 50
+          
           CUTOFF = int(time.time() * 1000) - 90 * 24 * 60 * 60 * 1000
 
           def read(path):
