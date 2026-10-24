@@ -1,0 +1,341 @@
+
+name: Local Talk Production Delete Preparation
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type PREVIEW_PROD_ONLY"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: local-talk-production-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Authenticate to production Firebase
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/1088072869168/locations/global/workloadIdentityPools/local-talk-github-prod/providers/github-actions'
+          service_account: 'local-talk-cleanup@local-talk-6c171.iam.gserviceaccount.com'
+          token_format: access_token
+          access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
+          create_credentials_file: false
+
+      - name: Verify production cleanup plan - NO DELETION
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import time
+          import urllib.request
+
+          # ==========================================
+          # LOCAL TALK - PRODUCTION SAFETY PREVIEW
+          # READ ONLY. NO DELETE OR WRITE OPERATIONS.
+          # ==========================================
+
+          DATABASE = (
+              "https://local-talk-6c171-default-rtdb.firebaseio.com"
+          )
+
+          EXPECTED_DATABASE = (
+              "https://local-talk-6c171-default-rtdb.firebaseio.com"
+          )
+
+          RETENTION_DAYS = 90
+          MAX_DELETE_NODES = 50
+
+          DRY_RUN = True
+          DELETE_ENABLED = False
+
+          CONFIRM_TEXT = "PREVIEW_PROD_ONLY"
+
+          TOKEN = os.environ["ACCESS_TOKEN"]
+
+          ALLOWED_ROOTS = {
+              "communityReports",
+              "communityReportStatuses",
+              "moderationLogs",
+          }
+
+          # ------------------------------------------
+          # 1. Safety checks
+          # ------------------------------------------
+
+          if os.environ.get("CONFIRMATION") != CONFIRM_TEXT:
+              raise RuntimeError(
+                  "STOP: Preview confirmation mismatch."
+              )
+
+          if DATABASE != EXPECTED_DATABASE:
+              raise RuntimeError(
+                  "STOP: Unexpected production database."
+              )
+
+          if not DRY_RUN:
+              raise RuntimeError(
+                  "STOP: Production dry run must remain enabled."
+              )
+
+          if DELETE_ENABLED:
+              raise RuntimeError(
+                  "STOP: Production deletion is disabled."
+              )
+
+          if not TOKEN:
+              raise RuntimeError(
+                  "STOP: Authentication token missing."
+              )
+
+          DAY_MS = 24 * 60 * 60 * 1000
+
+          CUTOFF = (
+              int(time.time() * 1000)
+              - RETENTION_DAYS * DAY_MS
+          )
+
+          # ------------------------------------------
+          # 2. Protected read-only API
+          # ------------------------------------------
+
+          def valid_id(value):
+              return (
+                  isinstance(value, str)
+                  and re.fullmatch(
+                      r"[A-Za-z0-9_-]{1,128}", value
+                  ) is not None
+              )
+
+          def read(path):
+              parts = path.split("/")
+
+              if len(parts) not in (1, 2):
+                  raise RuntimeError(
+                      "STOP: Unapproved path structure."
+                  )
+
+              if parts[0] not in ALLOWED_ROOTS:
+                  raise RuntimeError(
+                      "STOP: Unapproved database path."
+                  )
+
+              if len(parts) == 2 and not valid_id(parts[1]):
+                  raise RuntimeError(
+                      "STOP: Invalid database record ID."
+                  )
+
+              request = urllib.request.Request(
+                  f"{DATABASE}/{path}.json",
+                  headers={
+                      "Authorization": f"Bearer {TOKEN}"
+                  },
+                  method="GET",
+              )
+
+              with urllib.request.urlopen(
+                  request, timeout=30
+              ) as response:
+                  return json.load(response)
+
+          def read_map(path):
+              data = read(path)
+
+              if data is None:
+                  return {}
+
+              if not isinstance(data, dict):
+                  raise RuntimeError(
+                      "STOP: Unexpected database structure."
+                  )
+
+              return data
+
+          # ------------------------------------------
+          # 3. Retention rules
+          # ------------------------------------------
+
+          def is_old(timestamp):
+              return (
+                  type(timestamp) in (int, float)
+                  and 0 < timestamp < CUTOFF
+              )
+
+          def report_eligible(report, status):
+              return (
+                  isinstance(report, dict)
+                  and isinstance(status, dict)
+                  and status.get("action")
+                  in ("reviewed", "deleted")
+                  and is_old(status.get("createdAt"))
+              )
+
+          def log_eligible(log):
+              return (
+                  isinstance(log, dict)
+                  and is_old(log.get("createdAt"))
+              )
+
+          # ------------------------------------------
+          # 4. Read current production records
+          # ------------------------------------------
+
+          print("=== LOCAL TALK PRODUCTION PREVIEW ===")
+          print("Mode: READ ONLY")
+          print("Deletion enabled: FALSE")
+          print(f"Retention: {RETENTION_DAYS} days")
+
+          reports = read_map("communityReports")
+          statuses = read_map("communityReportStatuses")
+          logs = read_map("moderationLogs")
+
+          report_ids = []
+
+          for report_id, report in reports.items():
+
+              if not valid_id(report_id):
+                  raise RuntimeError(
+                      "STOP: Invalid report ID found."
+                  )
+
+              status = statuses.get(report_id)
+
+              if report_eligible(report, status):
+                  report_ids.append(report_id)
+
+          log_ids = []
+
+          for log_id, log in logs.items():
+
+              if not valid_id(log_id):
+                  raise RuntimeError(
+                      "STOP: Invalid moderation log ID found."
+                  )
+
+              if log_eligible(log):
+                  log_ids.append(log_id)
+
+          report_ids.sort()
+          log_ids.sort()
+
+          # Each report has two nodes:
+          # communityReports/{id}
+          # communityReportStatuses/{id}
+
+          total_nodes = (
+              2 * len(report_ids)
+              + len(log_ids)
+          )
+
+          print(
+              f"Old processed reports: {len(report_ids)}"
+          )
+          print(
+              f"Old moderation logs: {len(log_ids)}"
+          )
+          print(f"Candidate nodes: {total_nodes}")
+          print(f"Maximum nodes: {MAX_DELETE_NODES}")
+
+          # ------------------------------------------
+          # 5. Maximum deletion limit
+          # ------------------------------------------
+
+          if total_nodes > MAX_DELETE_NODES:
+              raise RuntimeError(
+                  "STOP: Candidate count exceeds 50 nodes."
+              )
+
+          # ------------------------------------------
+          # 6. Recheck each candidate
+          # ------------------------------------------
+
+          verified_reports = []
+
+          for report_id in report_ids:
+
+              report = read(
+                  f"communityReports/{report_id}"
+              )
+
+              status = read(
+                  f"communityReportStatuses/{report_id}"
+              )
+
+              if not report_eligible(report, status):
+                  raise RuntimeError(
+                      "STOP: Report eligibility changed."
+                  )
+
+              verified_reports.append(report_id)
+
+          verified_logs = []
+
+          for log_id in log_ids:
+
+              log = read(
+                  f"moderationLogs/{log_id}"
+              )
+
+              if not log_eligible(log):
+                  raise RuntimeError(
+                      "STOP: Log eligibility changed."
+                  )
+
+              verified_logs.append(log_id)
+
+          verified_nodes = (
+              2 * len(verified_reports)
+              + len(verified_logs)
+          )
+
+          if verified_nodes != total_nodes:
+              raise RuntimeError(
+                  "STOP: Candidate count changed."
+              )
+
+          # ------------------------------------------
+          # 7. Preview result
+          # ------------------------------------------
+
+          print("PASS: Candidate selection completed.")
+          print("PASS: Candidate timestamps rechecked.")
+          print("PASS: Maximum node limit checked.")
+
+          print(
+              f"Verified report candidates: "
+              f"{len(verified_reports)}"
+          )
+
+          print(
+              f"Verified log candidates: "
+              f"{len(verified_logs)}"
+          )
+
+          if total_nodes == 0:
+              print("No expired records to clean up.")
+
+          print("DRY RUN ONLY: No records deleted.")
+          print("SUCCESS: Production preview completed.")
+
+          # This workflow intentionally contains
+          # no database write or delete requests.
+
+          PY
