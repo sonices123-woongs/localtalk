@@ -83,5 +83,5 @@ jobs:
           print("Database: TEST PROJECT")
           print(f"Processed reports older than 90 days: {len(report_ids)}")
           print(f"Moderation logs older than 90 days: {len(log_ids)}")
-          print("DRY RUN ONLY: No records deleted.")
+          print(f"DRY RUN ONLY: No records deleted. Limit: {MAX_DELETE_RECORDS}")
           PY
