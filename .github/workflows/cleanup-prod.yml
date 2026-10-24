@@ -1,0 +1,145 @@
+
+name: Local Talk Production 90-Day Cleanup
+
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: local-talk-production-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Authenticate to production Firebase
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/1088072869168/locations/global/workloadIdentityPools/local-talk-github-prod/providers/github-actions'
+          service_account: 'local-talk-cleanup@local-talk-6c171.iam.gserviceaccount.com'
+          token_format: access_token
+          access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
+          create_credentials_file: false
+
+      - name: Check protected cleanup plan
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+
+          DATABASE = "https://local-talk-6c171-default-rtdb.firebaseio.com"
+          TOKEN = os.environ["ACCESS_TOKEN"]
+
+          DRY_RUN = True
+          RETENTION_DAYS = 90
+          MAX_DELETE_RECORDS = 50
+
+          ALLOWED_PATHS = {
+              "communityReports",
+              "communityReportStatuses",
+              "moderationLogs"
+          }
+
+          CUTOFF = (
+              int(time.time() * 1000)
+              - RETENTION_DAYS * 24 * 60 * 60 * 1000
+          )
+
+          def read(path):
+              if path not in ALLOWED_PATHS:
+                  raise SystemExit("BLOCKED: Unauthorized path.")
+
+              request = urllib.request.Request(
+                  f"{DATABASE}/{path}.json",
+                  headers={"Authorization": f"Bearer {TOKEN}"},
+                  method="GET"
+              )
+
+              with urllib.request.urlopen(
+                  request, timeout=30
+              ) as response:
+                  data = json.load(response)
+
+              if data is None:
+                  return {}
+
+              if not isinstance(data, dict):
+                  raise SystemExit("FAIL: Invalid database structure.")
+
+              return data
+
+          def is_old(timestamp):
+              return (
+                  type(timestamp) in (int, float)
+                  and 0 < timestamp < CUTOFF
+              )
+
+          reports = read("communityReports")
+          statuses = read("communityReportStatuses")
+          logs = read("moderationLogs")
+
+          report_ids = []
+
+          for report_id, report in reports.items():
+              status = statuses.get(report_id)
+
+              if not isinstance(report, dict):
+                  continue
+
+              if not isinstance(status, dict):
+                  continue
+
+              if status.get("action") not in ("reviewed", "deleted"):
+                  continue
+
+              if not is_old(status.get("createdAt")):
+                  continue
+
+              report_ids.append(report_id)
+
+          log_ids = []
+
+          for log_id, log in logs.items():
+              if not isinstance(log, dict):
+                  continue
+
+              if is_old(log.get("createdAt")):
+                  log_ids.append(log_id)
+
+          total_records = len(report_ids) * 2 + len(log_ids)
+
+          print("=== Local Talk Production Cleanup ===")
+          print(f"Retention: {RETENTION_DAYS} days")
+          print(f"Old processed reports: {len(report_ids)}")
+          print(f"Old moderation logs: {len(log_ids)}")
+          print(f"Total database nodes: {total_records}")
+
+          if total_records > MAX_DELETE_RECORDS:
+              raise SystemExit(
+                  "BLOCKED: Cleanup exceeds safety limit."
+              )
+
+          if not DRY_RUN:
+              raise SystemExit(
+                  "BLOCKED: Production deletion not enabled."
+              )
+
+          print("PASS: Cleanup candidates checked.")
+          print("DRY RUN ONLY: No records deleted.")
+          PY
