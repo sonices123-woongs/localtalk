@@ -2,9 +2,7 @@
 name: Local Talk 90-Day Cleanup
 
 on:
-  schedule:
-    - cron: '0 18 * * *'
-  workflow_dispatch:
+    workflow_dispatch:
 
 permissions:
   contents: read
