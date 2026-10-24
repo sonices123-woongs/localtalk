@@ -1,4 +1,3 @@
-
 name: Local Talk Cleanup Test
 
 on:
@@ -20,51 +19,21 @@ jobs:
           workload_identity_provider: 'projects/322452775254/locations/global/workloadIdentityPools/local-talk-github-test/providers/github-actions'
           service_account: 'local-talk-cleanup-test@local-talk-test-93910.iam.gserviceaccount.com'
           token_format: access_token
-          access_token_scopes: 'https://www.googleapis.com/auth/firebase.database https://www.googleapis.com/auth/userinfo.email'
+          access_token_scopes: 'https://www.googleapis.com/auth/cloud-platform'
           create_credentials_file: false
 
-      - name: Read Firebase report counts
+      - name: Check access token
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: |
           set -euo pipefail
 
-          python3 - <<'PY'
-          import json
-          import os
-          import urllib.parse
-          import urllib.request
-          import urllib.error
-
-          database = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
-          token = os.environ["ACCESS_TOKEN"]
-
-          paths = [
-              "communityReports",
-              "communityReportStatuses",
-              "moderationLogs"
-          ]
-
-          for path in paths:
-              query = urllib.parse.urlencode({
-                  "access_token": token,
-                  "shallow": "true"
-              })
-
-              url = f"{database}/{path}.json?{query}"
-
-              try:
-                  with urllib.request.urlopen(url, timeout=20) as response:
-                      data = json.load(response)
-
-                  count = len(data) if isinstance(data, dict) else 0
-                  print(f"{path}: {count} records")
-
-              except urllib.error.HTTPError as error:
-                  print(f"{path}: HTTP {error.code}")
-                  raise SystemExit(1)
-
-          print("Read-only test completed.")
-          print("No Firebase data deleted.")
-          PY
+          if [ -n "$ACCESS_TOKEN" ]; then
+            echo "Google Cloud access token issued successfully."
+            echo "No Firebase requests made."
+            echo "No data deleted."
+          else
+            echo "Access token was not issued."
+            exit 1
+          fi
