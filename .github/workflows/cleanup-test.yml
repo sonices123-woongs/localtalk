@@ -1,0 +1,20 @@
+
+name: Local Talk Cleanup Test
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 18 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check scheduled execution
+        run: |
+          echo "Local Talk cleanup test started"
+          date -u
+          echo "Dry run only - no Firebase data deleted"
