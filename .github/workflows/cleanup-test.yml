@@ -23,7 +23,7 @@ jobs:
           access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
           create_credentials_file: false
 
-      - name: Read Firebase report counts
+      - name: Count 90-day cleanup candidates
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
@@ -33,40 +33,87 @@ jobs:
           python3 - <<'PY'
           import json
           import os
-          import urllib.error
+          import time
           import urllib.request
 
-          database = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
-          token = os.environ["ACCESS_TOKEN"]
+          DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
+          TOKEN = os.environ["ACCESS_TOKEN"]
+          NOW_MS = int(time.time() * 1000)
+          CUTOFF_MS = NOW_MS - 90 * 24 * 60 * 60 * 1000
 
-          paths = [
-              "communityReports",
-              "communityReportStatuses",
-              "moderationLogs"
-          ]
-
-          for path in paths:
-              url = f"{database}/{path}.json?shallow=true"
-
+          def read_data(path):
+              url = f"{DATABASE}/{path}.json"
               request = urllib.request.Request(
                   url,
-                  headers={
-                      "Authorization": f"Bearer {token}"
-                  }
+                  headers={"Authorization": f"Bearer {TOKEN}"}
               )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  data = json.load(response)
+              return data if isinstance(data, dict) else {}
 
-              try:
-                  with urllib.request.urlopen(request, timeout=20) as response:
-                      data = json.load(response)
+          def timestamp_ms(value):
+              if isinstance(value, bool):
+                  return None
+              if isinstance(value, (int, float)) and value > 0:
+                  return value
+              return None
 
-                  count = len(data) if isinstance(data, dict) else 0
-                  print(f"{path}: {count} records")
+          reports = read_data("communityReports")
+          statuses = read_data("communityReportStatuses")
+          logs = read_data("moderationLogs")
 
-              except urllib.error.HTTPError as error:
-                  print(f"{path}: HTTP {error.code}")
-                  print("Firebase read permission test failed.")
-                  raise SystemExit(1)
+          old_processed = []
+          pending = []
+          invalid_statuses = []
 
-          print("Firebase read test completed.")
-          print("No data deleted.")
+          for report_id, report in reports.items():
+              status = statuses.get(report_id)
+
+              if not isinstance(status, dict):
+                  pending.append(report_id)
+                  continue
+
+              action = status.get("action")
+
+              if action not in ("reviewed", "dismissed", "resolved"):
+                  pending.append(report_id)
+                  continue
+
+              processed_at = timestamp_ms(status.get("createdAt"))
+
+              if processed_at is None:
+                  invalid_statuses.append(report_id)
+                  continue
+
+              if processed_at < CUTOFF_MS:
+                  old_processed.append(report_id)
+
+          old_logs = []
+          invalid_logs = []
+
+          for log_id, log in logs.items():
+              if not isinstance(log, dict):
+                  invalid_logs.append(log_id)
+                  continue
+
+              created_at = timestamp_ms(log.get("createdAt"))
+
+              if created_at is None:
+                  invalid_logs.append(log_id)
+                  continue
+
+              if created_at < CUTOFF_MS:
+                  old_logs.append(log_id)
+
+          print("=== Local Talk 90-day cleanup dry run ===")
+          print(f"Total reports: {len(reports)}")
+          print(f"Total report statuses: {len(statuses)}")
+          print(f"Total moderation logs: {len(logs)}")
+          print(f"Processed reports older than 90 days: {len(old_processed)}")
+          print(f"Pending reports preserved: {len(pending)}")
+          print(f"Old moderation logs: {len(old_logs)}")
+          print(f"Reports with invalid processing timestamps: {len(invalid_statuses)}")
+          print(f"Logs with invalid timestamps: {len(invalid_logs)}")
+          print(f"Orphan statuses (no matching report): {len(set(statuses) - set(reports))}")
+          print("DRY RUN ONLY. No data deleted.")
           PY
