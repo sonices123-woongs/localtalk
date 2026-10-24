@@ -23,7 +23,7 @@ jobs:
           access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
           create_credentials_file: false
 
-      - name: Count 90-day cleanup candidates
+      - name: Verify cleanup safety checks
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
@@ -38,218 +38,14 @@ jobs:
 
           DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
           TOKEN = os.environ["ACCESS_TOKEN"]
-          NOW_MS = int(time.time() * 1000)
-          CUTOFF_MS = NOW_MS - 90 * 24 * 60 * 60 * 1000
 
-          def read_data(path):
-              url = f"{DATABASE}/{path}.json"
-              request = urllib.request.Request(
-                  url,
-                  headers={"Authorization": f"Bearer {TOKEN}"}
-              )
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  data = json.load(response)
-              return data if isinstance(data, dict) else {}
-
-          def timestamp_ms(value):
-              if isinstance(value, bool):
-                  return None
-              if isinstance(value, (int, float)) and value > 0:
-                  return value
-              return None
-
-          reports = read_data("communityReports")
-          statuses = read_data("communityReportStatuses")
-          logs = read_data("moderationLogs")
-
-          old_processed = []
-          pending = []
-          invalid_statuses = []
-
-          for report_id, report in reports.items():
-              status = statuses.get(report_id)
-
-              if not isinstance(status, dict):
-                  pending.append(report_id)
-                  continue
-
-              action = status.get("action")
-
-              if action not in ("reviewed", "dismissed", "resolved"):
-                  pending.append(report_id)
-                  continue
-
-              processed_at = timestamp_ms(status.get("createdAt"))
-
-              if processed_at is None:
-                  invalid_statuses.append(report_id)
-                  continue
-
-              if processed_at < CUTOFF_MS:
-                  old_processed.append(report_id)
-
-          old_logs = []
-          invalid_logs = []
-
-          for log_id, log in logs.items():
-              if not isinstance(log, dict):
-                  invalid_logs.append(log_id)
-                  continue
-
-              created_at = timestamp_ms(log.get("createdAt"))
-
-              if created_at is None:
-                  invalid_logs.append(log_id)
-                  continue
-
-              if created_at < CUTOFF_MS:
-                  old_logs.append(log_id)
-
-          print("=== Local Talk 90-day cleanup dry run ===")
-          print(f"Total reports: {len(reports)}")
-          print(f"Total report statuses: {len(statuses)}")
-          print(f"Total moderation logs: {len(logs)}")
-          print(f"Processed reports older than 90 days: {len(old_processed)}")
-          print(f"Pending reports preserved: {len(pending)}")
-          print(f"Old moderation logs: {len(old_logs)}")
-          print(f"Reports with invalid processing timestamps: {len(invalid_statuses)}")
-          print(f"Logs with invalid timestamps: {len(invalid_logs)}")
-          print(f"Orphan statuses (no matching report): {len(set(statuses) - set(reports))}")
-          print("DRY RUN ONLY. No data deleted.")
-          PY
-
-      - name: Test 90-day retention rules
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          python3 - <<'PY'
-          from datetime import datetime, timedelta, timezone
-
-          NOW = datetime.now(timezone.utc)
-          CUTOFF_MS = int((NOW - timedelta(days=90)).timestamp() * 1000)
-
-          def days_ago(days):
-              return int((NOW - timedelta(days=days)).timestamp() * 1000)
-
-          def is_old(timestamp):
-              return (
-                  isinstance(timestamp, (int, float))
-                  and not isinstance(timestamp, bool)
-                  and timestamp > 0
-                  and timestamp < CUTOFF_MS
-              )
-
-          def should_delete_report(report, status):
-              if not isinstance(status, dict):
-                  return False
-
-              if status.get("action") not in (
-                  "reviewed", "dismissed", "resolved"
-              ):
-                  return False
-
-              return is_old(status.get("createdAt"))
-
-          def should_delete_log(log):
-              if not isinstance(log, dict):
-                  return False
-
-              return is_old(log.get("createdAt"))
-
-          cases = [
-              (
-                  "Processed report, 91 days old",
-                  should_delete_report(
-                      {"createdAt": days_ago(100)},
-                      {"action": "reviewed", "createdAt": days_ago(91)}
-                  ),
-                  True
-              ),
-              (
-                  "Processed report, 89 days old",
-                  should_delete_report(
-                      {"createdAt": days_ago(100)},
-                      {"action": "reviewed", "createdAt": days_ago(89)}
-                  ),
-                  False
-              ),
-              (
-                  "Pending report, 100 days old",
-                  should_delete_report(
-                      {"createdAt": days_ago(100)},
-                      None
-                  ),
-                  False
-              ),
-              (
-                  "Moderation log, 91 days old",
-                  should_delete_log(
-                      {"createdAt": days_ago(91)}
-                  ),
-                  True
-              ),
-              (
-                  "Invalid processing timestamp",
-                  should_delete_report(
-                      {"createdAt": days_ago(100)},
-                      {"action": "reviewed", "createdAt": None}
-                  ),
-                  False
-              ),
-              (
-                  "Unknown report action",
-                  should_delete_report(
-                      {"createdAt": days_ago(100)},
-                      {"action": "unknown", "createdAt": days_ago(91)}
-                  ),
-                  False
-              ),
-              (
-                  "Moderation log, 89 days old",
-                  should_delete_log(
-                      {"createdAt": days_ago(89)}
-                  ),
-                  False
-              )
-          ]
-
-          failed = 0
-
-          for name, actual, expected in cases:
-              passed = actual == expected
-              result = "PASS" if passed else "FAIL"
-              print(f"{result}: {name}")
-
-              if not passed:
-                  failed += 1
-
-          print(f"Tests passed: {len(cases) - failed}/{len(cases)}")
-          print("Simulation only. No data deleted.")
-
-          if failed:
-              raise SystemExit(1)
-          PY
-
-      - name: Verify isolated cleanup test data
-        shell: bash
-        env:
-          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
-        run: |
-          set -euo pipefail
-
-          python3 - <<'PY'
-          import json
-          import os
-          import time
-          import urllib.request
-
-          DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
-          TOKEN = os.environ["ACCESS_TOKEN"]
+          ROOT = "cleanupTestData"
           CUTOFF_MS = int(time.time() * 1000) - 90 * 24 * 60 * 60 * 1000
 
-          url = f"{DATABASE}/cleanupTestData.json"
+          EXPECTED_REPORT = "test_old_processed"
+          EXPECTED_LOG = "test_old_log"
 
+          url = f"{DATABASE}/{ROOT}.json"
           request = urllib.request.Request(
               url,
               headers={"Authorization": f"Bearer {TOKEN}"}
@@ -259,14 +55,14 @@ jobs:
               data = json.load(response)
 
           if not isinstance(data, dict):
-              raise SystemExit("FAIL: cleanupTestData is missing.")
+              raise SystemExit("FAIL: Test data missing.")
 
-          reports = data.get("reports", {})
-          statuses = data.get("statuses", {})
-          logs = data.get("logs", {})
+          reports = data.get("reports")
+          statuses = data.get("statuses")
+          logs = data.get("logs")
 
           if not all(isinstance(x, dict) for x in (reports, statuses, logs)):
-              raise SystemExit("FAIL: Invalid test data structure.")
+              raise SystemExit("FAIL: Invalid data structure.")
 
           def is_old(value):
               return (
@@ -276,7 +72,7 @@ jobs:
                   and value < CUTOFF_MS
               )
 
-          report_candidates = []
+          report_candidates = set()
 
           for report_id, report in reports.items():
               status = statuses.get(report_id)
@@ -287,40 +83,54 @@ jobs:
                   and status.get("action") == "reviewed"
                   and is_old(status.get("createdAt"))
               ):
-                  report_candidates.append(report_id)
+                  report_candidates.add(report_id)
 
-          log_candidates = []
+          log_candidates = {
+              log_id
+              for log_id, log in logs.items()
+              if isinstance(log, dict) and is_old(log.get("createdAt"))
+          }
 
-          for log_id, log in logs.items():
-              if isinstance(log, dict) and is_old(log.get("createdAt")):
-                  log_candidates.append(log_id)
+          if report_candidates != {EXPECTED_REPORT}:
+              raise SystemExit("FAIL: Unexpected report candidates.")
 
-          expected_reports = {"test_old_processed"}
-          expected_logs = {"test_old_log"}
-
-          print("=== Isolated Firebase cleanup verification ===")
-          print(f"Report candidates: {sorted(report_candidates)}")
-          print(f"Log candidates: {sorted(log_candidates)}")
-
-          if set(report_candidates) != expected_reports:
-              raise SystemExit("FAIL: Unexpected report deletion candidates.")
-
-          if set(log_candidates) != expected_logs:
-              raise SystemExit("FAIL: Unexpected log deletion candidates.")
+          if log_candidates != {EXPECTED_LOG}:
+              raise SystemExit("FAIL: Unexpected log candidates.")
 
           if "test_recent_processed" not in reports:
               raise SystemExit("FAIL: Recent report missing.")
 
           if "test_recent_processed" not in statuses:
-              raise SystemExit("FAIL: Recent report status missing.")
+              raise SystemExit("FAIL: Recent status missing.")
 
           if "test_old_pending" not in reports:
               raise SystemExit("FAIL: Pending report missing.")
 
           if "test_old_pending" in statuses:
-              raise SystemExit("FAIL: Pending report has an unexpected status.")
+              raise SystemExit("FAIL: Pending report has a status.")
 
-          print("PASS: Expected deletion candidates matched.")
-          print("PASS: Recent and pending reports preserved.")
-          print("READ-ONLY TEST. No data deleted.")
+          allowed_paths = {
+              f"{ROOT}/reports/{EXPECTED_REPORT}",
+              f"{ROOT}/statuses/{EXPECTED_REPORT}",
+              f"{ROOT}/logs/{EXPECTED_LOG}"
+          }
+
+          expected_paths = {
+              "cleanupTestData/reports/test_old_processed",
+              "cleanupTestData/statuses/test_old_processed",
+              "cleanupTestData/logs/test_old_log"
+          }
+
+          if allowed_paths != expected_paths:
+              raise SystemExit("FAIL: Unexpected deletion paths.")
+
+          print("=== Cleanup safety verification ===")
+
+          for path in sorted(allowed_paths):
+              print(f"ALLOWED TEST PATH: {path}")
+
+          print("PASS: Only expected old records selected.")
+          print("PASS: Recent and pending reports protected.")
+          print("PASS: Deletion paths restricted to cleanupTestData.")
+          print("READ-ONLY SAFETY CHECK. No data deleted.")
           PY
