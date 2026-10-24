@@ -3,18 +3,23 @@ name: Local Talk Cleanup Test
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '17 18 * * *'
 
 permissions:
   contents: read
+  id-token: write
 
 jobs:
   cleanup-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Check scheduled execution
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/322452775254/locations/global/workloadIdentityPools/local-talk-github-test/providers/github-actions'
+          service_account: 'local-talk-cleanup-test@local-talk-test-93910.iam.gserviceaccount.com'
+
+      - name: Confirm authentication
         run: |
-          echo "Local Talk cleanup test started"
-          date -u
-          echo "Dry run only - no Firebase data deleted"
+          echo "Google Cloud authentication step succeeded"
+          echo "No Firebase data accessed or deleted"
