@@ -2,7 +2,7 @@
 name: Local Talk 90-Day Cleanup
 
 on:
-    workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,7 +22,7 @@ jobs:
           access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
           create_credentials_file: false
 
-      - name: Check 90-day cleanup candidates
+      - name: Verify 90-day cleanup candidates
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
@@ -39,8 +39,25 @@ jobs:
 
           DRY_RUN = True
           MAX_DELETE_RECORDS = 50
-          
-          CUTOFF = int(time.time() * 1000) - 90 * 24 * 60 * 60 * 1000
+          RETENTION_DAYS = 90
+
+          CUTOFF = (
+              int(time.time() * 1000)
+              - RETENTION_DAYS * 24 * 60 * 60 * 1000
+          )
+
+          # Never run this workflow against production.
+          EXPECTED_DATABASE = (
+              "https://local-talk-test-93910-default-rtdb.firebaseio.com"
+          )
+
+          if DATABASE != EXPECTED_DATABASE:
+              raise RuntimeError("STOP: Not the expected TEST database.")
+
+          if not DRY_RUN:
+              raise RuntimeError(
+                  "STOP: Actual deletion is not enabled in this version."
+              )
 
           def read(path):
               request = urllib.request.Request(
@@ -49,11 +66,16 @@ jobs:
               )
               with urllib.request.urlopen(request, timeout=30) as response:
                   data = json.load(response)
-              return data if isinstance(data, dict) else {}
 
-          reports = read("communityReports")
-          statuses = read("communityReportStatuses")
-          logs = read("moderationLogs")
+              if data is None:
+                  return {}
+
+              if not isinstance(data, dict):
+                  raise RuntimeError(
+                      f"STOP: Unexpected database structure: {path}"
+                  )
+
+              return data
 
           def old(timestamp):
               return (
@@ -62,26 +84,67 @@ jobs:
                   and 0 < timestamp < CUTOFF
               )
 
-          report_ids = [
-              report_id
-              for report_id, report in reports.items()
-              if (
-                  isinstance(report, dict)
-                  and isinstance(statuses.get(report_id), dict)
-                  and statuses[report_id].get("action") in ("reviewed", "deleted")
-                  and old(statuses[report_id].get("createdAt"))
-              )
-          ]
-
-          log_ids = [
-              log_id
-              for log_id, log in logs.items()
-              if isinstance(log, dict) and old(log.get("createdAt"))
-          ]
-
           print("=== Local Talk 90-day cleanup ===")
           print("Database: TEST PROJECT")
-          print(f"Processed reports older than 90 days: {len(report_ids)}")
-          print(f"Moderation logs older than 90 days: {len(log_ids)}")
-          print(f"DRY RUN ONLY: No records deleted. Limit: {MAX_DELETE_RECORDS}")
+          print(f"Retention: {RETENTION_DAYS} days")
+          print(f"Dry run: {DRY_RUN}")
+
+          reports = read("communityReports")
+          statuses = read("communityReportStatuses")
+          logs = read("moderationLogs")
+
+          report_ids = []
+
+          for report_id, report in reports.items():
+              if not isinstance(report, dict):
+                  continue
+
+              status = statuses.get(report_id)
+
+              # No administrator decision: preserve the report.
+              if not isinstance(status, dict):
+                  continue
+
+              action = status.get("action")
+
+              # Only completed administrator decisions qualify.
+              if action not in ("reviewed", "deleted"):
+                  continue
+
+              # Use the administrator decision timestamp,
+              # not the original report submission timestamp.
+              processed_at = status.get("createdAt")
+
+              if old(processed_at):
+                  report_ids.append(report_id)
+
+          log_ids = []
+
+          for log_id, log in logs.items():
+              if not isinstance(log, dict):
+                  continue
+
+              if old(log.get("createdAt")):
+                  log_ids.append(log_id)
+
+          # Count actual database nodes, not just report IDs.
+          # Each report cleanup would remove its report and status.
+          total_nodes = 2 * len(report_ids) + len(log_ids)
+
+          print(
+              f"Processed reports older than 90 days: {len(report_ids)}"
+          )
+          print(
+              f"Moderation logs older than 90 days: {len(log_ids)}"
+          )
+          print(f"Total candidate database nodes: {total_nodes}")
+          print(f"Maximum allowed nodes: {MAX_DELETE_RECORDS}")
+
+          if total_nodes > MAX_DELETE_RECORDS:
+              raise RuntimeError(
+                  "STOP: Candidate count exceeds the safety limit."
+              )
+
+          print("Safety checks passed.")
+          print("DRY RUN ONLY: No records deleted.")
           PY
