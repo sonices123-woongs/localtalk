@@ -117,3 +117,116 @@ jobs:
           print(f"Orphan statuses (no matching report): {len(set(statuses) - set(reports))}")
           print("DRY RUN ONLY. No data deleted.")
           PY
+
+      - name: Test 90-day retention rules
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from datetime import datetime, timedelta, timezone
+
+          NOW = datetime.now(timezone.utc)
+          CUTOFF_MS = int((NOW - timedelta(days=90)).timestamp() * 1000)
+
+          def days_ago(days):
+              return int((NOW - timedelta(days=days)).timestamp() * 1000)
+
+          def is_old(timestamp):
+              return (
+                  isinstance(timestamp, (int, float))
+                  and not isinstance(timestamp, bool)
+                  and timestamp > 0
+                  and timestamp < CUTOFF_MS
+              )
+
+          def should_delete_report(report, status):
+              if not isinstance(status, dict):
+                  return False
+
+              if status.get("action") not in (
+                  "reviewed", "dismissed", "resolved"
+              ):
+                  return False
+
+              return is_old(status.get("createdAt"))
+
+          def should_delete_log(log):
+              if not isinstance(log, dict):
+                  return False
+
+              return is_old(log.get("createdAt"))
+
+          cases = [
+              (
+                  "Processed report, 91 days old",
+                  should_delete_report(
+                      {"createdAt": days_ago(100)},
+                      {"action": "reviewed", "createdAt": days_ago(91)}
+                  ),
+                  True
+              ),
+              (
+                  "Processed report, 89 days old",
+                  should_delete_report(
+                      {"createdAt": days_ago(100)},
+                      {"action": "reviewed", "createdAt": days_ago(89)}
+                  ),
+                  False
+              ),
+              (
+                  "Pending report, 100 days old",
+                  should_delete_report(
+                      {"createdAt": days_ago(100)},
+                      None
+                  ),
+                  False
+              ),
+              (
+                  "Moderation log, 91 days old",
+                  should_delete_log(
+                      {"createdAt": days_ago(91)}
+                  ),
+                  True
+              ),
+              (
+                  "Invalid processing timestamp",
+                  should_delete_report(
+                      {"createdAt": days_ago(100)},
+                      {"action": "reviewed", "createdAt": None}
+                  ),
+                  False
+              ),
+              (
+                  "Unknown report action",
+                  should_delete_report(
+                      {"createdAt": days_ago(100)},
+                      {"action": "unknown", "createdAt": days_ago(91)}
+                  ),
+                  False
+              ),
+              (
+                  "Moderation log, 89 days old",
+                  should_delete_log(
+                      {"createdAt": days_ago(89)}
+                  ),
+                  False
+              )
+          ]
+
+          failed = 0
+
+          for name, actual, expected in cases:
+              passed = actual == expected
+              result = "PASS" if passed else "FAIL"
+              print(f"{result}: {name}")
+
+              if not passed:
+                  failed += 1
+
+          print(f"Tests passed: {len(cases) - failed}/{len(cases)}")
+          print("Simulation only. No data deleted.")
+
+          if failed:
+              raise SystemExit(1)
+          PY
