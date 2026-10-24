@@ -3,6 +3,12 @@ name: Local Talk Cleanup Test
 
 on:
   workflow_dispatch:
+    inputs:
+      confirm_test_delete:
+        description: 'Type DELETE_TEST_DATA to allow test deletion'
+        required: true
+        default: 'NO'
+        type: string
 
 permissions:
   contents: read
@@ -23,10 +29,11 @@ jobs:
           access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
           create_credentials_file: false
 
-      - name: Verify cleanup safety checks
+      - name: Verify and optionally delete isolated test data
         shell: bash
         env:
           ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          CONFIRM_DELETE: ${{ inputs.confirm_test_delete }}
         run: |
           set -euo pipefail
 
@@ -37,22 +44,32 @@ jobs:
           import urllib.request
 
           DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
-          TOKEN = os.environ["ACCESS_TOKEN"]
-
           ROOT = "cleanupTestData"
+          TOKEN = os.environ["ACCESS_TOKEN"]
+          CONFIRM = os.environ.get("CONFIRM_DELETE", "NO")
+
           CUTOFF_MS = int(time.time() * 1000) - 90 * 24 * 60 * 60 * 1000
 
           EXPECTED_REPORT = "test_old_processed"
           EXPECTED_LOG = "test_old_log"
 
-          url = f"{DATABASE}/{ROOT}.json"
-          request = urllib.request.Request(
-              url,
-              headers={"Authorization": f"Bearer {TOKEN}"}
-          )
+          def firebase_request(path, method="GET"):
+              if not path.startswith(ROOT + "/") and path != ROOT:
+                  raise SystemExit("BLOCKED: Path outside test area.")
 
-          with urllib.request.urlopen(request, timeout=30) as response:
-              data = json.load(response)
+              url = f"{DATABASE}/{path}.json"
+              request = urllib.request.Request(
+                  url,
+                  headers={"Authorization": f"Bearer {TOKEN}"},
+                  method=method
+              )
+
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  if method == "GET":
+                      return json.load(response)
+                  return None
+
+          data = firebase_request(ROOT)
 
           if not isinstance(data, dict):
               raise SystemExit("FAIL: Test data missing.")
@@ -72,18 +89,16 @@ jobs:
                   and value < CUTOFF_MS
               )
 
-          report_candidates = set()
-
-          for report_id, report in reports.items():
-              status = statuses.get(report_id)
-
+          report_candidates = {
+              report_id
+              for report_id, report in reports.items()
               if (
                   isinstance(report, dict)
-                  and isinstance(status, dict)
-                  and status.get("action") == "reviewed"
-                  and is_old(status.get("createdAt"))
-              ):
-                  report_candidates.add(report_id)
+                  and isinstance(statuses.get(report_id), dict)
+                  and statuses[report_id].get("action") == "reviewed"
+                  and is_old(statuses[report_id].get("createdAt"))
+              )
+          }
 
           log_candidates = {
               log_id
@@ -109,28 +124,57 @@ jobs:
           if "test_old_pending" in statuses:
               raise SystemExit("FAIL: Pending report has a status.")
 
-          allowed_paths = {
+          paths = [
               f"{ROOT}/reports/{EXPECTED_REPORT}",
               f"{ROOT}/statuses/{EXPECTED_REPORT}",
               f"{ROOT}/logs/{EXPECTED_LOG}"
-          }
+          ]
 
-          expected_paths = {
-              "cleanupTestData/reports/test_old_processed",
-              "cleanupTestData/statuses/test_old_processed",
-              "cleanupTestData/logs/test_old_log"
-          }
+          print("=== Test deletion safety check ===")
 
-          if allowed_paths != expected_paths:
-              raise SystemExit("FAIL: Unexpected deletion paths.")
+          for path in paths:
+              print(f"TARGET: {path}")
 
-          print("=== Cleanup safety verification ===")
+          print("PASS: Exact test records verified.")
 
-          for path in sorted(allowed_paths):
-              print(f"ALLOWED TEST PATH: {path}")
+          if CONFIRM != "DELETE_TEST_DATA":
+              print("DRY RUN ONLY. No data deleted.")
+              raise SystemExit(0)
 
-          print("PASS: Only expected old records selected.")
-          print("PASS: Recent and pending reports protected.")
-          print("PASS: Deletion paths restricted to cleanupTestData.")
-          print("READ-ONLY SAFETY CHECK. No data deleted.")
+          print("Confirmed test deletion. Starting...")
+
+          for path in paths:
+              firebase_request(path, method="DELETE")
+              print(f"DELETED: {path}")
+
+          remaining = firebase_request(ROOT)
+
+          if not isinstance(remaining, dict):
+              raise SystemExit("FAIL: Test root missing after deletion.")
+
+          remaining_reports = remaining.get("reports", {})
+          remaining_statuses = remaining.get("statuses", {})
+          remaining_logs = remaining.get("logs", {})
+
+          if EXPECTED_REPORT in remaining_reports:
+              raise SystemExit("FAIL: Old report still exists.")
+
+          if EXPECTED_REPORT in remaining_statuses:
+              raise SystemExit("FAIL: Old status still exists.")
+
+          if EXPECTED_LOG in remaining_logs:
+              raise SystemExit("FAIL: Old log still exists.")
+
+          if "test_recent_processed" not in remaining_reports:
+              raise SystemExit("FAIL: Recent report was removed.")
+
+          if "test_recent_processed" not in remaining_statuses:
+              raise SystemExit("FAIL: Recent status was removed.")
+
+          if "test_old_pending" not in remaining_reports:
+              raise SystemExit("FAIL: Pending report was removed.")
+
+          print("PASS: Old test records deleted.")
+          print("PASS: Recent and pending reports preserved.")
+          print("TEST DELETION COMPLETED.")
           PY
