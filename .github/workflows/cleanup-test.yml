@@ -230,3 +230,97 @@ jobs:
           if failed:
               raise SystemExit(1)
           PY
+
+      - name: Verify isolated cleanup test data
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.request
+
+          DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
+          TOKEN = os.environ["ACCESS_TOKEN"]
+          CUTOFF_MS = int(time.time() * 1000) - 90 * 24 * 60 * 60 * 1000
+
+          url = f"{DATABASE}/cleanupTestData.json"
+
+          request = urllib.request.Request(
+              url,
+              headers={"Authorization": f"Bearer {TOKEN}"}
+          )
+
+          with urllib.request.urlopen(request, timeout=30) as response:
+              data = json.load(response)
+
+          if not isinstance(data, dict):
+              raise SystemExit("FAIL: cleanupTestData is missing.")
+
+          reports = data.get("reports", {})
+          statuses = data.get("statuses", {})
+          logs = data.get("logs", {})
+
+          if not all(isinstance(x, dict) for x in (reports, statuses, logs)):
+              raise SystemExit("FAIL: Invalid test data structure.")
+
+          def is_old(value):
+              return (
+                  isinstance(value, (int, float))
+                  and not isinstance(value, bool)
+                  and value > 0
+                  and value < CUTOFF_MS
+              )
+
+          report_candidates = []
+
+          for report_id, report in reports.items():
+              status = statuses.get(report_id)
+
+              if (
+                  isinstance(report, dict)
+                  and isinstance(status, dict)
+                  and status.get("action") == "reviewed"
+                  and is_old(status.get("createdAt"))
+              ):
+                  report_candidates.append(report_id)
+
+          log_candidates = []
+
+          for log_id, log in logs.items():
+              if isinstance(log, dict) and is_old(log.get("createdAt")):
+                  log_candidates.append(log_id)
+
+          expected_reports = {"test_old_processed"}
+          expected_logs = {"test_old_log"}
+
+          print("=== Isolated Firebase cleanup verification ===")
+          print(f"Report candidates: {sorted(report_candidates)}")
+          print(f"Log candidates: {sorted(log_candidates)}")
+
+          if set(report_candidates) != expected_reports:
+              raise SystemExit("FAIL: Unexpected report deletion candidates.")
+
+          if set(log_candidates) != expected_logs:
+              raise SystemExit("FAIL: Unexpected log deletion candidates.")
+
+          if "test_recent_processed" not in reports:
+              raise SystemExit("FAIL: Recent report missing.")
+
+          if "test_recent_processed" not in statuses:
+              raise SystemExit("FAIL: Recent report status missing.")
+
+          if "test_old_pending" not in reports:
+              raise SystemExit("FAIL: Pending report missing.")
+
+          if "test_old_pending" in statuses:
+              raise SystemExit("FAIL: Pending report has an unexpected status.")
+
+          print("PASS: Expected deletion candidates matched.")
+          print("PASS: Recent and pending reports preserved.")
+          print("READ-ONLY TEST. No data deleted.")
+          PY
