@@ -1,0 +1,180 @@
+
+name: Local Talk 90-Day Delete Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type DELETE_TEST_90_DAYS to allow test deletion'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  delete-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to TEST Firebase
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/322452775254/locations/global/workloadIdentityPools/local-talk-github-test/providers/github-actions'
+          service_account: 'local-talk-cleanup-test@local-talk-test-93910.iam.gserviceaccount.com'
+          token_format: access_token
+          access_token_scopes: 'https://www.googleapis.com/auth/firebase.database,https://www.googleapis.com/auth/userinfo.email'
+          create_credentials_file: false
+
+      - name: Delete expired TEST fixtures only
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import json
+          import os
+          import time
+          import urllib.error
+          import urllib.request
+
+          DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
+          EXPECTED_DATABASE = "https://local-talk-test-93910-default-rtdb.firebaseio.com"
+
+          RETENTION_DAYS = 90
+          MAX_DELETE_NODES = 50
+          TEST_PREFIX = "cleanup_verify_"
+          CONFIRM_TEXT = "DELETE_TEST_90_DAYS"
+
+          token = os.environ["ACCESS_TOKEN"]
+          confirmation = os.environ.get("CONFIRMATION", "")
+
+          if DATABASE != EXPECTED_DATABASE:
+              raise RuntimeError("STOP: Unexpected database.")
+
+          if confirmation != CONFIRM_TEXT:
+              raise RuntimeError("STOP: Confirmation text does not match.")
+
+          cutoff = (
+              int(time.time() * 1000)
+              - RETENTION_DAYS * 24 * 60 * 60 * 1000
+          )
+
+          def request(method, path):
+              req = urllib.request.Request(
+                  f"{DATABASE}/{path}.json",
+                  headers={
+                      "Authorization": f"Bearer {token}",
+                      "Content-Type": "application/json"
+                  },
+                  method=method
+              )
+              with urllib.request.urlopen(req, timeout=30) as response:
+                  if method == "GET":
+                      return json.load(response)
+                  return None
+
+          def read_map(path):
+              data = request("GET", path)
+              if data is None:
+                  return {}
+              if not isinstance(data, dict):
+                  raise RuntimeError(
+                      f"STOP: Unexpected structure at {path}"
+                  )
+              return data
+
+          def is_old(value):
+              return (
+                  isinstance(value, (int, float))
+                  and not isinstance(value, bool)
+                  and 0 < value < cutoff
+              )
+
+          def eligible(report, status):
+              return (
+                  isinstance(report, dict)
+                  and isinstance(status, dict)
+                  and status.get("action") in ("reviewed", "deleted")
+                  and is_old(status.get("createdAt"))
+              )
+
+          reports = read_map("communityReports")
+          statuses = read_map("communityReportStatuses")
+          logs = read_map("moderationLogs")
+
+          report_ids = sorted(
+              report_id
+              for report_id, report in reports.items()
+              if report_id.startswith(TEST_PREFIX)
+              and eligible(report, statuses.get(report_id))
+          )
+
+          log_ids = sorted(
+              log_id
+              for log_id, log in logs.items()
+              if log_id.startswith(TEST_PREFIX)
+              and isinstance(log, dict)
+              and is_old(log.get("createdAt"))
+          )
+
+          total_nodes = 2 * len(report_ids) + len(log_ids)
+
+          print("=== TEST FIREBASE 90-DAY DELETE ===")
+          print("Database: TEST ONLY")
+          print(f"Retention: {RETENTION_DAYS} days")
+          print(f"Report fixtures: {len(report_ids)}")
+          print(f"Log fixtures: {len(log_ids)}")
+          print(f"Total nodes: {total_nodes}")
+          print(f"Maximum nodes: {MAX_DELETE_NODES}")
+
+          if total_nodes > MAX_DELETE_NODES:
+              raise RuntimeError("STOP: Safety limit exceeded.")
+
+          if total_nodes == 0:
+              print("No eligible test fixtures. Nothing deleted.")
+              raise SystemExit(0)
+
+          # Recheck each fixture immediately before deletion.
+          for report_id in report_ids:
+              report = request("GET", f"communityReports/{report_id}")
+              status = request(
+                  "GET", f"communityReportStatuses/{report_id}"
+              )
+
+              if not eligible(report, status):
+                  raise RuntimeError(
+                      f"STOP: Report eligibility changed: {report_id}"
+                  )
+
+          for log_id in log_ids:
+              log = request("GET", f"moderationLogs/{log_id}")
+
+              if not (
+                  isinstance(log, dict)
+                  and is_old(log.get("createdAt"))
+              ):
+                  raise RuntimeError(
+                      f"STOP: Log eligibility changed: {log_id}"
+                  )
+
+          # Delete only verified, prefixed TEST fixtures.
+          for report_id in report_ids:
+              request("DELETE", f"communityReports/{report_id}")
+              request(
+                  "DELETE",
+                  f"communityReportStatuses/{report_id}"
+              )
+              print(f"Deleted test report fixture: {report_id}")
+
+          for log_id in log_ids:
+              request("DELETE", f"moderationLogs/{log_id}")
+              print(f"Deleted test log fixture: {log_id}")
+
+          print("TEST fixture deletion completed.")
+          PY
