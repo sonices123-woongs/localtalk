@@ -86,6 +86,21 @@
     var searchMarkers = [];
     var myLocationMarker = null;
     var userLatLng = null;
+    var mapLocationRequestBusy = false;
+    var mapLocationTranslations = {
+      ko: {checking:'📍 현재 위치를 확인하고 있어요. 휴대폰에 권한 요청이 나오면 허용해 주세요.',success:'📍 현재 위치를 지도에 표시했어요.',unsupported:'이 환경에서는 위치 확인을 지원하지 않아요.',insecure:'보안 연결(HTTPS)이 아니어서 위치 확인이 제한됐어요.',denied:'위치 접근이 거부됐어요. 휴대폰의 Local Talk 앱 위치 권한 또는 브라우저의 사이트 위치 권한을 확인해 주세요.',timeout:'위치를 확인하는 데 시간이 오래 걸려 중단됐어요. 위치 서비스를 켜고 다시 눌러 주세요.',unavailable:'휴대폰 위치 서비스를 켜고 앱 위치 권한을 확인한 뒤 다시 시도해 주세요.'},
+      en: {checking:'📍 Finding your location. Allow the location permission if prompted.',success:'📍 Your location is shown on the map.',unsupported:'Location is not supported here.',insecure:'Location requires a secure HTTPS connection.',denied:'Location permission was denied. Check the app permission or this site’s browser permission.',timeout:'Location request timed out. Enable device location and try again.',unavailable:'Check device location services and app permissions, then try again.'},
+      ja: {checking:'📍 現在地を確認中です。許可を求められたら位置情報を許可してください。',success:'📍 現在地を地図に表示しました。',unsupported:'この環境では位置情報を利用できません。',insecure:'位置情報にはHTTPS接続が必要です。',denied:'位置情報へのアクセスが拒否されました。アプリまたはブラウザーの許可を確認してください。',timeout:'位置情報の取得がタイムアウトしました。位置情報サービスを確認して再試行してください。',unavailable:'端末の位置情報サービスとアプリの許可を確認してください。'},
+      'zh-CN': {checking:'📍 正在获取当前位置。如有提示，请允许位置访问。',success:'📍 已在地图上显示当前位置。',unsupported:'此环境不支持定位。',insecure:'定位功能需要安全的HTTPS连接。',denied:'位置权限被拒绝。请检查应用或浏览器的位置权限。',timeout:'获取位置超时。请开启设备定位后重试。',unavailable:'请检查设备定位服务和应用权限后重试。'}
+    };
+    function showMapLocationStatus(key) {
+      var status = document.getElementById('mapGeoStatus');
+      if (!status) return;
+      var words = mapLocationTranslations[currentLang] || mapLocationTranslations.ko;
+      status.textContent = words[key] || words.unavailable;
+      status.classList.remove('hidden');
+      status.dataset.geoState = key;
+    }
 
     var roomUserCounts = {};
     var currentRoomUsersRef = null;
@@ -1859,7 +1874,11 @@
         googleMapMarkers.push(marker);
       }
 
-      moveToMyLocation(false);
+      // Do not request GPS merely because the user opened the map.
+      // Only the explicit 'my location' button should prompt for permission.
+      if (userLatLng) drawMyLocationMarker(false);
+      var mapStatus = document.getElementById('mapGeoStatus');
+      if (mapStatus) mapStatus.classList.add('hidden');
     }
 
     function searchGoogleMapLocation() {
@@ -1926,45 +1945,62 @@
       });
     }
 
-    function moveToMyLocation(shouldPan) {
-      var panToUser = (shouldPan !== undefined) ? shouldPan : true;
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-          var lat = position.coords.latitude;
-          var lng = position.coords.longitude;
-          userLatLng = { lat: lat, lng: lng };
-
-          if (myLocationMarker) {
-            myLocationMarker.setMap(null);
-          }
-
-          if (typeof google !== 'undefined' && google.maps) {
-            myLocationMarker = new google.maps.Marker({
-              position: userLatLng,
-              map: googleMapInstance,
-              title: "My Location",
-              icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 9,
-                fillColor: "#ef4444",
-                fillOpacity: 1,
-                strokeColor: "#ffffff",
-                strokeWeight: 2
-              }
-            });
-
-            if (panToUser && googleMapInstance) {
-              googleMapInstance.setCenter(userLatLng);
-              googleMapInstance.setZoom(14);
-            }
-          }
-        }, function(error) {
-          if (panToUser) {
-            alert(uiText('geoFailed'));
-          }
-        });
+    function drawMyLocationMarker(panToUser) {
+      if (!userLatLng || !googleMapInstance || typeof google === 'undefined' || !google.maps) return;
+      if (myLocationMarker) myLocationMarker.setMap(null);
+      myLocationMarker = new google.maps.Marker({
+        position: userLatLng,
+        map: googleMapInstance,
+        title: 'My Location',
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 9,
+          fillColor: '#ef4444',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2
+        }
+      });
+      if (panToUser) {
+        googleMapInstance.setCenter(userLatLng);
+        googleMapInstance.setZoom(14);
       }
+    }
+
+    function moveToMyLocation(shouldPan) {
+      // Called by a deliberate click on the map's crosshair button.
+      if (mapLocationRequestBusy) return;
+      if (!navigator.geolocation) { showMapLocationStatus('unsupported'); return; }
+      if (window.isSecureContext === false) { showMapLocationStatus('insecure'); return; }
+
+      var panToUser = shouldPan !== false;
+      var button = document.getElementById('mapGeoButton');
+      mapLocationRequestBusy = true;
+      if (button) { button.disabled = true; button.setAttribute('aria-busy', 'true'); }
+      showMapLocationStatus('checking');
+      function finish() {
+        mapLocationRequestBusy = false;
+        if (button) { button.disabled = false; button.removeAttribute('aria-busy'); }
+      }
+      navigator.geolocation.getCurrentPosition(function(position) {
+        finish();
+        var lat = Number(position.coords.latitude), lng = Number(position.coords.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+          if (currentView === 'map') showMapLocationStatus('unavailable');
+          return;
+        }
+        // Coordinates stay in memory; no Firebase write or analytics event.
+        userLatLng = { lat: lat, lng: lng };
+        if (currentView === 'map') {
+          drawMyLocationMarker(panToUser);
+          showMapLocationStatus('success');
+        }
+      }, function(error) {
+        finish();
+        if (currentView !== 'map') return;
+        showMapLocationStatus(error && error.code === 1 ? 'denied' : error && error.code === 3 ? 'timeout' : 'unavailable');
+        console.warn('Map geolocation failed:', error && error.code);
+      }, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
     }
 
     function leaveCurrentRoom() {
@@ -2584,6 +2620,11 @@
       }
 
       if (currentView === 'map') {
+        var geoStatus = document.getElementById('mapGeoStatus');
+        if (geoStatus && !geoStatus.classList.contains('hidden')) {
+          // A language switch should not trigger another location request.
+          showMapLocationStatus(geoStatus.dataset.geoState || 'unavailable');
+        }
         document.getElementById('headerTitle').innerText = t.mapTitle;
         document.getElementById('headerSub').innerText = t.mapSub;
         loadGoogleMapsScript(currentLang, renderGoogleMap);
