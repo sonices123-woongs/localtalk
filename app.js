@@ -144,6 +144,7 @@
       updateCountryOptionsV13();
       updateProfileSaveLabelV13();
       refreshBlockedManagerLabels();
+      refreshAccountDeleteLabel();
       document.getElementById('profileCancelButton').classList.toggle('hidden', !userCountry || !userNickname);
       loadSafetyBlocked();
       document.getElementById('manageBlockedLabel').textContent=blockedManagerText().title;
@@ -187,6 +188,77 @@
           alert(uiText('profileSyncFailed'));
         });
       }
+    }
+
+    // v20.33 TEST ONLY: self-service deletion for anonymous traveler identities.
+    // Reports/moderation audit records and room messages are NOT removed here.
+    var accountDeletionBusy = false;
+    function accountDeletionLabels() {
+      return {
+        ko:['내 데이터 및 익명 계정 삭제','현재 익명 계정의 프로필, 작성 게시글·댓글과 Firebase 인증 계정을 삭제합니다. 되돌릴 수 없습니다. 신고·관리 기록 및 대화방에 남아 있는 메시지는 이 기능으로 삭제되지 않습니다. 계속할까요?','삭제하려면 DELETE를 입력하세요.','삭제가 완료되었습니다. 새 사용자로 시작합니다.','삭제 중 오류가 발생했습니다. 일부 게시글이나 댓글은 이미 삭제되었을 수 있습니다. 계정은 유지되므로 다시 시도하거나 지원팀에 문의하세요.','익명 여행자 계정에서만 사용할 수 있습니다. 관리자 Google 계정은 이 버튼으로 삭제할 수 없습니다.'],
+        en:['Delete my data and anonymous account','Delete your profile, authored posts/comments and Firebase anonymous account permanently? Reports, moderation records and existing room messages are not deleted by this feature.','Type DELETE to confirm.','Deletion completed. Starting with a new user.','Deletion failed. Some posts/comments may already be removed. Your account remains; retry or contact support.','Only anonymous traveler accounts can use this action. Google admin accounts cannot be deleted here.'],
+        ja:['自分のデータと匿名アカウントを削除','プロフィール、投稿・コメント、Firebase匿名アカウントを削除します。元に戻せません。通報・管理記録や残存するチャットメッセージは削除されません。','確認のため DELETE と入力してください。','削除が完了しました。','削除に失敗しました。一部のデータは削除済みの場合があります。再試行またはサポートに連絡してください。','匿名ユーザー専用です。Google管理者アカウントは削除できません。'],
+        'zh-CN':['删除我的数据和匿名账户','永久删除个人资料、发布的帖子和评论及 Firebase 匿名账户。举报、管理记录及现存聊天消息不会被此功能删除。','请输入 DELETE 确认。','删除完成，将作为新用户开始。','删除失败。部分内容可能已删除。请重试或联系支持。','仅限匿名游客账户，不能删除 Google 管理员账户。']
+      }[currentLang] || accountDeletionLabelsFallback();
+    }
+    function accountDeletionLabelsFallback(){return ['내 데이터 및 익명 계정 삭제','삭제할까요?','DELETE 입력','완료','오류','익명 계정 전용'];}
+    function refreshAccountDeleteLabel(){
+      var button=document.getElementById('deleteMyAccountButton');
+      if(button)button.textContent=accountDeletionLabels()[0];
+    }
+    function deleteMyAccountV2033(){
+      if(accountDeletionBusy || !requireAuth())return;
+      var user=auth.currentUser, uid=user.uid, labels=accountDeletionLabels();
+      if(!user.isAnonymous){alert(labels[5]);return;}
+      if(!confirm(labels[1]))return;
+      if(prompt(labels[2])!=='DELETE')return;
+      accountDeletionBusy=true;
+      var button=document.getElementById('deleteMyAccountButton');
+      if(button){button.disabled=true;button.textContent='...';}
+      // Read every city before deleting anything, so a permission/read failure cannot
+      // silently leave unknown city posts behind after Auth identity deletion.
+      var cityIds=Array.from(new Set(CITIES.concat(LEGACY_CITIES).map(function(c){return c.id;})));
+      Promise.all(cityIds.map(function(cityId){
+        return db.ref('communityPosts/'+cityId).once('value').then(function(snapshot){
+          return {cityId:cityId,posts:snapshot.val()||{}};
+        });
+      })).then(function(cityData){
+        var paths=[];
+        cityData.forEach(function(group){
+          Object.keys(group.posts).forEach(function(postId){
+            var post=group.posts[postId];
+            if(!post||typeof post!=='object')return;
+            var base='communityPosts/'+group.cityId+'/'+postId;
+            if(post.uid===uid){paths.push(base);return;}
+            Object.keys(post.comments||{}).forEach(function(commentId){
+              if(post.comments[commentId]&&post.comments[commentId].uid===uid)paths.push(base+'/comments/'+commentId);
+            });
+          });
+        });
+        // Existing Firebase rules allow deleting own posts/comments, not other users'.
+        return paths.reduce(function(p,path){return p.then(function(){return db.ref(path).remove();});},Promise.resolve());
+      }).then(function(){
+        stopRoomListeners();
+        return leaveCurrentRoom();
+      }).then(function(){
+        if(cityPresenceRef)return cityPresenceRef.remove();
+      }).then(function(){
+        return db.ref('userProfiles/'+uid).remove();
+      }).then(function(){
+        return user.delete();
+      }).then(function(){
+        ['my_user_country','my_user_nickname','localtalk_ui_lang','localtalk_auto_translate',
+          'localtalk_blocked_'+uid,'localtalk_blocked_names_'+uid].forEach(function(key){localStorage.removeItem(key);});
+        // Remove any per-user blocked lists under this application's prefix.
+        Object.keys(localStorage).forEach(function(key){
+          if(key.indexOf(uid)!==-1 && (key.indexOf('block')!==-1 || key.indexOf('safety')!==-1))localStorage.removeItem(key);
+        });
+        alert(labels[3]);
+        window.location.reload();
+      }).catch(function(error){
+        console.error('Account deletion failed:',error);
+        alert(labels[4]+' ('+(error.code||error.message||'unknown')+')');
+      }).finally(function(){accountDeletionBusy=false;if(button){button.disabled=false;refreshAccountDeleteLabel();}});
     }
 
     function updateHeaderUserLabel() {
@@ -806,7 +878,9 @@
         .finally(function(){btn.disabled=false;});
     }
     function deleteCommunityPost(id){
-      if(!currentCity||!requireAuth()||!communityData[id]||communityData[id].uid!==myUserId)return;
+      if(!currentCity||!requireAuth()||!communityData[id])return;
+      if(communityData[id].uid!==myUserId && !officialIsAdmin)return;
+      if(communityData[id].uid!==myUserId){adminRemoveCommunityContent('post',id,null);return;}
       if(!confirm(communityT().deleteAsk))return;
       db.ref('communityPosts/'+currentCity.id+'/'+id).remove().catch(function(e){console.error(e);alert(communityT().error);});
     }
@@ -859,9 +933,39 @@
     }
     function deleteCommunityComment(postId,commentId){
       var post=communityData[postId],comment=post&&post.comments&&post.comments[commentId];
-      if(!comment||comment.uid!==myUserId||!confirm(communityT().deleteAsk))return;
+      if(!comment||!(comment.uid===myUserId||officialIsAdmin))return;
+      if(comment.uid!==myUserId){adminRemoveCommunityContent('comment',postId,commentId);return;}
+      if(!confirm(communityT().deleteAsk))return;
       db.ref('communityPosts/'+currentCity.id+'/'+postId+'/comments/'+commentId).remove()
         .catch(function(e){console.error(e);alert(communityT().error);});
+    }
+    // Admin moderation: log and deletion in one multi-location database update.
+    // Test with a separate Firebase test project before enabling in production.
+    function adminRemoveCommunityContent(kind,postId,commentId){
+      if(!officialIsAdmin||!auth.currentUser||!currentCity)return;
+      var post=communityData[postId];
+      var target=kind==='post'?post:(post&&post.comments&&post.comments[commentId]);
+      if(!target)return;
+      var reasons=currentLang==='ko'?'삭제 사유를 입력하세요 (필수).':'Enter moderation reason (required).';
+      var reason=prompt(reasons);
+      if(reason===null)return;
+      reason=reason.trim();
+      if(!reason||reason.length>200){alert(currentLang==='ko'?'삭제 사유는 1~200자로 입력하세요.':'Reason must be 1–200 characters.');return;}
+      if(!confirm(communityT().deleteAsk))return;
+      var cityId=currentCity.id;
+      var record={adminUid:auth.currentUser.uid,kind:kind,cityId:cityId,postId:postId,
+        targetUid:target.uid||'',reason:reason,createdAt:firebase.database.ServerValue.TIMESTAMP};
+      if(kind==='comment')record.commentId=commentId;
+      var targetPath='communityPosts/'+cityId+'/'+postId+(kind==='comment'?'/comments/'+commentId:'');
+      var logRef=db.ref('moderationLogs').push();
+      var changes={};
+      changes['moderationLogs/'+logRef.key]=record;
+      changes[targetPath]=null;
+      // RTDB multi-location update is all-or-nothing at the database level.
+      db.ref().update(changes).catch(function(err){
+        console.error('Moderation delete failed',err);
+        alert(communityT().error);
+      });
     }
     // Display-only translation. The original text remains in Firebase and editors.
     function boardDisplayText(el, original, key, lazy){
@@ -885,6 +989,130 @@
     function communitySearchChanged(value){communitySearchText=value;renderCommunityPosts();}
     function communitySearchLabels(){return ({ko:['여행자 글 검색 (제목·내용·장소)','검색 결과가 없습니다.'],en:['Search traveler posts (title, text, place)','No matching posts.'],ja:['旅行者の投稿を検索（タイトル・本文・場所）','検索結果がありません'], 'zh-CN':['搜索旅行者帖子（标题、内容、地点）','没有搜索结果']})[currentLang]||['여행자 글 검색','검색 결과가 없습니다.'];}
     function updateBoardSearchCount(n){var el=document.getElementById('boardSearchCount');if(el)el.textContent=n+' '+({ko:'개',en:'results',ja:'件','zh-CN':'条'}[currentLang]||'개');}
+    // v20.31 board reports: separate append-only channel; no public report reads.
+    function communityReportLabel(){return ({ko:'신고',en:'Report',ja:'通報','zh-CN':'举报'})[currentLang]||'Report';}
+    function submitCommunityReport(kind,postId,commentId){
+      if(!requireAuth()||!currentCity)return;
+      var post=communityData[postId];
+      var target=kind==='comment'?(post&&post.comments&&post.comments[commentId]):post;
+      if(!target||!target.uid||target.uid===myUserId)return;
+      var labels=safetyText();
+      var choices=labels.reasons;
+      var menu=choices.map(function(label,i){return i+': '+label;}).join('\n');
+      var answer=window.prompt(labels.reason+'\n'+menu,'0');
+      if(answer===null)return;
+      answer=answer.trim();
+      if(!/^[0-3]$/.test(answer)){alert(labels.reason+' (0-3)');return;}
+      var report={reporterUid:myUserId,reportedUid:target.uid,cityId:currentCity.id,
+        kind:kind,postId:postId,commentId:kind==='comment'?commentId:'',reason:answer,
+        contentText:String(kind==='comment'?target.text:(target.title+'\n'+target.body)).slice(0,2000),
+        sender:String(target.author||'').slice(0,100),createdAt:firebase.database.ServerValue.TIMESTAMP};
+      db.ref('communityReports').push().set(report).then(function(){alert(labels.success);})
+        .catch(function(e){console.error('Community report failed',e);alert(labels.error);});
+    }
+
+
+    // v20.32: admin-only report queue. Firebase rules are the actual authorization boundary.
+    var adminReportItems=[];
+    var adminReportStatuses={};
+    function closeAdminReports(){
+      var modal=document.getElementById('adminReportsModal');
+      if(modal)modal.classList.add('hidden');
+    }
+    function openAdminReports(){
+      if(!officialIsAdmin||!auth.currentUser)return;
+      var profile=document.getElementById('profileModal');if(profile)profile.classList.add('hidden');
+      document.getElementById('adminReportsModal').classList.remove('hidden');
+      document.getElementById('adminReportsList').textContent='신고 내역을 불러오는 중...';
+      Promise.all([db.ref('communityReports').limitToLast(100).once('value'),db.ref('communityReportStatuses').once('value')]).then(function(results){
+        if(!officialIsAdmin||document.getElementById('adminReportsModal').classList.contains('hidden'))return;
+        var raw=results[0].val()||{};
+        adminReportItems=Object.keys(raw).map(function(id){return {id:id,data:raw[id]};}).sort(function(a,b){return (b.data.createdAt||0)-(a.data.createdAt||0);});
+        adminReportStatuses=results[1].val()||{};
+        renderAdminReports();
+      }).catch(function(e){console.error('Admin report read',e);document.getElementById('adminReportsList').textContent='신고 목록을 읽지 못했습니다. Firebase 테스트 규칙을 게시했는지 확인하세요.';});
+    }
+    function renderAdminReports(){
+      var root=document.getElementById('adminReportsList');root.replaceChildren();
+      var pending=adminReportItems.filter(function(item){return !adminReportStatuses[item.id];}).length;
+      document.getElementById('adminReportCount').textContent='(미처리 '+pending+' / 최근 '+adminReportItems.length+'건)';
+      if(!adminReportItems.length){root.textContent='접수된 신고가 없습니다.';return;}
+      adminReportItems.forEach(function(item){
+        var d=item.data||{},st=adminReportStatuses[item.id];
+        var card=document.createElement('div');card.className='border border-slate-200 rounded-xl p-3 space-y-2';
+        var heading=document.createElement('div');heading.className='font-bold text-slate-800';
+        heading.textContent=(d.kind==='comment'?'댓글':'게시글')+' 신고 · '+(d.cityId||'')+' · '+(st?'처리 완료':'미처리');card.appendChild(heading);
+        var meta=document.createElement('p');meta.className='text-xs text-slate-500';
+        var reasons=['괴롭힘·욕설','스팸·광고','부적절한 내용','기타'];
+        meta.textContent='사유: '+(reasons[Number(d.reason)]||'기타')+' · '+(d.createdAt?new Date(d.createdAt).toLocaleString():'날짜 없음');card.appendChild(meta);
+        var content=document.createElement('div');content.className='bg-slate-50 rounded-lg p-2 text-sm whitespace-pre-wrap break-words';content.textContent=String(d.contentText||'').slice(0,2000);card.appendChild(content);
+        var author=document.createElement('p');author.className='text-xs text-slate-500 break-all';author.textContent='작성자: '+(d.sender||'알 수 없음')+' · 글 ID: '+(d.postId||'');card.appendChild(author);
+        if(!st){
+          var controls=document.createElement('div');controls.className='flex gap-2 flex-wrap';
+          var review=document.createElement('button');review.type='button';review.className='px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs';review.textContent='검토 완료 (삭제 안 함)';review.onclick=function(){adminResolveReport(item,'reviewed');};controls.appendChild(review);
+          var remove=document.createElement('button');remove.type='button';remove.className='px-3 py-2 rounded-lg bg-red-600 text-white text-xs';remove.textContent='신고 대상 삭제';remove.onclick=function(){adminResolveReport(item,'deleted');};controls.appendChild(remove);
+          card.appendChild(controls);
+        }else{var done=document.createElement('p');done.className='text-xs text-slate-500';done.textContent='처리: '+(st.action==='deleted'?'삭제':'검토 완료');card.appendChild(done);}
+        root.appendChild(card);
+      });
+    }
+    // Pre-deployment safeguard: never trust report IDs or target identity blindly.
+    function adminResolveReport(item,action){
+      if(!officialIsAdmin||!auth.currentUser)return;
+      if(action!=='reviewed'&&action!=='deleted')return;
+      var d=(item&&item.data)||{},reportId=item&&item.id;
+      function validKey(s){return typeof s==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(s);}
+      if(!validKey(reportId)||!validKey(d.cityId)||!validKey(d.postId)||
+         !['post','comment'].includes(d.kind)||
+         (d.kind==='comment'&&!validKey(d.commentId))){
+        alert('신고 ID 또는 대상 경로가 올바르지 않습니다. 삭제를 중단합니다.');return;
+      }
+      var statusPath='communityReportStatuses/'+reportId;
+      Promise.all([
+        db.ref('communityReports/'+reportId).once('value'),
+        db.ref(statusPath).once('value')
+      ]).then(function(results){
+        var current=results[0].val();
+        if(!current||results[1].exists()){
+          alert('신고가 없거나 이미 처리되었습니다. 목록을 새로 확인하세요.');return;
+        }
+        if(current.kind!==d.kind||current.cityId!==d.cityId||
+           current.postId!==d.postId||current.commentId!==d.commentId||
+           current.reportedUid!==d.reportedUid){
+          alert('신고 내용이 변경되어 처리를 중단합니다.');return;
+        }
+        var uid=auth.currentUser.uid;
+        var status={adminUid:uid,action:action,createdAt:firebase.database.ServerValue.TIMESTAMP};
+        if(action==='reviewed'){
+          if(!confirm('이 신고를 검토 완료로 표시할까요?'))return;
+          return db.ref(statusPath).set(status).then(openAdminReports);
+        }
+        var targetPath='communityPosts/'+current.cityId+'/'+current.postId+
+          (current.kind==='comment'?'/comments/'+current.commentId:'');
+        return db.ref(targetPath).once('value').then(function(snap){
+          var target=snap.val();
+          if(!target||typeof target!=='object'||target.uid!==current.reportedUid){
+            alert('신고 대상이 없거나 작성자 정보가 일치하지 않습니다. 삭제하지 않았습니다.');return;
+          }
+          var preview=String(current.kind==='comment'?target.text:target.title||'').slice(0,120);
+          if(!confirm('실제 게시물과 작성자 정보를 확인했습니다.\n'+
+                      '대상: '+preview+'\n\n이 콘텐츠를 삭제하고 처리 기록을 남길까요?'))return;
+          var log={adminUid:uid,kind:current.kind,cityId:current.cityId,
+                   postId:current.postId,targetUid:current.reportedUid||'',
+                   reason:'신고',createdAt:firebase.database.ServerValue.TIMESTAMP};
+          if(current.kind==='comment')log.commentId=current.commentId;
+          var changes={};
+          changes[statusPath]=status;
+          changes[targetPath]=null;
+          changes['moderationLogs/'+db.ref('moderationLogs').push().key]=log;
+          return db.ref().update(changes).then(openAdminReports);
+        });
+      }).catch(function(e){
+        console.error('Report moderation failed',e);
+        alert('처리 실패: 권한 또는 데이터 상태를 확인하세요.');
+      });
+    }
+
     function renderCommunityPosts(){
       communityLabels();
       var oldEditModal=document.getElementById('communityEditModal');if(oldEditModal)oldEditModal.remove();
@@ -943,9 +1171,13 @@
         var actions=communityEl('div','flex gap-2 items-center flex-wrap');
         var comments=p.comments||{};
         actions.appendChild(communityBtn(t.comment+' ('+Object.keys(comments).length+')',function(){communityOpenComments=commentsExpanded?null:id;renderCommunityPosts();}));
+        if(p.uid && p.uid!==myUserId)actions.appendChild(communityBtn(communityReportLabel(),function(){submitCommunityReport('post',id,'');},'text-amber-700 text-xs font-bold px-2 py-1'));
         if(p.uid===myUserId){
           actions.appendChild(communityBtn(t.edit,function(){editCommunityPost(id);}));
           actions.appendChild(communityBtn(t.delete,function(){deleteCommunityPost(id);},'text-red-600 text-xs font-bold px-2 py-1'));
+        }
+        if(officialIsAdmin && p.uid!==myUserId){
+          actions.appendChild(communityBtn(t.delete+' (Admin)',function(){deleteCommunityPost(id);},'text-red-600 text-xs font-bold px-2 py-1'));
         }
         card.appendChild(actions);
         if(expanded){
@@ -962,7 +1194,8 @@
             var line=communityEl('div','bg-slate-50 rounded-lg p-2 text-xs');
             line.appendChild(communityEl('div','font-semibold text-slate-600',c.author||t.anonymous));
             line.appendChild(boardDisplayText(communityEl('p','whitespace-pre-wrap break-words mt-1',c.text),c.text,'community:'+id+':comment:'+cid));
-            if(c.uid===myUserId)line.appendChild(communityBtn(t.delete,function(){deleteCommunityComment(id,cid);},'text-red-600 text-xs mt-1'));
+            if(c.uid && c.uid!==myUserId)line.appendChild(communityBtn(communityReportLabel(),function(){submitCommunityReport('comment',id,cid);},'text-amber-700 text-xs mt-1 mr-2'));
+            if(c.uid===myUserId||officialIsAdmin)line.appendChild(communityBtn(t.delete+(c.uid!==myUserId?' (Admin)':''),function(){deleteCommunityComment(id,cid);},'text-red-600 text-xs mt-1'));
             commentBox.appendChild(line);
           });
           if(!Object.keys(comments).length)commentBox.appendChild(communityEl('p','text-xs text-slate-400',t.replyEmpty));
@@ -1028,9 +1261,12 @@
       var status=document.getElementById('profileAdminStatus');
       var login=document.getElementById('profileAdminLoginButton');
       var tools=document.getElementById('officialAdminTools');
+      var reportButton=document.getElementById('adminReportsButton');
       if(status)status.textContent=t[5];
       if(login){login.classList.remove('hidden');login.textContent=t[2];}
       if(tools)tools.classList.add('hidden');
+      if(reportButton)reportButton.classList.add('hidden');
+      closeAdminReports();
       if(!user){renderOfficialNotices();return;}
       db.ref('officialAdmins/'+user.uid).once('value').then(function(s){
         if(auth.currentUser&&auth.currentUser.uid===user.uid){
@@ -1038,6 +1274,7 @@
           if(status)status.textContent=officialIsAdmin?t[3]:(user.providerData.some(function(p){return p.providerId==='google.com';})?t[4]:t[5]);
           if(login)login.classList.toggle('hidden',officialIsAdmin);
           if(tools)tools.classList.toggle('hidden',!officialIsAdmin);
+          if(reportButton)reportButton.classList.toggle('hidden',!officialIsAdmin);
           renderOfficialNotices();
         }
       }).catch(function(e){console.error('Admin lookup',e);renderOfficialNotices();});

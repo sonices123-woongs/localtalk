@@ -174,12 +174,22 @@ header {gap:6px;min-width:0}
           <div class="mt-3 space-y-2">
             <p id="profileAdminStatus" class="text-xs text-slate-500" aria-live="polite">공식 공지 관리 계정으로 로그인할 수 있습니다.</p>
             <button id="profileAdminLoginButton" type="button" onclick="loginOfficialAdmin()" class="w-full border border-indigo-200 bg-indigo-50 text-indigo-700 font-bold text-sm py-3 rounded-xl">Google 관리자 로그인</button>
+            <button id="adminReportsButton" type="button" onclick="openAdminReports()" class="hidden w-full border border-amber-200 bg-amber-50 text-amber-900 font-bold text-sm py-3 rounded-xl">신고 관리</button>
           </div>
         </details>
+        <button id="deleteMyAccountButton" type="button" onclick="deleteMyAccountV2033()" class="w-full border border-red-200 bg-red-50 text-red-700 font-bold text-sm py-3 rounded-xl">내 데이터 및 익명 계정 삭제</button>
         <button id="manageBlockedButton" type="button" onclick="openBlockedManager()" class="w-full bg-indigo-50 text-indigo-700 border border-indigo-200 font-bold text-sm py-3 rounded-xl flex items-center justify-center gap-2"><i class="fas fa-user-slash"></i><span id="manageBlockedLabel">차단 사용자 관리</span><span id="blockedCountBadge" class="text-xs text-indigo-500"></span></button>
       </div>
     </div>
 
+    <!-- v20.32 administrator-only report review (server rules enforce access) -->
+    <div id="adminReportsModal" class="hidden lt-modal" role="dialog" aria-modal="true" aria-label="관리자 신고 관리">
+      <div class="lt-modal-card space-y-3" style="width:min(100%,680px)">
+        <div class="flex items-center justify-between gap-2"><h3 class="font-bold text-slate-800">신고 관리 <span id="adminReportCount" class="text-xs text-slate-500"></span></h3><button type="button" onclick="closeAdminReports()" class="px-3 py-2 bg-slate-100 rounded-lg">닫기</button></div>
+        <p class="text-xs text-slate-500">관리자 전용 · 최근 신고 최대 100건 · 신고자 정보는 공개하지 마세요.</p>
+        <div id="adminReportsList" class="space-y-3 text-sm">불러오는 중...</div>
+      </div>
+    </div>
     <!-- 1. 상단 헤더 -->
     <header class="bg-indigo-600 text-white px-4 py-3.5 shrink-0 flex justify-between items-center shadow-md w-full z-50">
       <div class="flex items-center gap-2.5 min-w-0 flex-1">
@@ -451,6 +461,6 @@ header {gap:6px;min-width:0}
 .lt-modal.hidden{display:none!important}
 .lt-modal-card{background:#fff;border-radius:18px;padding:20px;width:min(100%,560px);max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25)}
 </style>
-  <script src="./app.js?v=20.30"></script>
+  <script src="./app.js?v=20.33-prod-review"></script>
 </body>
 </html>
