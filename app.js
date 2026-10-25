@@ -95,6 +95,8 @@
     var roomConnectionRef = null;
     var roomConnectionCallback = null;
     var roomReconnectBusy = false;
+    // Serialize an explicit exit before allowing another admission for the same UID.
+    var roomLeaveInFlight = Promise.resolve();
 
     // v17: restore from the same Firebase anonymous UID; browser cache is a fallback.
     var profileRestoreStarted = false;
@@ -1591,13 +1593,18 @@
       currentRoomUsersRef = db.ref('rooms/' + currentCity.id + '/' + roomId + '/activeUsers/' + myUserId);
       var joiningRef = currentRoomUsersRef;
       var joinToken = roomJoinToken;
-      // Register server disconnect cleanup BEFORE announcing presence.
-      joiningRef.onDisconnect().remove().then(function() {
+      // An immediate re-entry must not race a preceding exit's Firebase removal.
+      roomLeaveInFlight.then(function() {
+        if (joinToken !== roomJoinToken) return null;
+        // Register server disconnect cleanup BEFORE announcing presence.
+        return joiningRef.onDisconnect().remove();
+      }).then(function() {
+        if (joinToken !== roomJoinToken) return null;
         // Capture all messages already present BEFORE publishing our presence.
         // This is a display filter, NOT an authorization or privacy boundary.
         return joiningRef.parent.parent.child('messages').once('value');
       }).then(function(snapshot) {
-        if (joinToken !== roomJoinToken) return;
+        if (joinToken !== roomJoinToken || !snapshot) return;
         roomEntryMessageKeys = new Set(Object.keys(snapshot.val() || {}));
         roomHistoryReady = true;
         renderMessages(roomLatestMessages);
@@ -1704,10 +1711,11 @@
       messageListenerRef = null;
     }
 
-    // A brief WebView suspension removes Firebase presence. Wait before
-    // showing a departure, and discard it if the same UID returns.
+    // Connection loss can remove presence without an intentional exit.
+    // Explicit exits use joinedAt=0 to display a notice immediately; brief
+    // disconnections get a short grace period to avoid phantom departures.
     var pendingRoomLeaves = Object.create(null);
-    var ROOM_LEAVE_NOTICE_GRACE_MS = 45000;
+    var ROOM_LEAVE_NOTICE_GRACE_MS = 5000;
     function clearPendingRoomLeaves() {
       Object.keys(pendingRoomLeaves).forEach(function(uid) {
         clearTimeout(pendingRoomLeaves[uid].timer);
@@ -1722,7 +1730,13 @@
       roomPresenceListener = roomRef.child('activeUsers');
 
       roomPresenceListener.on('value', function(snapshot) {
-        var usersData = snapshot.val() || {};
+        var snapshotUsers = snapshot.val() || {};
+        var usersData = {};
+        Object.keys(snapshotUsers).forEach(function(uid) {
+          var member = snapshotUsers[uid];
+          // joinedAt=0 is a temporary, rules-compatible explicit-exit signal.
+          if (member && member.joinedAt !== 0) usersData[uid] = member;
+        });
         var userCount = Object.keys(usersData).length;
         // Only transitions after the initial presence snapshot generate notices.
         // Keep a position in the message timeline, not a permanent footer.
@@ -1743,8 +1757,18 @@
             }
           });
           Object.keys(roomPreviousUsers).forEach(function(uid) {
-            if (uid === myUserId || Object.prototype.hasOwnProperty.call(usersData, uid) || pendingRoomLeaves[uid]) return;
+            if (uid === myUserId || Object.prototype.hasOwnProperty.call(usersData, uid)) return;
             var actor = String(roomPreviousUsers[uid].name || uiText('participant'));
+            // Unlike network loss, an explicit exit should display at once.
+            if (snapshotUsers[uid] && snapshotUsers[uid].joinedAt === 0) {
+              if (pendingRoomLeaves[uid]) {
+                clearTimeout(pendingRoomLeaves[uid].timer);
+                delete pendingRoomLeaves[uid];
+              }
+              roomNoticeQueue.push({ id: ++roomNoticeSeq, position: visibleCount, kind: 'leave', actor: actor });
+              return;
+            }
+            if (pendingRoomLeaves[uid]) return;
             var noticeToken = roomJoinToken;
             var pending = { timer: null };
             pendingRoomLeaves[uid] = pending;
@@ -1944,11 +1968,20 @@
     }
 
     function leaveCurrentRoom() {
-      if (!currentRoomUsersRef) return Promise.resolve();
+      if (!currentRoomUsersRef) return roomLeaveInFlight;
       var leavingRef = currentRoomUsersRef;
       currentRoomUsersRef = null;
-      // Cancels stale onDisconnect operation when user explicitly leaves.
-      return leavingRef.remove().then(function() {
+      // Firebase rules permit numeric joinedAt. Signal an intentional exit
+      // before removing presence so observers can distinguish it from a
+      // momentary WebView/network disconnect without changing database rules.
+      roomLeaveInFlight = leavingRef.child('joinedAt').set(0).catch(function(error) {
+        // If admission was canceled before presence was written, the marker
+        // may be denied; still attempt to remove any remaining presence.
+        console.warn('Room exit signal unavailable:', error);
+      }).then(function() {
+        return leavingRef.remove();
+      }).then(function() {
+        // Cancel the old onDisconnect before any new admission may begin.
         return leavingRef.onDisconnect().cancel();
       }).then(function() {
         return leavingRef.parent.once('value');
@@ -1959,6 +1992,7 @@
       }).catch(function(error) {
         console.error('퇴장/기록 정리 실패:', error);
       });
+      return roomLeaveInFlight;
     }
 
     function goBack() {
