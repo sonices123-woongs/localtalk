@@ -2634,6 +2634,23 @@
       if (!I18N[lang]) return;
       currentLang = lang;
       updateMyLocationLabels();
+      // Local Talk Korea policy pages follow the app's selected language.
+      var policyLinkText = {
+        ko:['개인정보처리방침','계정 삭제 안내'],
+        en:['Privacy Policy','Account Deletion Help'],
+        ja:['プライバシーポリシー','アカウント削除案内'],
+        'zh-CN':['隐私政策','账户删除说明']
+      }[lang] || ['개인정보처리방침','계정 삭제 안내'];
+      var privacyLink = document.getElementById('profilePrivacyPolicyLink');
+      var deletionLink = document.getElementById('profileAccountDeletionHelpLink');
+      if (privacyLink) {
+        privacyLink.textContent = policyLinkText[0];
+        privacyLink.href = './privacy.html?lang=' + encodeURIComponent(lang);
+      }
+      if (deletionLink) {
+        deletionLink.textContent = policyLinkText[1];
+        deletionLink.href = './delete-account.html?lang=' + encodeURIComponent(lang);
+      }
       if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
       if (currentView === 'board') { updateOfficialSearchUI();renderOfficialNotices(); }
       localStorage.setItem('localtalk_ui_lang', lang);
