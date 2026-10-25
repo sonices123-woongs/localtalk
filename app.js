@@ -85,6 +85,7 @@
     var googleMapMarkers = [];
     var searchMarkers = [];
     var myLocationMarker = null;
+    var myLocationInfoWindow = null;
     var userLatLng = null;
     var mapLocationRequestBusy = false;
     var mapLocationTranslations = {
@@ -93,6 +94,39 @@
       ja: {checking:'📍 現在地を確認中です。許可を求められたら位置情報を許可してください。',success:'📍 現在地を地図に表示しました。',unsupported:'この環境では位置情報を利用できません。',insecure:'位置情報にはHTTPS接続が必要です。',denied:'位置情報へのアクセスが拒否されました。アプリまたはブラウザーの許可を確認してください。',timeout:'位置情報の取得がタイムアウトしました。位置情報サービスを確認して再試行してください。',unavailable:'端末の位置情報サービスとアプリの許可を確認してください。'},
       'zh-CN': {checking:'📍 正在获取当前位置。如有提示，请允许位置访问。',success:'📍 已在地图上显示当前位置。',unsupported:'此环境不支持定位。',insecure:'定位功能需要安全的HTTPS连接。',denied:'位置权限被拒绝。请检查应用或浏览器的位置权限。',timeout:'获取位置超时。请开启设备定位后重试。',unavailable:'请检查设备定位服务和应用权限后重试。'}
     };
+    // Show the GPS button's purpose even when the device denies location access.
+    // The marker popup appears only after coordinates were obtained successfully.
+    var myLocationNames = { ko: '내 위치', en: 'My Location', ja: '現在地', 'zh-CN': '我的位置' };
+    function myLocationName() {
+      return myLocationNames[currentLang] || myLocationNames.ko;
+    }
+    function updateMyLocationLabels() {
+      var label = myLocationName();
+      var button = document.getElementById('mapGeoButton');
+      if (button) {
+        button.classList.remove('rounded-full', 'p-3');
+        button.classList.add('rounded-xl', 'px-3', 'py-2.5', 'gap-1.5');
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        var visibleLabel = document.getElementById('mapGeoButtonLabel');
+        if (!visibleLabel) {
+          visibleLabel = document.createElement('span');
+          visibleLabel.id = 'mapGeoButtonLabel';
+          visibleLabel.className = 'text-xs font-bold whitespace-nowrap';
+          button.appendChild(visibleLabel);
+        }
+        visibleLabel.textContent = label;
+      }
+      if (myLocationMarker) myLocationMarker.setTitle(label);
+      if (myLocationInfoWindow) {
+        var infoContent = document.createElement('span');
+        infoContent.textContent = '📍 ' + label;
+        infoContent.style.fontWeight = '700';
+        infoContent.style.fontSize = '13px';
+        infoContent.style.whiteSpace = 'nowrap';
+        myLocationInfoWindow.setContent(infoContent);
+      }
+    }
     function showMapLocationStatus(key) {
       var status = document.getElementById('mapGeoStatus');
       if (!status) return;
@@ -1848,6 +1882,7 @@
 
       googleMapInstance = new google.maps.Map(document.getElementById("googleMap"), mapOptions);
       googleMapMarkers = [];
+      updateMyLocationLabels();
 
       for (var j = 0; j < CITIES.length; j++) {
         var c = CITIES[j];
@@ -1947,11 +1982,12 @@
 
     function drawMyLocationMarker(panToUser) {
       if (!userLatLng || !googleMapInstance || typeof google === 'undefined' || !google.maps) return;
+      if (myLocationInfoWindow) { myLocationInfoWindow.close(); myLocationInfoWindow = null; }
       if (myLocationMarker) myLocationMarker.setMap(null);
       myLocationMarker = new google.maps.Marker({
         position: userLatLng,
         map: googleMapInstance,
-        title: 'My Location',
+        title: myLocationName(),
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
           scale: 9,
@@ -1960,6 +1996,21 @@
           strokeColor: '#ffffff',
           strokeWeight: 2
         }
+      });
+      // A clearly visible rectangular name card anchored to the GPS dot.
+      // We pass a text node rather than interpolating HTML.
+      var popupText = document.createElement('span');
+      popupText.textContent = '📍 ' + myLocationName();
+      popupText.style.fontSize = '13px';
+      popupText.style.fontWeight = '700';
+      popupText.style.whiteSpace = 'nowrap';
+      myLocationInfoWindow = new google.maps.InfoWindow({
+        content: popupText,
+        disableAutoPan: true
+      });
+      myLocationInfoWindow.open(googleMapInstance, myLocationMarker);
+      myLocationMarker.addListener('click', function() {
+        if (myLocationInfoWindow) myLocationInfoWindow.open(googleMapInstance, myLocationMarker);
       });
       if (panToUser) {
         googleMapInstance.setCenter(userLatLng);
@@ -2582,6 +2633,7 @@
       }
       if (!I18N[lang]) return;
       currentLang = lang;
+      updateMyLocationLabels();
       if (typeof communityLabels === 'function') { communityLabels(); if (currentView === 'board') renderCommunityPosts(); }
       if (currentView === 'board') { updateOfficialSearchUI();renderOfficialNotices(); }
       localStorage.setItem('localtalk_ui_lang', lang);
