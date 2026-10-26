@@ -180,6 +180,51 @@
         autoTranslate:autoTranslateEnabled, updatedAt:firebase.database.ServerValue.TIMESTAMP
       }).catch(function(err) { console.warn('Profile cloud save failed; browser copy retained:',err); });
     }
+    // Consent is recorded locally per Firebase user, with no extra database writes.
+    // Increment the policy version only when the published terms materially change.
+    var termsPolicyVersion = '20261026';
+    var termsConsentText = {
+      ko:['이용약관 및 커뮤니티 규칙 동의','채팅이나 게시글을 작성하려면 이용약관을 확인하고 동의해야 합니다.','이용약관 보기','이용약관과 커뮤니티 규칙을 읽고 동의합니다.','동의 완료','나중에','동의한 뒤 작성 또는 저장 버튼을 다시 눌러주세요.','먼저 동의 체크박스를 선택해주세요.'],
+      en:['Agree to the Terms and Community Rules','You must review and accept the terms before posting messages or other content.','Read Terms of Service','I have read and agree to the Terms and Community Rules.','Accept','Not now','After accepting, tap Send or Save again.','Please check the agreement box first.'],
+      ja:['利用規約・コミュニティルールへの同意','メッセージや投稿を作成する前に、利用規約を確認して同意してください。','利用規約を見る','利用規約とコミュニティルールを読み、同意します。','同意する','後で','同意した後、送信または保存をもう一度押してください。','同意のチェックを入れてください。'],
+      'zh-CN':['同意服务条款与社区规则','发表消息或帖子前，请阅读并同意服务条款。','查看服务条款','我已阅读并同意服务条款与社区规则。','同意','稍后','同意后请再次点击发送或保存。','请先勾选同意选项。']
+    };
+    function localTermsText(){return termsConsentText[currentLang] || termsConsentText.ko;}
+    function termsConsentStorageKey(){return 'localtalk_terms_' + termsPolicyVersion + '_' + (myUserId || 'none');}
+    function updateTermsConsentUI(){
+      var text=localTermsText();
+      var ids=['termsConsentHeading','termsConsentDescription','termsConsentLink','termsConsentCheckboxLabel',
+        'termsConsentAccept','termsConsentCancel','termsConsentHint'];
+      ids.forEach(function(id,index){var el=document.getElementById(id);if(el)el.textContent=text[index];});
+      var link=document.getElementById('termsConsentLink');
+      if(link)link.href='./terms.html?lang='+encodeURIComponent(currentLang);
+      var accept=document.getElementById('termsConsentAccept');
+      var check=document.getElementById('termsConsentCheckbox');
+      if(accept && check)accept.disabled=!check.checked;
+    }
+    function dismissTermsConsent(){
+      var modal=document.getElementById('termsConsentModal');
+      if(modal)modal.classList.add('hidden');
+    }
+    function acceptTermsConsent(){
+      var check=document.getElementById('termsConsentCheckbox');
+      if(!check || !check.checked){alert(localTermsText()[7]);return;}
+      if(!authReady || !myUserId){alert(uiText('authWait'));return;}
+      localStorage.setItem(termsConsentStorageKey(),'yes');
+      dismissTermsConsent();
+    }
+    function requireTermsConsent(){
+      if(!authReady || !myUserId){alert(uiText('authWait'));return false;}
+      if(localStorage.getItem(termsConsentStorageKey())==='yes')return true;
+      var modal=document.getElementById('termsConsentModal');
+      var check=document.getElementById('termsConsentCheckbox');
+      if(!modal || !check){console.error('Terms consent UI unavailable');return false;}
+      check.checked=false;
+      updateTermsConsentUI();
+      modal.classList.remove('hidden');
+      return false;
+    }
+
     function checkUserProfile() {
       if (!userCountry || !userNickname) openProfileModal();
       else { updateHeaderUserLabel(); document.getElementById('profileModal').classList.add('hidden'); }
@@ -209,6 +254,7 @@
     }
 
     function saveUserProfile() {
+      if(!requireTermsConsent())return;
       var country = document.getElementById('modalCountry').value;
       var nick = document.getElementById('modalNickname').value.trim();
 
@@ -910,6 +956,7 @@
     function communityAuthor(){return (userCountry?userCountry+' ':'')+(userNickname||communityT().anonymous);}
     function publishCommunityPost(){
       if(!currentCity||!requireAuth()){alert(communityT().auth);return;}
+      if(!requireTermsConsent())return;
       var title=document.getElementById('communityPostTitle').value.trim();
       var body=document.getElementById('communityPostBody').value.trim();
       if(!title||!body){alert(communityT().required);return;}
@@ -952,6 +999,7 @@
     function saveCommunityEdit(id,titleField,bodyField,saveBtn,placeNameField,placeUrlField){
       var post=communityData[id];
       if(!post||post.uid!==myUserId||!currentCity)return;
+      if(!requireTermsConsent())return;
       var title=titleField.value.trim(),body=bodyField.value.trim();
       if(!title||!body||title.length>100||body.length>3000){alert(communityT().required);return;}
       var placeName=placeNameField.value.trim(),rawUrl=placeUrlField.value.trim();
@@ -974,6 +1022,7 @@
     }
     function publishCommunityComment(postId,field,btn){
       if(!currentCity||!requireAuth())return;
+      if(!requireTermsConsent())return;
       var text=field.value.trim();
       if(!text||text.length>1000)return;
       btn.disabled=true;
@@ -2593,6 +2642,7 @@
     function sendChatText(text, input) {
       if (!requireAuth()) return;
       if (!text || !currentCity || !currentRoom) return;
+      if (!requireTermsConsent()) return;
       if (!roomAdmissionReady) {
         alert(uiText('sendNotReady'));
         return;
@@ -2636,13 +2686,19 @@
       updateMyLocationLabels();
       // Local Talk Korea policy pages follow the app's selected language.
       var policyLinkText = {
-        ko:['개인정보처리방침','계정 삭제 안내'],
-        en:['Privacy Policy','Account Deletion Help'],
-        ja:['プライバシーポリシー','アカウント削除案内'],
-        'zh-CN':['隐私政策','账户删除说明']
-      }[lang] || ['개인정보처리방침','계정 삭제 안내'];
+        ko:['개인정보처리방침','계정 삭제 안내','이용약관'],
+        en:['Privacy Policy','Account Deletion Help','Terms of Service'],
+        ja:['プライバシーポリシー','アカウント削除案内','利用規約'],
+        'zh-CN':['隐私政策','账户删除说明','服务条款']
+      }[lang] || ['개인정보처리방침','계정 삭제 안내','이용약관'];
       var privacyLink = document.getElementById('profilePrivacyPolicyLink');
       var deletionLink = document.getElementById('profileAccountDeletionHelpLink');
+      var termsLink = document.getElementById('profileTermsLink');
+      if (termsLink) {
+        termsLink.textContent = policyLinkText[2];
+        termsLink.href = './terms.html?lang=' + encodeURIComponent(lang);
+      }
+      updateTermsConsentUI();
       if (privacyLink) {
         privacyLink.textContent = policyLinkText[0];
         privacyLink.href = './privacy.html?lang=' + encodeURIComponent(lang);
