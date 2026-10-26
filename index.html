@@ -130,7 +130,7 @@ header {gap:6px;min-width:0}
 
         <div class="space-y-3">
           <div>
-            <label id="profileCountryLabel" class="text-xs font-bold text-slate-600 block mb-1">국가 선택</label>
+            <label id="profileCountryLabel" class="text-base font-bold text-slate-600 block mb-1">국가 선택</label>
             <select id="modalCountry" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="🇰🇷 대한민국">🇰🇷 대한민국 (Korea)</option>
               <option value="🇺🇸 미국">🇺🇸 미국 (USA)</option>
@@ -147,7 +147,7 @@ header {gap:6px;min-width:0}
           </div>
 
           <div>
-            <label id="profileNicknameLabel" class="text-xs font-bold text-slate-600 block mb-1">별명 (닉네임)</label>
+            <label id="profileNicknameLabel" class="text-base font-bold text-slate-600 block mb-1">별명 (닉네임)</label>
             <input type="text" id="modalNickname" maxlength="30" placeholder="예: 대구여행자, 로컬맛집탐험가" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
         </div>
@@ -166,7 +166,7 @@ header {gap:6px;min-width:0}
           <p id="profilePrivacyNote" class="text-xs text-slate-500 leading-relaxed">닉네임과 국가, 언어 설정은 이 브라우저에 저장됩니다. 채팅 중 닉네임을 바꾸면 참여자 목록에도 반영됩니다.</p>
         </div>
         <button id="profileCancelButton" type="button" onclick="closeProfileModal()" class="w-full bg-slate-100 text-slate-700 font-bold text-sm py-2.5 rounded-xl">닫기</button>
-        <button id="profileSaveButton" onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-lg py-4 min-h-[54px] rounded-xl shadow-md transition">
+        <button id="profileSaveButton" onclick="saveUserProfile()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-base py-4 min-h-[54px] rounded-xl shadow-md transition">
           시작하기
         </button>
 
@@ -487,6 +487,6 @@ header {gap:6px;min-width:0}
 .lt-modal.hidden{display:none!important}
 .lt-modal-card{background:#fff;border-radius:18px;padding:20px;width:min(100%,560px);max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25)}
 </style>
-  <script src="./app.js?v=20.39-onboarding"></script>
+  <script src="./app.js?v=20.40-profile-labels"></script>
 </body>
 </html>
