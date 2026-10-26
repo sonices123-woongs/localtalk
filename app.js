@@ -254,7 +254,6 @@
     }
 
     function saveUserProfile() {
-      if(!requireTermsConsent())return;
       var country = document.getElementById('modalCountry').value;
       var nick = document.getElementById('modalNickname').value.trim();
 
@@ -264,6 +263,7 @@
       }
 
       if (nick.length > 30) { alert(uiText('nickTooLong')); return; }
+      if(!requireTermsConsent())return;
       var selectedLanguage = document.getElementById('profileLanguage').value;
       var selectedAutoTranslate = document.getElementById('profileAutoTranslate').checked;
       userCountry = country;
