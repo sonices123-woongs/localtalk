@@ -244,6 +244,7 @@
       document.getElementById('profileCancelButton').classList.toggle('hidden', !userCountry || !userNickname);
       loadSafetyBlocked();
       document.getElementById('manageBlockedLabel').textContent=blockedManagerText().title;
+      updateInitialProfileAccessibility();
       document.getElementById('profileModal').classList.remove('hidden');
       refreshOfficialAdmin();
     }
@@ -529,6 +530,12 @@
       var select=document.getElementById('modalCountry');
       if (!select) return;
       var names=COUNTRY_LABELS_V13[currentLang] || COUNTRY_LABELS_V13.ko;
+      // Keep the first visit understandable to English-speaking travelers before selection.
+      if (currentLang==='ko' && (!userNickname || !userCountry)) {
+        names=COUNTRY_LABELS_V13.ko.map(function(name,i){
+          return name + ' (' + COUNTRY_LABELS_V13.en[i] + ')';
+        });
+      }
       Array.from(select.options).forEach(function(option, i) {
         var flag=option.value.split(' ')[0];
         option.textContent=flag+' '+(names[i] || option.value);
@@ -539,6 +546,43 @@
       Object.keys(mapping).forEach(function(id) {
         var el=document.getElementById(id); if(el) el.textContent=uiText(mapping[id]);
       });
+    }
+    // Bilingual only on the initial Korean-language setup screen.
+    // After a language is chosen, or for subsequent profile edits, the selected language is used.
+    function updateInitialProfileAccessibility() {
+      var firstVisit = !userNickname || !userCountry;
+      var koreanFirst = currentLang==='ko' && firstVisit;
+      var initialText = {
+        profileTitle:'프로필 설정 (Profile Setup)',
+        profileDescription:'대화방에서 사용할 국가와 별명을 선택해주세요. / Choose your country and nickname for chat.',
+        profileCountryLabel:'국가 선택 (Country)',
+        profileNicknameLabel:'별명 (Nickname)',
+        profileLanguageLabel:'앱 표시 언어 (App Language)',
+        profileAutoTranslateLabel:'받은 메시지 자동 번역 (Auto-translate)',
+        profilePrivacyNote:'닉네임·국가·언어 설정은 기기와 서비스에 저장됩니다. / Your profile settings are saved on this device and in Local Talk.',
+        profileSaveButton:'시작하기 (Start)',
+        deleteMyAccountButton:'내 데이터 및 익명 계정 삭제 (Delete My Account)',
+        manageBlockedLabel:'차단 사용자 관리 (Manage Blocked Users)',
+        profileTermsLink:'이용약관 (Terms)',
+        profilePrivacyPolicyLink:'개인정보처리방침 (Privacy Policy)',
+        profileAccountDeletionHelpLink:'계정 삭제 안내 (Deletion Help)'
+      };
+      if (koreanFirst) {
+        Object.keys(initialText).forEach(function(id){
+          var el=document.getElementById(id);
+          if(el)el.textContent=initialText[id];
+        });
+        var nick=document.getElementById('modalNickname');
+        if(nick)nick.placeholder='예: 여행자 / e.g. Traveler';
+      }
+      var adminLabels={
+        ko:koreanFirst?'관리자 전용 (Admin Only)':'관리자 전용',
+        en:'Admin only',
+        ja:'管理者専用',
+        'zh-CN':'仅管理员'
+      };
+      var admin=document.getElementById('profileAdminSummary');
+      if(admin)admin.textContent=adminLabels[currentLang] || adminLabels.ko;
     }
     function updateProfileSaveLabelV13() {
       var button=document.getElementById('profileSaveButton');
@@ -2761,6 +2805,8 @@
       updateCountryOptionsV13();
       updateProfileSaveLabelV13();
       refreshBlockedManagerLabels();
+      refreshAccountDeleteLabel();
+      updateInitialProfileAccessibility();
       if (currentView === 'roomList') document.getElementById('headerSub').textContent = uiText('roomMax');
       if (currentView === 'chat') {
         var liveCount = roomPreviousUsers ? Object.keys(roomPreviousUsers).length : 0;
