@@ -561,8 +561,8 @@
         profileAutoTranslateLabel:'받은 메시지 자동 번역 (Auto-translate)',
         profilePrivacyNote:'닉네임·국가·언어 설정은 기기와 서비스에 저장됩니다. / Your profile settings are saved on this device and in Local Talk.',
         profileSaveButton:'시작하기 (Start)',
-        deleteMyAccountButton:'내 데이터 및 익명 계정 삭제 (Delete My Account)',
-        manageBlockedLabel:'차단 사용자 관리 (Manage Blocked Users)',
+        deleteMyAccountButton:'계정 삭제 (Delete Account)',
+        manageBlockedLabel:'차단 관리 (Blocked Users)',
         profileTermsLink:'이용약관 (Terms)',
         profilePrivacyPolicyLink:'개인정보처리방침 (Privacy Policy)',
         profileAccountDeletionHelpLink:'계정 삭제 안내 (Deletion Help)'
