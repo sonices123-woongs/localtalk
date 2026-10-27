@@ -1,3 +1,47 @@
+
+// Local Talk unified dialogs (no browser-origin headings).
+(function(){
+  var queue=Promise.resolve();
+  function words(){
+    return ({ko:['Local Talk · 알림','Local Talk · 확인','Local Talk · 입력','확인','취소'],
+      en:['Local Talk · Notice','Local Talk · Confirm','Local Talk · Input','OK','Cancel'],
+      ja:['Local Talk · お知らせ','Local Talk · 確認','Local Talk · 入力','確認','キャンセル'],
+      'zh-CN':['Local Talk · 提示','Local Talk · 确认','Local Talk · 输入','确认','取消']})[typeof currentLang==='string'?currentLang:'ko']||['Local Talk','Local Talk','Local Talk','OK','Cancel'];
+  }
+  function display(message,kind,defaultValue){
+    return new Promise(function(resolve){
+      var w=words(), overlay=document.createElement('div');
+      overlay.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.60);z-index:2147483600;display:flex;align-items:center;justify-content:center;padding:20px';
+      var panel=document.createElement('section');
+      panel.style.cssText='background:#fff;border-radius:22px;width:min(100%,400px);box-shadow:0 22px 65px rgba(0,0,0,.24);padding:24px;color:#1e293b;font-family:inherit';
+      panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+      var brand=document.createElement('div');brand.textContent='Local Talk · Community';brand.style.cssText='font-size:12px;font-weight:800;color:#6555ed;margin-bottom:9px';
+      var heading=document.createElement('h2');heading.textContent=w[kind==='confirm'?1:kind==='input'?2:0];heading.style.cssText='font-size:22px;font-weight:800;margin:0 0 12px';
+      var msg=document.createElement('p');msg.textContent=String(message==null?'':message);msg.style.cssText='font-size:14px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;color:#475569;margin:0 0 18px';
+      panel.appendChild(brand);panel.appendChild(heading);panel.appendChild(msg);
+      var field=null;
+      if(kind==='input'){field=document.createElement('input');field.type='text';field.value=defaultValue||'';field.style.cssText='width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:12px;padding:12px;font-size:15px;margin-bottom:18px;outline-color:#6656ec';panel.appendChild(field);}
+      var buttons=document.createElement('div');buttons.style.cssText='display:flex;gap:10px';
+      function button(label,bg,color){var b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='flex:1;border:0;border-radius:12px;padding:13px 10px;font-size:14px;font-weight:800;cursor:pointer;background:'+bg+';color:'+color;return b;}
+      var cancel=(kind==='notice'?null:button(w[4],'#edf2f7','#475569'));
+      var ok=button(w[3],'#6d5df1','#fff');
+      if(cancel)buttons.appendChild(cancel);buttons.appendChild(ok);panel.appendChild(buttons);overlay.appendChild(panel);
+      var previous=document.activeElement,completed=false;
+      function finish(value){if(completed)return;completed=true;document.removeEventListener('keydown',onKey,true);overlay.remove();if(previous&&previous.isConnected&&previous.focus)previous.focus();resolve(value);}
+      function onKey(e){if(e.key==='Escape'){e.preventDefault();e.stopPropagation();finish(kind==='notice'?undefined:kind==='confirm'?false:null);}else if(e.key==='Enter'&&(kind==='input'||kind==='confirm')){e.preventDefault();finish(kind==='confirm'?true:field.value);}}
+      document.addEventListener('keydown',onKey,true);
+      ok.onclick=function(){finish(kind==='confirm'?true:kind==='input'?field.value:undefined);};
+      if(cancel)cancel.onclick=function(){finish(kind==='confirm'?false:null);};
+      document.body.appendChild(overlay);(field||ok).focus();
+    });
+  }
+  // Queue dialogs so rapid alerts cannot overlap.
+  window.ltNotice=function(message){queue=queue.then(function(){return display(message,'notice');});return queue;};
+  window.ltConfirm=function(message){var p=queue.then(function(){return display(message,'confirm');});queue=p.then(function(){},function(){});return p;};
+  window.ltPrompt=function(message,value){var p=queue.then(function(){return display(message,'input',value);});queue=p.then(function(){},function(){});return p;};
+  window.alert=function(message){window.ltNotice(message);};
+})();
+
     var firebaseConfig = {
       apiKey: "AIzaSyAFJzrygiDq_64TLCNi86VE5nmLKivq_Y8",
       authDomain: "local-talk-6c171.firebaseapp.com",
@@ -304,12 +348,12 @@
       var button=document.getElementById('deleteMyAccountButton');
       if(button)button.textContent=accountDeletionLabels()[0];
     }
-    function deleteMyAccountV2033(){
+    async function deleteMyAccountV2033(){
       if(accountDeletionBusy || !requireAuth())return;
       var user=auth.currentUser, uid=user.uid, labels=accountDeletionLabels();
       if(!user.isAnonymous){alert(labels[5]);return;}
-      if(!confirm(labels[1]))return;
-      if(prompt(labels[2])!=='DELETE')return;
+      if(!await ltConfirm(labels[1]))return;
+      if(await ltPrompt(labels[2])!=='DELETE')return;
       accountDeletionBusy=true;
       var button=document.getElementById('deleteMyAccountButton');
       if(button){button.disabled=true;button.textContent='...';}
@@ -1069,11 +1113,11 @@
         }).catch(function(err){console.error(err);alert(communityT().error);})
         .finally(function(){btn.disabled=false;});
     }
-    function deleteCommunityPost(id){
+    async function deleteCommunityPost(id){
       if(!currentCity||!requireAuth()||!communityData[id])return;
       if(communityData[id].uid!==myUserId && !officialIsAdmin)return;
       if(communityData[id].uid!==myUserId){adminRemoveCommunityContent('post',id,null);return;}
-      if(!confirm(communityT().deleteAsk))return;
+      if(!await ltConfirm(communityT().deleteAsk))return;
       db.ref('communityPosts/'+currentCity.id+'/'+id).remove().catch(function(e){console.error(e);alert(communityT().error);});
     }
     var communityEditingPost=null;
@@ -1125,27 +1169,27 @@
         .then(function(){field.value='';}).catch(function(e){console.error(e);alert(communityT().error);})
         .finally(function(){btn.disabled=false;});
     }
-    function deleteCommunityComment(postId,commentId){
+    async function deleteCommunityComment(postId,commentId){
       var post=communityData[postId],comment=post&&post.comments&&post.comments[commentId];
       if(!comment||!(comment.uid===myUserId||officialIsAdmin))return;
       if(comment.uid!==myUserId){adminRemoveCommunityContent('comment',postId,commentId);return;}
-      if(!confirm(communityT().deleteAsk))return;
+      if(!await ltConfirm(communityT().deleteAsk))return;
       db.ref('communityPosts/'+currentCity.id+'/'+postId+'/comments/'+commentId).remove()
         .catch(function(e){console.error(e);alert(communityT().error);});
     }
     // Admin moderation: log and deletion in one multi-location database update.
     // Test with a separate Firebase test project before enabling in production.
-    function adminRemoveCommunityContent(kind,postId,commentId){
+    async function adminRemoveCommunityContent(kind,postId,commentId){
       if(!officialIsAdmin||!auth.currentUser||!currentCity)return;
       var post=communityData[postId];
       var target=kind==='post'?post:(post&&post.comments&&post.comments[commentId]);
       if(!target)return;
       var reasons=currentLang==='ko'?'삭제 사유를 입력하세요 (필수).':'Enter moderation reason (required).';
-      var reason=prompt(reasons);
+      var reason=await ltPrompt(reasons);
       if(reason===null)return;
       reason=reason.trim();
       if(!reason||reason.length>200){alert(currentLang==='ko'?'삭제 사유는 1~200자로 입력하세요.':'Reason must be 1–200 characters.');return;}
-      if(!confirm(communityT().deleteAsk))return;
+      if(!await ltConfirm(communityT().deleteAsk))return;
       var cityId=currentCity.id;
       var record={adminUid:auth.currentUser.uid,kind:kind,cityId:cityId,postId:postId,
         targetUid:target.uid||'',reason:reason,createdAt:firebase.database.ServerValue.TIMESTAMP};
@@ -1185,7 +1229,7 @@
     function updateBoardSearchCount(n){var el=document.getElementById('boardSearchCount');if(el)el.textContent=n+' '+({ko:'개',en:'results',ja:'件','zh-CN':'条'}[currentLang]||'개');}
     // v20.31 board reports: separate append-only channel; no public report reads.
     function communityReportLabel(){return ({ko:'신고',en:'Report',ja:'通報','zh-CN':'举报'})[currentLang]||'Report';}
-    function submitCommunityReport(kind,postId,commentId){
+    async function submitCommunityReport(kind,postId,commentId){
       if(!requireAuth()||!currentCity)return;
       var post=communityData[postId];
       var target=kind==='comment'?(post&&post.comments&&post.comments[commentId]):post;
@@ -1193,7 +1237,7 @@
       var labels=safetyText();
       var choices=labels.reasons;
       var menu=choices.map(function(label,i){return i+': '+label;}).join('\n');
-      var answer=window.prompt(labels.reason+'\n'+menu,'0');
+      var answer=await ltPrompt(labels.reason+'\n'+menu,'0');
       if(answer===null)return;
       answer=answer.trim();
       if(!/^[0-3]$/.test(answer)){alert(labels.reason+' (0-3)');return;}
@@ -1231,7 +1275,7 @@
         db.ref('communityReports').limitToLast(100).once('value'),
         db.ref('communityReportStatuses').once('value'),
         chatRequest
-      ]).then(function(results){
+      ]).then(async function(results){
         if(!officialIsAdmin||document.getElementById('adminReportsModal').classList.contains('hidden'))return;
         var boardRaw=results[0].val()||{};
         var boardItems=Object.keys(boardRaw).map(function(id){
@@ -1308,7 +1352,7 @@
       });
     }
     // Pre-deployment safeguard: never trust report IDs or target identity blindly.
-    function adminResolveReport(item,action){
+    async function adminResolveReport(item,action){
       if(!officialIsAdmin||!auth.currentUser)return;
       if(action!=='reviewed'&&action!=='deleted')return;
       var d=(item&&item.data)||{},reportId=item&&item.id;
@@ -1322,7 +1366,7 @@
       Promise.all([
         db.ref('communityReports/'+reportId).once('value'),
         db.ref(statusPath).once('value')
-      ]).then(function(results){
+      ]).then(async function(results){
         var current=results[0].val();
         if(!current||results[1].exists()){
           alert('신고가 없거나 이미 처리되었습니다. 목록을 새로 확인하세요.');return;
@@ -1335,18 +1379,18 @@
         var uid=auth.currentUser.uid;
         var status={adminUid:uid,action:action,createdAt:firebase.database.ServerValue.TIMESTAMP};
         if(action==='reviewed'){
-          if(!confirm('이 신고를 검토 완료로 표시할까요?'))return;
+          if(!await ltConfirm('이 신고를 검토 완료로 표시할까요?'))return;
           return db.ref(statusPath).set(status).then(openAdminReports);
         }
         var targetPath='communityPosts/'+current.cityId+'/'+current.postId+
           (current.kind==='comment'?'/comments/'+current.commentId:'');
-        return db.ref(targetPath).once('value').then(function(snap){
+        return db.ref(targetPath).once('value').then(async function(snap){
           var target=snap.val();
           if(!target||typeof target!=='object'||target.uid!==current.reportedUid){
             alert('신고 대상이 없거나 작성자 정보가 일치하지 않습니다. 삭제하지 않았습니다.');return;
           }
           var preview=String(current.kind==='comment'?target.text:target.title||'').slice(0,120);
-          if(!confirm('실제 게시물과 작성자 정보를 확인했습니다.\n'+
+          if(!await ltConfirm('실제 게시물과 작성자 정보를 확인했습니다.\n'+
                       '대상: '+preview+'\n\n이 콘텐츠를 삭제하고 처리 기록을 남길까요?'))return;
           var log={adminUid:uid,kind:current.kind,cityId:current.cityId,
                    postId:current.postId,targetUid:current.reportedUid||'',
@@ -1663,7 +1707,7 @@
       var editor=document.getElementById('officialEditor');document.body.appendChild(editor);editor.classList.remove('hidden');
       document.getElementById('officialTitle').focus();
     }
-    function deleteOfficialNotice(id){
+    async function deleteOfficialNotice(id){
       if(!officialIsAdmin||!officialData[id]||!confirm(officialL()[8]))return;
       db.ref('officialNotices/'+currentCity.id+'/'+id).remove().catch(function(e){console.error(e);alert(officialL()[7]);});
     }
@@ -2313,9 +2357,9 @@
       return roomLeaveInFlight;
     }
 
-    function goBack() {
+    async function goBack() {
       if (currentView === 'chat') {
-        var leaveConfirm = confirm(uiText('leaveConfirm'));
+        var leaveConfirm = await ltConfirm(uiText('leaveConfirm'));
         if (!leaveConfirm) return;
 
         stopRoomListeners();
