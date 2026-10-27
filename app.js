@@ -1749,11 +1749,41 @@
         return !q||officialSearchCorpus(p).indexOf(q)!==-1||officialSearchCorpus(p).indexOf(normalized)!==-1;
       }).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);});
       if(boardSection==='notice')updateBoardSearchCount(ids.length);
+      // Single-post reading mode: pin the selected title at the top of the
+      // board's reading area while scrolling only the article body.
+      var activeId=Array.from(officialOpenNotices)[0];
+      if(activeId && !ids.includes(activeId)){officialOpenNotices.clear();activeId=null;}
+      var reading=!!activeId;
+      var scroller=document.getElementById('boardScrollablePosts');
+      var panel=document.getElementById('boardNoticePanel');
+      var panelTitle=document.getElementById('boardPostsTitle');
+      var adminTools=document.getElementById('officialAdminTools');
+      if(scroller){
+        scroller.style.overflowY=reading?'hidden':'auto';
+        scroller.style.display=reading?'flex':'';
+        scroller.style.flexDirection=reading?'column':'';
+      }
+      if(panel){
+        panel.style.display=reading?'flex':'';
+        panel.style.flexDirection=reading?'column':'';
+        panel.style.flex=reading?'1 1 auto':'';
+        panel.style.minHeight=reading?'0':'';
+        panel.style.overflow=reading?'hidden':'';
+      }
+      if(panelTitle)panelTitle.style.display=reading?'none':'';
+      if(adminTools)adminTools.style.display=reading?'none':'';
+      wrap.style.display=reading?'flex':'';
+      wrap.style.flexDirection=reading?'column':'';
+      wrap.style.flex=reading?'1 1 auto':'';
+      wrap.style.minHeight=reading?'0':'';
+      wrap.style.overflow=reading?'hidden':'';
+      if(reading)ids=[activeId];
+
       if(!ids.length){var empty=document.createElement('p');empty.className='text-sm text-slate-400 text-center py-8';empty.textContent=officialSearchLabels()[5];wrap.appendChild(empty);}
       ids.forEach(function(id){
         var p=officialData[id],parsed=officialCategoryFromTitle(p.title);
-        var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
-        var details=document.createElement('details');details.className='group';
+        var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm'+(reading?' flex flex-col flex-1 min-h-0 overflow-hidden':'');
+        var details=document.createElement('details');details.className='group'+(reading?' flex flex-col flex-1 min-h-0 overflow-hidden':'');
         var summary=document.createElement('summary');summary.className='cursor-pointer list-none block text-sm min-w-0';
         summary.style.listStyle='none';
         var tagRow=document.createElement('div');tagRow.className='flex items-center justify-between gap-2 mb-2 min-w-0';
@@ -1771,15 +1801,17 @@
           title.style.overflow=details.open?'visible':'hidden';
         }
         if(officialOpenNotices.has(id))details.open=true;
-        details.addEventListener('toggle',function(){
-          if(details.open){officialOpenNotices.add(id);content.querySelectorAll('[data-board-translation-key]').forEach(boardTranslateElement);}
-          else officialOpenNotices.delete(id);
-          updateOfficialCardState();
+        summary.addEventListener('click',function(event){
+          event.preventDefault();
+          if(reading)officialOpenNotices.clear();
+          else {officialOpenNotices.clear();officialOpenNotices.add(id);}
+          renderOfficialNotices();
+          if(scroller)scroller.scrollTop=0;
         });
         boardDisplayText(title,parsed.title,'official:'+id+':title');
         summary.appendChild(tagRow);summary.appendChild(title);summary.appendChild(toggleRow);details.appendChild(summary);
         updateOfficialCardState();
-        var content=document.createElement('div');content.className='mt-3 pt-3 border-t space-y-3 text-sm text-slate-700';
+        var content=document.createElement('div');content.className='mt-3 pt-3 border-t space-y-3 text-sm text-slate-700'+(reading?' flex-1 min-h-0 overflow-y-auto overscroll-contain pb-4':'');
         officialDecodeBlocks(p.body).forEach(function(block){
           if(block.type==='text'){
             var text=document.createElement('p');text.className='whitespace-pre-wrap break-words';text.textContent=block.text;boardDisplayText(text,block.text,'official:'+id+':block:'+content.childNodes.length,true);content.appendChild(text);
