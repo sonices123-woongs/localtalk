@@ -1656,10 +1656,33 @@
       return result.length?result:[{type:'text',text:''}];
     }
     function officialEncodeBlocks(blocks){return '[[LT_BLOCKS_V1:'+btoa(unescape(encodeURIComponent(JSON.stringify(blocks))))+']]';}
+
+    function officialEditorSerialize(el){
+      function walk(node){
+        if(node.nodeType===3)return node.nodeValue||'';
+        if(node.nodeType!==1)return '';
+        var tag=node.tagName.toLowerCase();
+        if(tag==='br')return '\n';
+        var inner=Array.from(node.childNodes).map(walk).join('');
+        if(tag==='b'||tag==='strong')return inner?'**'+inner+'**':'';
+        var size=node.getAttribute('data-size');
+        if(size && /^(14|15|16|18|20|22)$/.test(size))return '[[size:'+size+']]'+inner+'[[/size]]';
+        if(tag==='div'||tag==='p')return inner+'\n';
+        return inner;
+      }
+      return Array.from(el.childNodes).map(walk).join('').replace(/\n$/,'');
+    }
+    function officialEditorFormatted(el,source){
+      formatOfficialBold(el,source);
+      el.querySelectorAll('span').forEach(function(span){
+        var size=parseInt(span.style.fontSize,10);
+        if([14,15,16,18,20,22].includes(size))span.dataset.size=String(size);
+      });
+    }
     function officialTextBlocks(){
       document.querySelectorAll('#officialBlockList [data-block-index]').forEach(function(el){
         var idx=Number(el.dataset.blockIndex);
-        if(officialBlocks[idx]&&officialBlocks[idx].type==='text')officialBlocks[idx].text=el.value;
+        if(officialBlocks[idx]&&officialBlocks[idx].type==='text')officialBlocks[idx].text=officialEditorSerialize(el);
       });
     }
     function officialBlockPhotoCount(){return officialBlocks.filter(function(b){return b.type==='image';}).length;}
@@ -1676,21 +1699,45 @@
           btn.addEventListener('click',function(){officialTextBlocks();if(opt[1]===0)officialBlocks.splice(i,1);else{var j=i+opt[1],tmp=officialBlocks[i];officialBlocks[i]=officialBlocks[j];officialBlocks[j]=tmp;}officialRenderBlockEditor();});header.appendChild(btn);
         });row.appendChild(header);
         if(b.type==='text'){
-          var ta=document.createElement('textarea');ta.className='w-full border rounded-lg p-3 text-sm';ta.rows=3;ta.placeholder='이 위치에 표시할 설명을 작성하세요';ta.value=b.text;ta.dataset.blockIndex=i;
-          ta.addEventListener('input',function(){b.text=ta.value;});
+          var ta=document.createElement('div');
+          ta.className='w-full border border-slate-300 rounded-lg p-3 text-sm bg-white outline-indigo-500 whitespace-pre-wrap break-words';
+          ta.style.cssText='min-height:96px;font-size:15px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere';
+          ta.contentEditable='true';ta.setAttribute('role','textbox');ta.setAttribute('aria-multiline','true');
+          ta.dataset.blockIndex=i;ta.dataset.placeholder='이 위치에 표시할 설명을 작성하세요';
+          officialEditorFormatted(ta,b.text);
+          ta.addEventListener('input',function(){b.text=officialEditorSerialize(ta);});
+          ta.addEventListener('paste',function(e){
+            e.preventDefault();
+            var plain=(e.clipboardData&&e.clipboardData.getData('text/plain'))||'';
+            var selection=window.getSelection();if(!selection||!selection.rangeCount)return;
+            var range=selection.getRangeAt(0);range.deleteContents();
+            var node=document.createTextNode(plain);range.insertNode(node);
+            range.setStartAfter(node);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
+            b.text=officialEditorSerialize(ta);
+          });
           var toolbar=document.createElement('div');toolbar.className='flex flex-wrap items-center gap-2 mb-2';
           var strongBtn=document.createElement('button');strongBtn.type='button';strongBtn.className='rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 py-1.5 text-sm font-bold';strongBtn.textContent='B 굵게';
           var sizeSelect=document.createElement('select');sizeSelect.className='rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm';
           [['','글자 크기'],['14','14px'],['15','15px (기본)'],['16','16px'],['18','18px'],['20','20px'],['22','22px']].forEach(function(item){var o=document.createElement('option');o.value=item[0];o.textContent=item[1];sizeSelect.appendChild(o);});
-          var hint=document.createElement('span');hint.className='text-xs text-slate-500';hint.textContent='원하는 글자를 드래그해 선택하세요';
-          function wrapSelected(before,after){
-            var st=ta.selectionStart,en=ta.selectionEnd,selected=ta.value.slice(st,en);
-            if(!selected){ta.focus();return;}
-            ta.setRangeText(before+selected+after,st,en,'select');
-            b.text=ta.value;ta.dispatchEvent(new Event('input',{bubbles:true}));ta.focus();
+          var hint=document.createElement('span');hint.className='text-xs text-slate-500';hint.textContent='글자를 선택한 뒤 굵게 또는 크기를 누르세요';
+          var savedRange=null;
+          ta.addEventListener('mouseup',function(){var sel=window.getSelection();if(sel&&sel.rangeCount)savedRange=sel.getRangeAt(0).cloneRange();});
+          ta.addEventListener('keyup',function(){var sel=window.getSelection();if(sel&&sel.rangeCount)savedRange=sel.getRangeAt(0).cloneRange();});
+          ta.addEventListener('touchend',function(){var sel=window.getSelection();if(sel&&sel.rangeCount)savedRange=sel.getRangeAt(0).cloneRange();});
+          function applyFormat(kind,size){
+            var sel=window.getSelection(),range=savedRange;
+            if(!range||range.collapsed||!ta.contains(range.commonAncestorContainer)){ta.focus();return;}
+            var picked=range.toString();if(!picked)return;
+            // Replace only selected text with safe formatting; never copy arbitrary HTML.
+            range.deleteContents();
+            var el=document.createElement(kind==='bold'?'strong':'span');
+            if(kind==='size'){el.dataset.size=size;el.style.fontSize=size+'px';}
+            el.textContent=picked;range.insertNode(el);
+            sel.removeAllRanges();var next=document.createRange();next.selectNodeContents(el);sel.addRange(next);savedRange=next.cloneRange();
+            b.text=officialEditorSerialize(ta);
           }
-          strongBtn.onclick=function(){wrapSelected('**','**');};
-          sizeSelect.onchange=function(){if(sizeSelect.value)wrapSelected('[[size:'+sizeSelect.value+']]','[[/size]]');sizeSelect.value='';};
+          strongBtn.onclick=function(){applyFormat('bold');};
+          sizeSelect.onchange=function(){if(sizeSelect.value)applyFormat('size',sizeSelect.value);sizeSelect.value='';};
           toolbar.appendChild(strongBtn);toolbar.appendChild(sizeSelect);
           row.appendChild(toolbar);row.appendChild(ta);row.appendChild(hint);
         }else{
