@@ -1754,14 +1754,31 @@
         var p=officialData[id],parsed=officialCategoryFromTitle(p.title);
         var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
         var details=document.createElement('details');details.className='group';
-        var summary=document.createElement('summary');summary.className='cursor-pointer list-none flex items-center gap-2 text-sm';
-        var tag=document.createElement('span');tag.className='shrink-0 bg-indigo-50 text-indigo-700 rounded px-2 py-1 text-xs font-bold';tag.textContent=officialCategoryLabel(parsed.category);
-        var title=document.createElement('span');title.className='font-bold text-slate-800 flex-1 break-words';title.textContent=parsed.title;
-        var toggle=document.createElement('span');toggle.className='text-indigo-600 font-semibold shrink-0';toggle.style.fontSize='13px';toggle.style.whiteSpace='nowrap';
+        var summary=document.createElement('summary');summary.className='cursor-pointer list-none block text-sm min-w-0';
+        summary.style.listStyle='none';
+        var tagRow=document.createElement('div');tagRow.className='flex items-center justify-between gap-2 mb-2 min-w-0';
+        var tag=document.createElement('span');tag.className='inline-flex items-center bg-indigo-50 text-indigo-700 rounded-lg px-2 py-1 text-xs font-bold max-w-full';tag.textContent=officialCategoryLabel(parsed.category);
+        tagRow.appendChild(tag);
+        var title=document.createElement('span');title.className='block font-bold text-slate-800 break-words min-w-0 leading-relaxed';title.textContent=parsed.title;
+        var toggleRow=document.createElement('div');toggleRow.className='flex justify-end mt-2';
+        var toggle=document.createElement('span');toggle.className='inline-flex items-center text-indigo-600 font-semibold text-xs whitespace-nowrap';
+        toggleRow.appendChild(toggle);
+        function updateOfficialCardState(){
+          toggle.textContent=boardExpandLabel(details.open);
+          title.style.display=details.open?'block':'-webkit-box';
+          title.style.webkitBoxOrient=details.open?'initial':'vertical';
+          title.style.webkitLineClamp=details.open?'unset':'2';
+          title.style.overflow=details.open?'visible':'hidden';
+        }
         if(officialOpenNotices.has(id))details.open=true;
-        toggle.textContent=boardExpandLabel(details.open);
-        details.addEventListener('toggle',function(){if(details.open){officialOpenNotices.add(id);content.querySelectorAll('[data-board-translation-key]').forEach(boardTranslateElement);}else officialOpenNotices.delete(id);toggle.textContent=boardExpandLabel(details.open);});
-        boardDisplayText(title,parsed.title,'official:'+id+':title');summary.appendChild(tag);summary.appendChild(title);summary.appendChild(toggle);details.appendChild(summary);
+        details.addEventListener('toggle',function(){
+          if(details.open){officialOpenNotices.add(id);content.querySelectorAll('[data-board-translation-key]').forEach(boardTranslateElement);}
+          else officialOpenNotices.delete(id);
+          updateOfficialCardState();
+        });
+        boardDisplayText(title,parsed.title,'official:'+id+':title');
+        summary.appendChild(tagRow);summary.appendChild(title);summary.appendChild(toggleRow);details.appendChild(summary);
+        updateOfficialCardState();
         var content=document.createElement('div');content.className='mt-3 pt-3 border-t space-y-3 text-sm text-slate-700';
         officialDecodeBlocks(p.body).forEach(function(block){
           if(block.type==='text'){
