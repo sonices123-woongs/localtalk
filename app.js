@@ -1422,7 +1422,6 @@
         var actions=communityEl('div','flex gap-2 items-center flex-wrap');
         var comments=p.comments||{};
         actions.appendChild(communityBtn(t.comment+' ('+Object.keys(comments).length+')',function(){communityOpenComments=commentsExpanded?null:id;renderCommunityPosts();}));
-        if(p.uid && p.uid!==myUserId)actions.appendChild(communityBtn(communityReportLabel(),function(){submitCommunityReport('post',id,'');},'text-amber-700 text-xs font-bold px-2 py-1'));
         if(p.uid===myUserId){
           actions.appendChild(communityBtn(t.edit,function(){editCommunityPost(id);}));
           actions.appendChild(communityBtn(t.delete,function(){deleteCommunityPost(id);},'text-red-600 text-xs font-bold px-2 py-1'));
@@ -1436,6 +1435,12 @@
           boardDisplayText(body,p.body,'community:'+id+':body');card.insertBefore(body,actions);
           var placeCard=communityPlaceCard(p.place);
           if(placeCard)card.insertBefore(placeCard,actions);
+          // Show the post report action only when the post is expanded.
+          if(p.uid && p.uid!==myUserId){
+            var reportRow=communityEl('div','flex justify-end mt-1');
+            reportRow.appendChild(communityBtn(communityReportLabel(),function(){submitCommunityReport('post',id,'');},'text-amber-700 text-xs font-bold px-2 py-1'));
+            card.appendChild(reportRow);
+          }
         }
         if(commentsExpanded){
           var commentBox=communityEl('div','space-y-2 border-t pt-3');
