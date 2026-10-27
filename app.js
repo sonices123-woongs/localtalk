@@ -1933,13 +1933,15 @@
         var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
         var opener=document.createElement('button');opener.type='button';opener.className='block w-full text-left cursor-pointer';
         opener.onclick=function(){openOfficialReader(id);};
-        var tag=document.createElement('span');tag.className='inline-flex bg-indigo-50 text-indigo-700 rounded-lg px-2 py-1 text-xs font-bold mb-2';
-        tag.textContent=officialCategoryLabel(parsed.category);opener.appendChild(tag);
+        var topRow=document.createElement('span');topRow.className='flex items-center justify-between gap-3 mb-2';
+        var tag=document.createElement('span');tag.className='inline-flex bg-indigo-50 text-indigo-700 rounded-lg px-2 py-1 text-xs font-bold shrink-0';
+        tag.textContent=officialCategoryLabel(parsed.category);
+        var viewLabel=document.createElement('span');viewLabel.className='text-indigo-600 font-semibold text-xs whitespace-nowrap';
+        viewLabel.textContent=boardExpandLabel(false);
+        topRow.appendChild(tag);topRow.appendChild(viewLabel);opener.appendChild(topRow);
         var title=document.createElement('span');title.className='font-bold text-slate-800 break-words leading-relaxed';
         title.style.cssText='display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden';
         title.textContent=parsed.title;boardDisplayText(title,parsed.title,'official:'+id+':title');opener.appendChild(title);
-        var bottom=document.createElement('span');bottom.className='block text-right text-indigo-600 font-semibold text-xs mt-2';
-        bottom.textContent=boardExpandLabel(false);opener.appendChild(bottom);
         card.appendChild(opener);wrap.appendChild(card);
       });
       if(officialReaderId){if(officialData[officialReaderId])renderOfficialReader();else closeOfficialReader();}
