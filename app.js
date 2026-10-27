@@ -834,6 +834,7 @@
     function openBoardPlacePicker(){
       placePickerMode='board';
       selectedSharePlace=null;
+      resetSharePlaceSearchResults();
       document.getElementById('selectedPlaceLabel').textContent=uiText('placeEmpty');
       document.getElementById('confirmSharePlace').disabled=true;
       document.getElementById('confirmSharePlace').textContent=currentLang==='ko'?'이 장소 첨부':currentLang==='en'?'Attach this place':currentLang==='ja'?'この場所を添付':'添加此地点';
@@ -2379,6 +2380,18 @@
       } catch (e) { return null; }
     }
     var placePickerMode="chat";
+    var sharePlaceSearchSeq=0;
+    var placeSearchCopy={
+      ko:{searching:'장소를 검색하고 있어요…',choose:'아래 주소 중 정확한 장소를 선택하세요.',empty:'검색 결과가 없습니다. 주소를 더 구체적으로 입력하거나 지도에서 핀을 선택해 주세요.'},
+      en:{searching:'Searching for places…',choose:'Select the correct address from the results.',empty:'No results. Try a more specific address or choose a point on the map.'},
+      ja:{searching:'場所を検索中…',choose:'正しい住所を選択してください。',empty:'結果がありません。住所を詳しく入力するか、地図で選択してください。'},
+      'zh-CN':{searching:'正在搜索地点…',choose:'请从以下地址中选择正确地点。',empty:'未找到结果，请输入更具体的地址或在地图上选点。'}
+    };
+    function resetSharePlaceSearchResults(){
+      sharePlaceSearchSeq++;
+      var list=document.getElementById('placeSearchResults');
+      if(list){list.replaceChildren();list.classList.add('hidden');}
+    }
     function openPlacePicker() {
       placePickerMode="chat";
       document.querySelector('#placePicker strong').textContent=(I18N[currentLang]||I18N.ko).placeTitle;
@@ -2387,6 +2400,7 @@
         alert(uiText('placeRequiresRoom')); return;
       }
       selectedSharePlace = null;
+      resetSharePlaceSearchResults();
       document.getElementById('selectedPlaceLabel').textContent = uiText('placeEmpty');
       document.getElementById('confirmSharePlace').disabled = true;
       document.getElementById('placePicker').classList.remove('hidden');
@@ -2395,6 +2409,7 @@
       } else initSharePlaceMap();
     }
     function closePlacePicker() {
+      resetSharePlaceSearchResults();
       document.getElementById('placePicker').classList.add('hidden');
     }
     function initSharePlaceMap() {
@@ -2406,6 +2421,7 @@
       shareMap = new google.maps.Map(document.getElementById('sharePlaceMap'), {center:center,zoom:13,streetViewControl:false,mapTypeControl:false});
       shareGeocoder = new google.maps.Geocoder();
       shareMap.addListener('click',function(event) {
+        resetSharePlaceSearchResults();
         var lat = event.latLng.lat(), lng = event.latLng.lng();
         shareGeocoder.geocode({location:{lat:lat,lng:lng}},function(results,status) {
           if (document.getElementById('placePicker').classList.contains('hidden')) return;
@@ -2415,6 +2431,7 @@
       });
     }
     function selectSharePlace(name,address,lat,lng) {
+      resetSharePlaceSearchResults();
       selectedSharePlace = {name:String(name).slice(0,150),address:String(address).slice(0,350),lat:lat,lng:lng};
       if (shareMarker) shareMarker.setMap(null);
       shareMarker = new google.maps.Marker({map:shareMap,position:{lat:lat,lng:lng}});
@@ -2425,12 +2442,44 @@
     function searchSharePlace() {
       var query = document.getElementById('placeSearchInput').value.trim();
       if (!query || !shareGeocoder) return;
+      resetSharePlaceSearchResults();
+      var requestId=sharePlaceSearchSeq;
+      var list=document.getElementById('placeSearchResults');
+      var words=placeSearchCopy[currentLang]||placeSearchCopy.ko;
+      list.classList.remove('hidden');
+      list.textContent=words.searching;
+      list.classList.add('text-sm');
+      // Never allow an old selected pin to be shared while new results load.
+      selectedSharePlace=null;
+      document.getElementById('confirmSharePlace').disabled=true;
+      document.getElementById('selectedPlaceLabel').textContent=uiText('placeEmpty');
+      if(shareMarker){shareMarker.setMap(null);shareMarker=null;}
       shareGeocoder.geocode({address:query},function(results,status) {
-        if (document.getElementById('placePicker').classList.contains('hidden')) return;
-        if (status !== 'OK' || !results[0]) { alert(uiText('placeNotFound')); return; }
-        var r = results[0], lat=r.geometry.location.lat(), lng=r.geometry.location.lng();
-        selectSharePlace(query,r.formatted_address || query,lat,lng);
-        shareMap.setZoom(16);
+        if (document.getElementById('placePicker').classList.contains('hidden') ||
+            requestId!==sharePlaceSearchSeq) return;
+        list.replaceChildren();
+        var candidates=status==='OK'&&Array.isArray(results)?results.filter(function(r){
+          return r&&r.geometry&&r.geometry.location&&typeof r.geometry.location.lat==='function' &&
+            typeof r.geometry.location.lng==='function';
+        }).slice(0,6):[];
+        if(!candidates.length){list.textContent=words.empty;return;}
+        var heading=document.createElement('p');
+        heading.className='text-xs font-bold text-indigo-700 px-2 pb-1';
+        heading.textContent=words.choose;
+        list.appendChild(heading);
+        candidates.forEach(function(r,i){
+          var lat=r.geometry.location.lat(),lng=r.geometry.location.lng();
+          var address=String(r.formatted_address||query);
+          var button=document.createElement('button');
+          button.type='button';
+          button.className='block w-full text-left px-3 py-2 rounded-lg hover:bg-indigo-50 focus:bg-indigo-50 border-b border-slate-100 text-sm text-slate-800 break-words';
+          button.textContent=(i+1)+'. '+address;
+          button.addEventListener('click',function(){
+            selectSharePlace(query,address,lat,lng);
+            if(shareMap)shareMap.setZoom(16);
+          });
+          list.appendChild(button);
+        });
       });
     }
     function sendSharedPlace() {
