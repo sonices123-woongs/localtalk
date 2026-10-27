@@ -867,6 +867,13 @@
       ja:{place:'共有された場所',close:'閉じる',check:'📍 現在地からの距離を確認',again:'📍 距離を再確認',checking:'位置を確認中…',hint:'ボタンを押した時だけ位置情報を要求します。（直線距離）',waiting:'端末の位置情報へのアクセスを許可してください。',unsupported:'この端末は位置情報に対応していません。',denied:'位置情報へのアクセスが拒否されました。アプリの権限設定を確認してください。',timeout:'位置情報の取得がタイムアウトしました。',unavailable:'現在地を取得できません。位置情報サービスとアプリの権限を確認してください。',insecure:'この環境では位置情報を利用できません。',distance:'現在地からの直線距離：約',suffix:' · 実際の移動距離とは異なります。',missing:'この場所には正確な座標がありません。',mapError:'地図を読み込めませんでした。'},
       'zh-CN':{place:'分享的位置',close:'关闭',check:'📍 查看距当前位置的距离',again:'📍 重新查看距离',checking:'正在获取位置…',hint:'仅点击按钮时请求定位权限。（直线距离）',waiting:'请允许手机访问位置信息。',unsupported:'此设备不支持定位。',denied:'定位权限被拒绝。请检查手机中的应用定位权限。',timeout:'定位超时，请重试。',unavailable:'无法获取当前位置。请检查手机定位服务和应用权限。',insecure:'当前环境限制定位功能。',distance:'距当前位置的直线距离约 ',suffix:' · 实际行程距离可能不同。',missing:'此旧地点没有准确坐标，请作者重新选取地图标记。',mapError:'地图加载失败，请重试。'}
     };
+    // Shared-place directions launch Google Maps without an additional API request.
+    var placeDirectionsText={
+      ko:'🧭 Google 지도 길찾기',
+      en:'🧭 Get directions in Google Maps',
+      ja:'🧭 Google マップで経路検索',
+      'zh-CN':'🧭 在 Google 地图中查看路线'
+    };
     function viewerT(){return viewerTranslations[currentLang]||viewerTranslations.ko;}
     var viewedPlace=null, viewedMap=null, viewedMarker=null;
     function viewPlaceInsideApp(place){
@@ -876,6 +883,21 @@
       if(result)result.textContent=viewerT().hint;
       var distanceButton=document.getElementById('viewPlaceDistanceButton');
       if(distanceButton){distanceButton.disabled=false;distanceButton.textContent=viewerT().check;distanceButton.classList.toggle('hidden',!validSavedPlace(place));}
+      var directionsLink=document.getElementById('viewPlaceDirectionsLink');
+      if(directionsLink){
+        var canRoute=validSavedPlace(place);
+        directionsLink.classList.toggle('hidden',!canRoute);
+        directionsLink.textContent=placeDirectionsText[currentLang]||placeDirectionsText.ko;
+        if(canRoute){
+          // Omit origin: Google Maps uses the device's current location if available.
+          directionsLink.href='https://www.google.com/maps/dir/?api=1&destination='+
+            encodeURIComponent(Number(place.lat)+','+Number(place.lng))+googleMapsLanguageParam();
+          // The Android WebView handles external links through same-frame navigation.
+          directionsLink.target=/;\s*wv\)/i.test(navigator.userAgent)?'_self':'_blank';
+        }else{
+          directionsLink.removeAttribute('href');
+        }
+      }
       var dialog=document.getElementById('placeViewer');
       document.getElementById('viewPlaceName').textContent='📍 '+String(place.name||viewerT().place);
       document.getElementById('viewPlaceAddress').textContent=String(place.address||'');
