@@ -61,15 +61,14 @@
           escapeHtml(uiText('roomFullShort')) + '</button>'
         : '<button type="button" class="lt-room-enter" onclick="enterSpecificChatRoom(' + id + ')">' +
           escapeHtml(t.roomEnter) + '</button>';
-      var icon = active ? 'fa-volume-high' : 'fa-volume-xmark';
-      var speakerText = active ? copy.active : copy.idle;
+      var icon = 'fa-lightbulb';
+      var lightText = active ? copy.active : copy.idle;
       var memberNames = participantsByRoom[id] || [];
       parts.push(
         '<article class="lt-room-card' + (active?' lt-room-has-people':' lt-room-no-people') + '">' +
-          '<span class="lt-room-speaker" role="img" aria-label="' + escapeHtml(speakerText) +
-            '" title="' + escapeHtml(speakerText) + '">' +
+          '<span class="lt-room-bulb" role="img" aria-label="' + escapeHtml(lightText) +
+            '" title="' + escapeHtml(lightText) + '">' +
             '<i class="fas ' + icon + '" aria-hidden="true"></i>' +
-            (active ? '<span class="lt-room-live-dot" aria-hidden="true"></span>' : '') +
           '</span>' +
           '<div class="lt-room-body">' +
             '<h4 class="lt-room-title">Room #' + id + '</h4>' +
