@@ -1221,7 +1221,27 @@
       function add(parent,part){
         if(/^\*\*[^\n*]+\*\*$/.test(part)){
           var strong=document.createElement('strong');strong.textContent=part.slice(2,-2);parent.appendChild(strong);
-        }else parent.appendChild(document.createTextNode(part));
+        }else{
+          // Linkify only HTTPS URLs, using text nodes for all other content.
+          var pattern=/https:\/\/[^\s<>"'\u200b]+/g, cursor=0, match;
+          while((match=pattern.exec(part))!==null){
+            if(match.index>cursor)parent.appendChild(document.createTextNode(part.slice(cursor,match.index)));
+            var raw=match[0],url=raw.replace(/[.,;:!?)}\]]+$/g,'');
+            var trailing=raw.slice(url.length);
+            try{
+              var parsed=new URL(url);
+              if(parsed.protocol!=='https:'||!parsed.hostname)throw Error('invalid');
+              var link=document.createElement('a');
+              link.href=parsed.href;link.target='_blank';link.rel='noopener noreferrer';
+              link.className='text-indigo-600 underline underline-offset-2 break-all';
+              link.textContent=url;
+              parent.appendChild(link);
+            }catch(e){parent.appendChild(document.createTextNode(url));}
+            if(trailing)parent.appendChild(document.createTextNode(trailing));
+            cursor=match.index+raw.length;
+          }
+          if(cursor<part.length)parent.appendChild(document.createTextNode(part.slice(cursor)));
+        }
       }
       tokens.forEach(function(part){
         var match=/^\[\[size:(14|15|16|18|20|22)\]\]([\s\S]*?)\[\[\/size\]\]$/.exec(part);
