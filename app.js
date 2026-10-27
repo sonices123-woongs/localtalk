@@ -1214,15 +1214,22 @@
       return el;
     }
     // Safe limited **bold** formatting for official notice body (also after translation).
+    // Render only our small, escaped formatting vocabulary; never user HTML.
     function formatOfficialBold(el,value){
-      var parts=String(value||'').split(/(\\*\\*[^\\n*]+\\*\\*)/g);
       var fragment=document.createDocumentFragment();
-      parts.forEach(function(part){
-        if(/^\\*\\*[^\\n*]+\\*\\*$/.test(part)){
-          var strong=document.createElement('strong');
-          strong.textContent=part.slice(2,-2);
-          fragment.appendChild(strong);
-        }else fragment.appendChild(document.createTextNode(part));
+      var tokens=String(value||'').split(/(\[\[size:(?:14|15|16|18|20|22)\]\][\s\S]*?\[\[\/size\]\]|\*\*[^\n*]+\*\*)/g);
+      function add(parent,part){
+        if(/^\*\*[^\n*]+\*\*$/.test(part)){
+          var strong=document.createElement('strong');strong.textContent=part.slice(2,-2);parent.appendChild(strong);
+        }else parent.appendChild(document.createTextNode(part));
+      }
+      tokens.forEach(function(part){
+        var match=/^\[\[size:(14|15|16|18|20|22)\]\]([\s\S]*?)\[\[\/size\]\]$/.exec(part);
+        if(match){
+          var span=document.createElement('span');span.style.fontSize=match[1]+'px';
+          match[2].split(/(\*\*[^\n*]+\*\*)/g).forEach(function(t){add(span,t);});
+          fragment.appendChild(span);
+        }else add(fragment,part);
       });
       el.replaceChildren(fragment);
     }
@@ -1670,7 +1677,22 @@
         });row.appendChild(header);
         if(b.type==='text'){
           var ta=document.createElement('textarea');ta.className='w-full border rounded-lg p-3 text-sm';ta.rows=3;ta.placeholder='이 위치에 표시할 설명을 작성하세요';ta.value=b.text;ta.dataset.blockIndex=i;
-          ta.addEventListener('input',function(){b.text=ta.value;});row.appendChild(ta);
+          ta.addEventListener('input',function(){b.text=ta.value;});
+          var toolbar=document.createElement('div');toolbar.className='flex flex-wrap items-center gap-2 mb-2';
+          var strongBtn=document.createElement('button');strongBtn.type='button';strongBtn.className='rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 px-3 py-1.5 text-sm font-bold';strongBtn.textContent='B 굵게';
+          var sizeSelect=document.createElement('select');sizeSelect.className='rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm';
+          [['','글자 크기'],['14','14px'],['15','15px (기본)'],['16','16px'],['18','18px'],['20','20px'],['22','22px']].forEach(function(item){var o=document.createElement('option');o.value=item[0];o.textContent=item[1];sizeSelect.appendChild(o);});
+          var hint=document.createElement('span');hint.className='text-xs text-slate-500';hint.textContent='원하는 글자를 드래그해 선택하세요';
+          function wrapSelected(before,after){
+            var st=ta.selectionStart,en=ta.selectionEnd,selected=ta.value.slice(st,en);
+            if(!selected){ta.focus();return;}
+            ta.setRangeText(before+selected+after,st,en,'select');
+            b.text=ta.value;ta.dispatchEvent(new Event('input',{bubbles:true}));ta.focus();
+          }
+          strongBtn.onclick=function(){wrapSelected('**','**');};
+          sizeSelect.onchange=function(){if(sizeSelect.value)wrapSelected('[[size:'+sizeSelect.value+']]','[[/size]]');sizeSelect.value='';};
+          toolbar.appendChild(strongBtn);toolbar.appendChild(sizeSelect);
+          row.appendChild(toolbar);row.appendChild(ta);row.appendChild(hint);
         }else{
           var img=document.createElement('img');img.src=b.url;img.loading='lazy';img.alt='첨부 사진';img.className='w-full rounded-lg object-contain';img.style.maxHeight='180px';row.appendChild(img);
         }
