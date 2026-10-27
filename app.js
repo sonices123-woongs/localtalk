@@ -868,12 +868,19 @@
       'zh-CN':{place:'分享的位置',close:'关闭',check:'📍 查看距当前位置的距离',again:'📍 重新查看距离',checking:'正在获取位置…',hint:'仅点击按钮时请求定位权限。（直线距离）',waiting:'请允许手机访问位置信息。',unsupported:'此设备不支持定位。',denied:'定位权限被拒绝。请检查手机中的应用定位权限。',timeout:'定位超时，请重试。',unavailable:'无法获取当前位置。请检查手机定位服务和应用权限。',insecure:'当前环境限制定位功能。',distance:'距当前位置的直线距离约 ',suffix:' · 实际行程距离可能不同。',missing:'此旧地点没有准确坐标，请作者重新选取地图标记。',mapError:'地图加载失败，请重试。'}
     };
     // Shared-place directions launch Google Maps without an additional API request.
+    // Google Maps offers transit routing in Korea; car and walking routes
+    // can be opened in Kakao Map through an official coordinate-based HTTPS link.
     var placeDirectionsText={
-      ko:'🧭 Google 지도 길찾기',
-      en:'🧭 Get directions in Google Maps',
-      ja:'🧭 Google マップで経路検索',
-      'zh-CN':'🧭 在 Google 地图中查看路线'
+      ko:{googleTransit:'🚆 Google 지도 대중교통',googleGeneral:'🌍 Google 지도 길찾기',kakao:'🚗🚶 카카오맵 자동차·도보'},
+      en:{googleTransit:'🚆 Google Maps transit',googleGeneral:'🌍 Google Maps directions',kakao:'🚗🚶 KakaoMap driving & walking'},
+      ja:{googleTransit:'🚆 Google マップ公共交通',googleGeneral:'🌍 Google マップ経路検索',kakao:'🚗🚶 KakaoMap 車・徒歩'},
+      'zh-CN':{googleTransit:'🚆 Google 地图公交路线',googleGeneral:'🌍 Google 地图路线',kakao:'🚗🚶 KakaoMap 驾车和步行'}
     };
+    function isKoreaPlace(place){
+      if(!validSavedPlace(place))return false;
+      var lat=Number(place.lat),lng=Number(place.lng);
+      return lat>=31.43&&lat<=44.35&&lng>=122.37&&lng<=132.00;
+    }
     function viewerT(){return viewerTranslations[currentLang]||viewerTranslations.ko;}
     var viewedPlace=null, viewedMap=null, viewedMarker=null;
     function viewPlaceInsideApp(place){
@@ -883,19 +890,38 @@
       if(result)result.textContent=viewerT().hint;
       var distanceButton=document.getElementById('viewPlaceDistanceButton');
       if(distanceButton){distanceButton.disabled=false;distanceButton.textContent=viewerT().check;distanceButton.classList.toggle('hidden',!validSavedPlace(place));}
+      var labels=placeDirectionsText[currentLang]||placeDirectionsText.ko;
+      var canRoute=validSavedPlace(place);
+      var koreanDestination=isKoreaPlace(place);
+      var routeTarget=/;\s*wv\)/i.test(navigator.userAgent)?'_self':'_blank';
       var directionsLink=document.getElementById('viewPlaceDirectionsLink');
       if(directionsLink){
-        var canRoute=validSavedPlace(place);
         directionsLink.classList.toggle('hidden',!canRoute);
-        directionsLink.textContent=placeDirectionsText[currentLang]||placeDirectionsText.ko;
+        directionsLink.textContent=koreanDestination?labels.googleTransit:labels.googleGeneral;
         if(canRoute){
-          // Omit origin: Google Maps uses the device's current location if available.
+          // Keep the existing coordinate-based destination. Google will use the
+          // user's device location as origin when available.
           directionsLink.href='https://www.google.com/maps/dir/?api=1&destination='+
-            encodeURIComponent(Number(place.lat)+','+Number(place.lng))+googleMapsLanguageParam();
-          // The Android WebView handles external links through same-frame navigation.
-          directionsLink.target=/;\s*wv\)/i.test(navigator.userAgent)?'_self':'_blank';
+            encodeURIComponent(Number(place.lat)+','+Number(place.lng))+
+            (koreanDestination?'&travelmode=transit':'')+googleMapsLanguageParam();
+          directionsLink.target=routeTarget;
         }else{
           directionsLink.removeAttribute('href');
+        }
+      }
+      var kakaoLink=document.getElementById('viewPlaceKakaoDirectionsLink');
+      if(kakaoLink){
+        kakaoLink.classList.toggle('hidden',!koreanDestination);
+        kakaoLink.textContent=labels.kakao;
+        if(koreanDestination){
+          // Official Kakao Maps HTTPS link, usable by mobile browsers and apps.
+          // This provides the destination; the user selects origin and route mode.
+          kakaoLink.href='https://map.kakao.com/link/to/'+
+            encodeURIComponent(String(place.name||place.address||'Destination').slice(0,100))+
+            ','+Number(place.lat)+','+Number(place.lng);
+          kakaoLink.target=routeTarget;
+        }else{
+          kakaoLink.removeAttribute('href');
         }
       }
       var dialog=document.getElementById('placeViewer');
