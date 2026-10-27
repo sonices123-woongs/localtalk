@@ -1213,12 +1213,26 @@
       boardTranslateElement(el);
       return el;
     }
+    // Safe limited **bold** formatting for official notice body (also after translation).
+    function formatOfficialBold(el,value){
+      var parts=String(value||'').split(/(\\*\\*[^\\n*]+\\*\\*)/g);
+      var fragment=document.createDocumentFragment();
+      parts.forEach(function(part){
+        if(/^\\*\\*[^\\n*]+\\*\\*$/.test(part)){
+          var strong=document.createElement('strong');
+          strong.textContent=part.slice(2,-2);
+          fragment.appendChild(strong);
+        }else fragment.appendChild(document.createTextNode(part));
+      });
+      el.replaceChildren(fragment);
+    }
     function boardTranslateElement(el){
       var original=el.dataset.sourceText, lang=currentLang;
       if(!original || !autoTranslateEnabled)return;
       translateMsg('board:'+el.dataset.boardTranslationKey,original,lang,false).then(function(result){
         if(el.isConnected && currentLang===lang && el.dataset.sourceText===original && autoTranslateEnabled){
-          el.textContent=result;
+          if(el.dataset.officialBold==='yes')formatOfficialBold(el,result);
+          else el.textContent=result;
           el.title=original;
         }
       }).catch(function(){ /* On failure retain the original. */ });
@@ -1780,10 +1794,10 @@
       title.textContent=parsed.title;boardDisplayText(title,parsed.title,'official:'+id+':title');
       head.appendChild(top);head.appendChild(title);panel.appendChild(head);
       var body=document.createElement('div');body.style.cssText='flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:16px 18px 28px';
-      body.className='space-y-4 text-sm text-slate-700 leading-relaxed';
+      body.className='space-y-4 text-slate-700 leading-relaxed';body.style.fontSize='15px';
       officialDecodeBlocks(p.body).forEach(function(block,index){
         if(block.type==='text'){
-          var line=document.createElement('p');line.className='whitespace-pre-wrap break-words';line.textContent=block.text;
+          var line=document.createElement('p');line.className='whitespace-pre-wrap break-words';line.dataset.officialBold='yes';formatOfficialBold(line,block.text);
           boardDisplayText(line,block.text,'official:'+id+':block:'+index,true);body.appendChild(line);
         }else{
           var img=document.createElement('img');img.src=block.url;img.alt='첨부 사진';img.loading='lazy';img.decoding='async';img.className='w-full rounded-xl object-contain cursor-pointer';
