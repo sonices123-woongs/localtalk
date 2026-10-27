@@ -415,7 +415,8 @@ header {gap:6px;min-width:0}
           <strong class="text-sm">📍 채팅방에 장소 공유</strong>
           <button type="button" id="closePlacePickerButton" onclick="closePlacePicker()" class="px-3 py-2 rounded-lg bg-slate-100 text-sm" aria-label="닫기">✕</button>
         </div>
-        <div class="flex gap-2 p-3">
+        <div class="relative z-20 flex gap-2 p-3">
+          <div id="placeSearchResults" class="hidden absolute top-full left-3 right-3 z-30 max-h-[45vh] overflow-y-auto bg-white rounded-xl shadow-2xl border border-indigo-200 p-2 space-y-1" role="region" aria-label="장소 검색 결과" aria-live="polite"></div>
           <input id="placeSearchInput" class="flex-1 min-w-0 bg-slate-100 rounded-xl px-3 py-2 text-sm" placeholder="장소 이름 또는 주소 검색" onkeypress="if(event.key==='Enter') searchSharePlace()" maxlength="150">
           <button type="button" id="placeSearchButton" onclick="searchSharePlace()" class="bg-indigo-600 text-white rounded-xl px-3 text-sm">검색</button>
         </div>
@@ -489,7 +490,7 @@ header {gap:6px;min-width:0}
 .lt-modal.hidden{display:none!important}
 .lt-modal-card{background:#fff;border-radius:18px;padding:20px;width:min(100%,560px);max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25)}
 </style>
-  <script src="./app.js?v=20.44-chat-report-queue"></script>
+  <script src="./app.js?v=20.46-place-candidates"></script>
   <script src="./chat-report-admin.js?v=20.45-moderation"></script>
 </body>
 </html>
