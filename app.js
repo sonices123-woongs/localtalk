@@ -2401,6 +2401,14 @@
         return {label:words.place,note:words.placeNote,trust:'place'};
       return {label:words.address,note:words.addressNote,trust:'address'};
     }
+    // Approximate or partially matched geocodes are previews only.
+    // A deliberate tap on the map is required before sharing their coordinates.
+    var placePinConfirmCopy={
+      ko:'⚠ 검색 위치는 미확정입니다. 지도에서 원하는 지점을 직접 눌러 핀을 확정해야 공유할 수 있어요.',
+      en:'⚠ This search location is unconfirmed. Tap the exact spot on the map before sharing.',
+      ja:'⚠ 検索位置は未確定です。地図で正確な場所をタップしてから共有してください。',
+      'zh-CN':'⚠ 搜索位置尚未确认。请在地图上点击准确位置后再分享。'
+    };
     function resetSharePlaceSearchResults(){
       sharePlaceSearchSeq++;
       var list=document.getElementById('placeSearchResults');
@@ -2451,15 +2459,20 @@
         });
       });
     }
-    function selectSharePlace(name,address,lat,lng,accuracyNote) {
+    function selectSharePlace(name,address,lat,lng,accuracyNote,requiresMapTap) {
       resetSharePlaceSearchResults();
-      selectedSharePlace = {name:String(name).slice(0,150),address:String(address).slice(0,350),lat:lat,lng:lng};
+      var picked={name:String(name).slice(0,150),address:String(address).slice(0,350),lat:lat,lng:lng};
+      // A rough/partial geocoder result must not become shareable until
+      // the user explicitly chooses a coordinate on the actual map.
+      selectedSharePlace=requiresMapTap?null:picked;
       if (shareMarker) shareMarker.setMap(null);
       shareMarker = new google.maps.Marker({map:shareMap,position:{lat:lat,lng:lng}});
       shareMap.panTo({lat:lat,lng:lng});
-      document.getElementById('selectedPlaceLabel').textContent = (I18N[currentLang] || I18N.ko).selected + selectedSharePlace.name;
-      setSharePlaceAccuracyNotice(accuracyNote||'');
-      document.getElementById('confirmSharePlace').disabled = false;
+      document.getElementById('selectedPlaceLabel').textContent =
+        (I18N[currentLang] || I18N.ko).selected + picked.name;
+      var extra=requiresMapTap?(placePinConfirmCopy[currentLang]||placePinConfirmCopy.ko):'';
+      setSharePlaceAccuracyNotice((accuracyNote||'')+(extra?' '+extra:''));
+      document.getElementById('confirmSharePlace').disabled=!!requiresMapTap;
     }
     function searchSharePlace() {
       var query = document.getElementById('placeSearchInput').value.trim();
@@ -2509,7 +2522,8 @@
             // For approximate addresses, do not label the coordinate with
             // the queried business name (e.g. a store that wasn't located).
             var displayName=quality.trust==='place'?query:address;
-            selectSharePlace(displayName,address,lat,lng,quality.note);
+            selectSharePlace(displayName,address,lat,lng,quality.note,
+              quality.trust==='rough'||quality.trust==='partial');
             if(shareMap)shareMap.setZoom(quality.trust==='rough'?14:16);
           });
           list.appendChild(button);
