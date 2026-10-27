@@ -835,6 +835,7 @@
       placePickerMode='board';
       selectedSharePlace=null;
       resetSharePlaceSearchResults();
+      setSharePlaceAccuracyNotice('');
       document.getElementById('selectedPlaceLabel').textContent=uiText('placeEmpty');
       document.getElementById('confirmSharePlace').disabled=true;
       document.getElementById('confirmSharePlace').textContent=currentLang==='ko'?'이 장소 첨부':currentLang==='en'?'Attach this place':currentLang==='ja'?'この場所を添付':'添加此地点';
@@ -2382,15 +2383,34 @@
     var placePickerMode="chat";
     var sharePlaceSearchSeq=0;
     var placeSearchCopy={
-      ko:{searching:'장소를 검색하고 있어요…',choose:'아래 주소 중 정확한 장소를 선택하세요.',empty:'검색 결과가 없습니다. 주소를 더 구체적으로 입력하거나 지도에서 핀을 선택해 주세요.'},
-      en:{searching:'Searching for places…',choose:'Select the correct address from the results.',empty:'No results. Try a more specific address or choose a point on the map.'},
-      ja:{searching:'場所を検索中…',choose:'正しい住所を選択してください。',empty:'結果がありません。住所を詳しく入力するか、地図で選択してください。'},
-      'zh-CN':{searching:'正在搜索地点…',choose:'请从以下地址中选择正确地点。',empty:'未找到结果，请输入更具体的地址或在地图上选点。'}
+      ko:{searching:'장소를 검색하고 있어요…',choose:'검색 결과는 매장명이 아닌 주소·지역일 수 있습니다. 위치를 확인하고 선택하세요.',empty:'검색 결과가 없습니다. 주소를 더 구체적으로 입력하거나 지도에서 핀을 선택해 주세요.',rough:'⚠ 대략적인 위치',partial:'⚠ 일부만 일치',address:'주소 검색 결과',place:'장소 정보',roughNote:'⚠ 도로·지역의 중심 또는 대략적인 위치일 수 있어요. 정확한 매장을 찾으려면 지도에서 직접 핀을 찍어 주세요.',partialNote:'⚠ 검색어 일부만 일치한 결과예요. 정확한 주소와 지도 핀을 꼭 확인해 주세요.',addressNote:'ℹ 검색으로 찾은 주소 위치예요. 특정 매장인지 확인된 것은 아니니 지도 핀을 확인해 주세요.',placeNote:'ℹ 검색된 장소예요. 이름과 실제 위치가 맞는지 지도 핀을 확인해 주세요.'},
+      en:{searching:'Searching for places…',choose:'These may be addresses or areas rather than verified stores. Check the map pin before selecting.',empty:'No results. Try a more specific address or choose a point on the map.',rough:'⚠ Approximate location',partial:'⚠ Partial match',address:'Address result',place:'Place result',roughNote:'⚠ This may be the center of a road or area, not the store. Tap the map to set the exact pin.',partialNote:'⚠ Only part of your search matched. Check the address and map pin carefully.',addressNote:'ℹ This is a geocoded address, not a verified store. Check the map pin.',placeNote:'ℹ Check that the result name and map pin match the place you intended.'},
+      ja:{searching:'場所を検索中…',choose:'店舗ではなく住所・地域の場合があります。位置を確認して選択してください。',empty:'結果がありません。住所を詳しく入力するか、地図で選択してください。',rough:'⚠ おおよその位置',partial:'⚠ 部分一致',address:'住所の結果',place:'場所の結果',roughNote:'⚠ 道路や地域の中心など、おおよその位置の可能性があります。正確な場所は地図で選んでください。',partialNote:'⚠ 検索語の一部のみ一致しました。住所とピンを確認してください。',addressNote:'ℹ 住所の検索結果で、店舗を確認したものではありません。ピンを確認してください。',placeNote:'ℹ 名称と地図上の位置が合っているか確認してください。'},
+      'zh-CN':{searching:'正在搜索地点…',choose:'结果可能是地址或区域，而非确认的商店。请核对地图标记。',empty:'未找到结果，请输入更具体的地址或在地图上选点。',rough:'⚠ 大致位置',partial:'⚠ 部分匹配',address:'地址结果',place:'地点结果',roughNote:'⚠ 可能是道路或区域中心，不是准确的商店位置。请在地图上直接选点。',partialNote:'⚠ 仅部分匹配搜索词。请确认地址和地图标记。',addressNote:'ℹ 这是地址搜索结果，并未确认商店位置。请核对标记。',placeNote:'ℹ 请确认名称与地图位置对应。'}
     };
+    function sharePlaceSearchQuality(result,words){
+      var types=Array.isArray(result.types)?result.types:[];
+      var kind=result.geometry&&result.geometry.location_type;
+      var broad=types.some(function(t){
+        return /^(route|intersection|neighborhood|sublocality|locality|country|political|postal_code|administrative_area_level_[0-9]+|natural_feature)$/.test(t);
+      });
+      if(result.partial_match)return {label:words.partial,note:words.partialNote,trust:'partial'};
+      if(broad||kind==='APPROXIMATE'||kind==='GEOMETRIC_CENTER'||kind==='RANGE_INTERPOLATED')
+        return {label:words.rough,note:words.roughNote,trust:'rough'};
+      if(types.some(function(t){return t==='point_of_interest'||t==='establishment';}))
+        return {label:words.place,note:words.placeNote,trust:'place'};
+      return {label:words.address,note:words.addressNote,trust:'address'};
+    }
     function resetSharePlaceSearchResults(){
       sharePlaceSearchSeq++;
       var list=document.getElementById('placeSearchResults');
       if(list){list.replaceChildren();list.classList.add('hidden');}
+    }
+    function setSharePlaceAccuracyNotice(message){
+      var note=document.getElementById('placeSelectionAccuracyNote');
+      if(!note)return;
+      note.textContent=message||'';
+      note.classList.toggle('hidden',!message);
     }
     function openPlacePicker() {
       placePickerMode="chat";
@@ -2401,6 +2421,7 @@
       }
       selectedSharePlace = null;
       resetSharePlaceSearchResults();
+      setSharePlaceAccuracyNotice('');
       document.getElementById('selectedPlaceLabel').textContent = uiText('placeEmpty');
       document.getElementById('confirmSharePlace').disabled = true;
       document.getElementById('placePicker').classList.remove('hidden');
@@ -2430,13 +2451,14 @@
         });
       });
     }
-    function selectSharePlace(name,address,lat,lng) {
+    function selectSharePlace(name,address,lat,lng,accuracyNote) {
       resetSharePlaceSearchResults();
       selectedSharePlace = {name:String(name).slice(0,150),address:String(address).slice(0,350),lat:lat,lng:lng};
       if (shareMarker) shareMarker.setMap(null);
       shareMarker = new google.maps.Marker({map:shareMap,position:{lat:lat,lng:lng}});
       shareMap.panTo({lat:lat,lng:lng});
       document.getElementById('selectedPlaceLabel').textContent = (I18N[currentLang] || I18N.ko).selected + selectedSharePlace.name;
+      setSharePlaceAccuracyNotice(accuracyNote||'');
       document.getElementById('confirmSharePlace').disabled = false;
     }
     function searchSharePlace() {
@@ -2451,6 +2473,7 @@
       list.classList.add('text-sm');
       // Never allow an old selected pin to be shared while new results load.
       selectedSharePlace=null;
+      setSharePlaceAccuracyNotice('');
       document.getElementById('confirmSharePlace').disabled=true;
       document.getElementById('selectedPlaceLabel').textContent=uiText('placeEmpty');
       if(shareMarker){shareMarker.setMap(null);shareMarker=null;}
@@ -2470,13 +2493,24 @@
         candidates.forEach(function(r,i){
           var lat=r.geometry.location.lat(),lng=r.geometry.location.lng();
           var address=String(r.formatted_address||query);
+          var quality=sharePlaceSearchQuality(r,words);
           var button=document.createElement('button');
           button.type='button';
           button.className='block w-full text-left px-3 py-2 rounded-lg hover:bg-indigo-50 focus:bg-indigo-50 border-b border-slate-100 text-sm text-slate-800 break-words';
-          button.textContent=(i+1)+'. '+address;
+          var resultName=document.createElement('span');
+          resultName.className='block';
+          resultName.textContent=(i+1)+'. '+address;
+          var tag=document.createElement('span');
+          tag.className='block text-xs mt-0.5 '+(quality.trust==='rough'||quality.trust==='partial'?'text-amber-700':'text-slate-500');
+          tag.textContent=quality.label;
+          button.appendChild(resultName);
+          button.appendChild(tag);
           button.addEventListener('click',function(){
-            selectSharePlace(query,address,lat,lng);
-            if(shareMap)shareMap.setZoom(16);
+            // For approximate addresses, do not label the coordinate with
+            // the queried business name (e.g. a store that wasn't located).
+            var displayName=quality.trust==='place'?query:address;
+            selectSharePlace(displayName,address,lat,lng,quality.note);
+            if(shareMap)shareMap.setZoom(quality.trust==='rough'?14:16);
           });
           list.appendChild(button);
         });
