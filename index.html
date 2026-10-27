@@ -368,7 +368,8 @@ header {gap:6px;min-width:0}
         <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5 text-xs text-indigo-800 flex items-start gap-2.5 w-full">
           <i class="fas fa-info-circle text-indigo-500 mt-0.5 shrink-0 text-sm"></i>
           <div class="min-w-0 flex-1">
-            <strong id="chatNoticeTitle" class="text-sm">현지인 Q&A 방</strong><br>
+            <strong id="chatNoticeTitle" class="text-sm">현지인 Q&A 방</strong>
+            <span id="chatRoomOccupancyBadge" class="inline-block ml-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600" aria-live="polite">접속 인원 확인 중</span><br>
             <span id="chatNoticeSub" class="text-xs">여행 중 궁금한 점을 물어보세요! 현지 주민들이 답해드립니다.</span>
           </div>
         </div>
@@ -491,7 +492,7 @@ header {gap:6px;min-width:0}
 .lt-modal.hidden{display:none!important}
 .lt-modal-card{background:#fff;border-radius:18px;padding:20px;width:min(100%,560px);max-height:calc(100dvh - 32px);overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,.25)}
 </style>
-  <script src="./app.js?v=20.48-pin-confirm"></script>
+  <script src="./app.js?v=20.50-chat-room-count"></script>
   <script src="./chat-report-admin.js?v=20.45-moderation"></script>
 </body>
 </html>
