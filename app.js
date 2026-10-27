@@ -1886,6 +1886,7 @@
       document.getElementById('headerTitle').innerText = cityName + ' Room #' + roomId;
       document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + roomId + ' Q&A';
       document.getElementById('chatNoticeSub').innerText = t.noticeSub;
+      updateChatRoomOccupancyBadge(null);
 
       listenRoomPresence();
       listenRealtimeMessages();
@@ -1975,6 +1976,27 @@
       });
     }
 
+    // Show the live Firebase presence count inside the open chat room.
+    // This is an indicator, not a server-side admission limit.
+    function updateChatRoomOccupancyBadge(count) {
+      var badge=document.getElementById('chatRoomOccupancyBadge');
+      if(!badge)return;
+      var copy={
+        ko:{loading:'접속 인원 확인 중',suffix:'명 접속 중'},
+        en:{loading:'Checking occupancy',suffix:'online'},
+        ja:{loading:'参加人数を確認中',suffix:'人参加中'},
+        'zh-CN':{loading:'正在确认在线人数',suffix:'人在线'}
+      }[currentLang]||{loading:'Checking occupancy',suffix:'online'};
+      if(typeof count!=='number'||!Number.isFinite(count)){
+        badge.textContent=copy.loading;
+        badge.className='inline-block ml-2 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600';
+        return;
+      }
+      badge.textContent=count+'/4'+(currentLang==='ko'?'': ' ')+copy.suffix;
+      badge.className='inline-block ml-2 rounded-full px-2.5 py-1 text-xs font-bold '+
+        (count>=4?'bg-rose-100 text-rose-700':'bg-emerald-100 text-emerald-800');
+    }
+
     function listenRoomPresence() {
       if (roomPresenceListener) roomPresenceListener.off();
 
@@ -1990,6 +2012,7 @@
           if (member && member.joinedAt !== 0) usersData[uid] = member;
         });
         var userCount = Object.keys(usersData).length;
+        updateChatRoomOccupancyBadge(userCount);
         // Only transitions after the initial presence snapshot generate notices.
         // Keep a position in the message timeline, not a permanent footer.
         if (roomPreviousUsers !== null && roomHistoryReady) {
@@ -2990,6 +3013,7 @@
           document.getElementById('headerTitle').innerText = cityName + ' Room #' + currentRoom;
           document.getElementById('chatNoticeTitle').innerText = cityName + ' Room #' + currentRoom + ' Q&A';
           document.getElementById('chatNoticeSub').innerText = t.noticeSub;
+          updateChatRoomOccupancyBadge(roomPreviousUsers===null?null:Object.keys(roomPreviousUsers).length);
         }
       }
 
