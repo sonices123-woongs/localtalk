@@ -1736,9 +1736,84 @@
     function officialSearchLabels(){
       return ({ko:['장소나 제목 검색 (예: 명동)','전체','공지','추천','팁','검색 결과가 없습니다.'],en:['Search places or titles (e.g. Myeongdong)','All','Notice','Recommended','Tip','No matching posts.'],ja:['場所・タイトルを検索','すべて','お知らせ','おすすめ','ヒント','検索結果がありません'], 'zh-CN':['搜索地点或标题','全部','公告','推荐','提示','没有搜索结果']})[currentLang]||['장소나 제목 검색 (예: 명동)','전체','공지','추천','팁','검색 결과가 없습니다.'];
     }
+
+    // Notice reader is a full-screen overlay; background board scroll is preserved.
+    var officialReaderId=null;
+    var officialReaderPreviousFocus=null;
+    function closeOfficialReader(){
+      var modal=document.getElementById('localTalkNoticeReader');
+      if(modal)modal.remove();
+      officialReaderId=null;
+      officialOpenNotices.clear();
+      if(officialReaderPreviousFocus&&officialReaderPreviousFocus.isConnected)officialReaderPreviousFocus.focus();
+      officialReaderPreviousFocus=null;
+    }
+    function openOfficialReader(id){
+      if(!officialData[id])return;
+      if(officialReaderId!==id)closeOfficialReader();
+      officialReaderPreviousFocus=document.activeElement;
+      officialReaderId=id;
+      officialOpenNotices.clear();
+      officialOpenNotices.add(id);
+      renderOfficialReader();
+    }
+    function renderOfficialReader(){
+      var old=document.getElementById('localTalkNoticeReader');
+      if(old)old.remove();
+      var id=officialReaderId,p=officialData[id];
+      if(!id||!p){officialReaderId=null;officialOpenNotices.clear();return;}
+      var parsed=officialCategoryFromTitle(p.title);
+      var backdrop=document.createElement('div');
+      backdrop.id='localTalkNoticeReader';
+      backdrop.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.62);display:flex;align-items:center;justify-content:center;padding:env(safe-area-inset-top, 8px) 8px env(safe-area-inset-bottom, 8px);box-sizing:border-box';
+      backdrop.setAttribute('role','dialog');backdrop.setAttribute('aria-modal','true');
+      var panel=document.createElement('div');
+      panel.style.cssText='width:100%;max-width:670px;height:calc(100dvh - 20px);max-height:900px;min-height:0;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden';
+      var head=document.createElement('div');head.style.cssText='padding:15px 17px 12px;border-bottom:1px solid #e2e8f0;flex-shrink:0;background:#fff';
+      var top=document.createElement('div');top.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:12px';
+      var tag=document.createElement('span');tag.className='bg-indigo-50 text-indigo-700 rounded-lg px-2 py-1 text-xs font-bold';tag.textContent=officialCategoryLabel(parsed.category);
+      var close=document.createElement('button');close.type='button';close.textContent='×';
+      close.style.cssText='border:0;background:#f1f5f9;color:#334155;border-radius:10px;min-width:38px;min-height:38px;font-size:26px;cursor:pointer';
+      close.setAttribute('aria-label',({ko:'닫기',en:'Close',ja:'閉じる','zh-CN':'关闭'})[currentLang]||'Close');
+      close.onclick=closeOfficialReader;top.appendChild(tag);top.appendChild(close);
+      var title=document.createElement('h2');title.className='font-bold text-slate-800 text-base break-words leading-relaxed mt-2';
+      title.textContent=parsed.title;boardDisplayText(title,parsed.title,'official:'+id+':title');
+      head.appendChild(top);head.appendChild(title);panel.appendChild(head);
+      var body=document.createElement('div');body.style.cssText='flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:16px 18px 28px';
+      body.className='space-y-4 text-sm text-slate-700 leading-relaxed';
+      officialDecodeBlocks(p.body).forEach(function(block,index){
+        if(block.type==='text'){
+          var line=document.createElement('p');line.className='whitespace-pre-wrap break-words';line.textContent=block.text;
+          boardDisplayText(line,block.text,'official:'+id+':block:'+index,true);body.appendChild(line);
+        }else{
+          var img=document.createElement('img');img.src=block.url;img.alt='첨부 사진';img.loading='lazy';img.decoding='async';img.className='w-full rounded-xl object-contain cursor-pointer';
+          img.onclick=function(){window.open(block.url,'_blank','noopener,noreferrer');};body.appendChild(img);
+        }
+      });
+      panel.appendChild(body);
+      if(officialIsAdmin){
+        var actions=document.createElement('div');actions.style.cssText='padding:8px 15px;border-top:1px solid #e2e8f0;display:flex;gap:10px;flex-shrink:0';
+        actions.appendChild(officialButton(officialL()[9],function(){closeOfficialReader();editOfficialNotice(id);}));
+        actions.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));
+        panel.appendChild(actions);
+      }
+      backdrop.appendChild(panel);
+      backdrop.addEventListener('click',function(e){if(e.target===backdrop)closeOfficialReader();});
+      document.body.appendChild(backdrop);
+      close.focus();
+      body.querySelectorAll('[data-board-translation-key]').forEach(boardTranslateElement);
+    }
     function renderOfficialNotices(){
       var wrap=document.getElementById('officialPosts');if(!wrap)return;
       wrap.replaceChildren();
+      // Reset the older inline sticky-reader layout.
+      var scroller=document.getElementById('boardScrollablePosts');
+      if(scroller){scroller.style.overflowY='auto';scroller.style.display='';scroller.style.flexDirection='';}
+      var panel=document.getElementById('boardNoticePanel');
+      if(panel){panel.style.display='';panel.style.flexDirection='';panel.style.flex='';panel.style.minHeight='';panel.style.overflow='';}
+      var titleSection=document.getElementById('boardPostsTitle');if(titleSection)titleSection.style.display='';
+      var adminTools=document.getElementById('officialAdminTools');if(adminTools)adminTools.style.display='';
+      ['display','flexDirection','flex','minHeight','overflow'].forEach(function(key){wrap.style[key]='';});
       var q=officialSearchText.trim().toLowerCase();
       var aliases=[['명동','myeongdong','myungdong','明洞','ミョンドン'],['홍대','hongdae','hongik','弘大','ホンデ'],['서울역','seoul station','ソウル駅'],['강남','gangnam','江南','カンナム'],['경복궁','gyeongbokgung','景福宮','景福宫'],['동대문','dongdaemun','東大門'],['부산','busan','釜山'],['해운대','haeundae','海雲台'],['제주','jeju','済州','济州']];
       var normalized=q;
@@ -1749,81 +1824,22 @@
         return !q||officialSearchCorpus(p).indexOf(q)!==-1||officialSearchCorpus(p).indexOf(normalized)!==-1;
       }).sort(function(a,b){return (officialData[b].createdAt||0)-(officialData[a].createdAt||0);});
       if(boardSection==='notice')updateBoardSearchCount(ids.length);
-      // Single-post reading mode: pin the selected title at the top of the
-      // board's reading area while scrolling only the article body.
-      var activeId=Array.from(officialOpenNotices)[0];
-      if(activeId && !ids.includes(activeId)){officialOpenNotices.clear();activeId=null;}
-      var reading=!!activeId;
-      var scroller=document.getElementById('boardScrollablePosts');
-      var panel=document.getElementById('boardNoticePanel');
-      var panelTitle=document.getElementById('boardPostsTitle');
-      var adminTools=document.getElementById('officialAdminTools');
-      if(scroller){
-        scroller.style.overflowY='auto';
-        scroller.style.display='';
-        scroller.style.flexDirection='';
-      }
-      if(panel){
-        panel.style.display='';
-        panel.style.flexDirection='';
-        panel.style.flex='';
-        panel.style.minHeight='';
-        panel.style.overflow='';
-      }
-      if(panelTitle)panelTitle.style.display=reading?'none':'';
-      if(adminTools)adminTools.style.display=reading?'none':'';
-      wrap.style.display='';
-      wrap.style.flexDirection='';
-      wrap.style.flex='';
-      wrap.style.minHeight='';
-      wrap.style.overflow='';
-      if(reading)ids=[activeId];
-
       if(!ids.length){var empty=document.createElement('p');empty.className='text-sm text-slate-400 text-center py-8';empty.textContent=officialSearchLabels()[5];wrap.appendChild(empty);}
       ids.forEach(function(id){
         var p=officialData[id],parsed=officialCategoryFromTitle(p.title);
         var card=document.createElement('article');card.className='bg-white border border-slate-200 rounded-2xl p-3 shadow-sm';
-        var details=document.createElement('details');details.className='group';
-        var summary=document.createElement('summary');summary.className='cursor-pointer list-none block text-sm min-w-0';
-        summary.style.listStyle='none';
-        if(reading){summary.style.position='sticky';summary.style.top='0';summary.style.zIndex='10';summary.style.background='#ffffff';summary.style.padding='6px 0 10px';summary.style.borderBottom='1px solid #e2e8f0';}
-        var tagRow=document.createElement('div');tagRow.className='flex items-center justify-between gap-2 mb-2 min-w-0';
-        var tag=document.createElement('span');tag.className='inline-flex items-center bg-indigo-50 text-indigo-700 rounded-lg px-2 py-1 text-xs font-bold max-w-full';tag.textContent=officialCategoryLabel(parsed.category);
-        tagRow.appendChild(tag);
-        var title=document.createElement('span');title.className='block font-bold text-slate-800 break-words min-w-0 leading-relaxed';title.textContent=parsed.title;
-        var toggleRow=document.createElement('div');toggleRow.className='flex justify-end mt-2';
-        var toggle=document.createElement('span');toggle.className='inline-flex items-center text-indigo-600 font-semibold text-xs whitespace-nowrap';
-        toggleRow.appendChild(toggle);
-        function updateOfficialCardState(){
-          toggle.textContent=boardExpandLabel(details.open);
-          title.style.display=details.open?'block':'-webkit-box';
-          title.style.webkitBoxOrient=details.open?'initial':'vertical';
-          title.style.webkitLineClamp=details.open?'unset':'2';
-          title.style.overflow=details.open?'visible':'hidden';
-        }
-        if(officialOpenNotices.has(id))details.open=true;
-        summary.addEventListener('click',function(event){
-          event.preventDefault();
-          if(reading)officialOpenNotices.clear();
-          else {officialOpenNotices.clear();officialOpenNotices.add(id);}
-          renderOfficialNotices();
-          if(scroller)scroller.scrollTop=0;
-        });
-        boardDisplayText(title,parsed.title,'official:'+id+':title');
-        summary.appendChild(tagRow);summary.appendChild(title);summary.appendChild(toggleRow);details.appendChild(summary);
-        updateOfficialCardState();
-        var content=document.createElement('div');content.className='mt-3 pt-3 border-t space-y-3 text-sm text-slate-700 pb-4';
-        officialDecodeBlocks(p.body).forEach(function(block){
-          if(block.type==='text'){
-            var text=document.createElement('p');text.className='whitespace-pre-wrap break-words';text.textContent=block.text;boardDisplayText(text,block.text,'official:'+id+':block:'+content.childNodes.length,true);content.appendChild(text);
-          }else{
-            var img=document.createElement('img');img.src=block.url;img.alt='첨부 사진';img.loading='lazy';img.decoding='async';img.className='w-full rounded-xl object-contain cursor-pointer';
-            img.addEventListener('click',function(){window.open(block.url,'_blank','noopener,noreferrer');});content.appendChild(img);
-          }
-        });details.appendChild(content);if(details.open)content.querySelectorAll('[data-board-translation-key]').forEach(boardTranslateElement);
-        if(officialIsAdmin){var actions=document.createElement('div');actions.className='flex gap-2 mt-2';actions.appendChild(officialButton(officialL()[9],function(){editOfficialNotice(id);}));actions.appendChild(officialButton(officialL()[10],function(){deleteOfficialNotice(id);},true));details.appendChild(actions);}
-        card.appendChild(details);wrap.appendChild(card);
+        var opener=document.createElement('button');opener.type='button';opener.className='block w-full text-left cursor-pointer';
+        opener.onclick=function(){openOfficialReader(id);};
+        var tag=document.createElement('span');tag.className='inline-flex bg-indigo-50 text-indigo-700 rounded-lg px-2 py-1 text-xs font-bold mb-2';
+        tag.textContent=officialCategoryLabel(parsed.category);opener.appendChild(tag);
+        var title=document.createElement('span');title.className='font-bold text-slate-800 break-words leading-relaxed';
+        title.style.cssText='display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden';
+        title.textContent=parsed.title;boardDisplayText(title,parsed.title,'official:'+id+':title');opener.appendChild(title);
+        var bottom=document.createElement('span');bottom.className='block text-right text-indigo-600 font-semibold text-xs mt-2';
+        bottom.textContent=boardExpandLabel(false);opener.appendChild(bottom);
+        card.appendChild(opener);wrap.appendChild(card);
       });
+      if(officialReaderId){if(officialData[officialReaderId])renderOfficialReader();else closeOfficialReader();}
     }
     function updateOfficialSearchUI(){
       var labels=officialSearchLabels(),input=document.getElementById('officialSearchInput'),select=document.getElementById('officialSearchCategory');
