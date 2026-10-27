@@ -2863,6 +2863,24 @@
 
     // All user-controlled content is inserted as text, never parsed as HTML.
     function renderMessages(msgs) {
+      // Small localized discoverability hint in the existing chat information card.
+      var hint=document.getElementById('chatSafetyMenuHint');
+      var subtitle=document.getElementById('chatNoticeSub');
+      if(subtitle){
+        if(!hint){
+          hint=document.createElement('span');
+          hint.id='chatSafetyMenuHint';
+          hint.className='block mt-1 text-[11px] text-indigo-600/80';
+          subtitle.insertAdjacentElement('afterend',hint);
+        }
+        var hintLabels={
+          ko:'안내: 메시지 옆 ⋯에서 신고·차단할 수 있어요.',
+          en:'Tip: Tap ⋯ beside a message to report or block.',
+          ja:'ヒント：メッセージ横の ⋯ から通報・ブロックできます。',
+          'zh-CN':'提示：点击消息旁的 ⋯ 可以举报或屏蔽。'
+        };
+        hint.textContent=hintLabels[currentLang]||hintLabels.ko;
+      }
       loadSafetyBlocked();
       resetTranslationRoom();
       var container = document.getElementById('messageList');
@@ -2916,14 +2934,22 @@
         var sender = document.createElement('span');
         sender.className = 'text-xs font-bold text-slate-500 px-1 mb-0.5';
         sender.textContent = mine ? getFormattedMySender() + ' (' + uiText('mine') + ')' : String(m.sender || '');
-        wrapper.appendChild(sender);
         if (!mine && m.uid) {
+          var senderRow=document.createElement('div');
+          senderRow.className='flex items-center gap-2';
+          senderRow.appendChild(sender);
           var safetyBtn=document.createElement('button');
           safetyBtn.type='button';
-          safetyBtn.className='text-xs text-slate-500 underline mb-1 px-1 self-start';
-          safetyBtn.textContent='⚑ '+safetyText().menu;
+          safetyBtn.className='text-slate-500 hover:text-indigo-600 rounded-lg px-2 py-0.5 text-lg font-bold leading-none focus:outline-none focus:ring-2 focus:ring-indigo-400';
+          safetyBtn.textContent='⋯';
+          var menuLabels={ko:'메시지 신고·차단 메뉴',en:'Report or block message',ja:'メッセージの通報・ブロック','zh-CN':'举报或屏蔽消息'};
+          safetyBtn.setAttribute('aria-label',menuLabels[currentLang]||menuLabels.ko);
+          safetyBtn.title=menuLabels[currentLang]||menuLabels.ko;
           safetyBtn.addEventListener('click',function(){openSafetyModal(m.id);});
-          wrapper.appendChild(safetyBtn);
+          senderRow.appendChild(safetyBtn);
+          wrapper.appendChild(senderRow);
+        } else {
+          wrapper.appendChild(sender);
         }
         var bubble = document.createElement('div');
         bubble.className = 'max-w-[82%] rounded-2xl p-3 text-xs sm:text-sm leading-relaxed chat-bubble ' +
