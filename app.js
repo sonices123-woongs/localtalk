@@ -1207,6 +1207,7 @@
     // v20.32: admin-only report queue. Firebase rules are the actual authorization boundary.
     var adminReportItems=[];
     var adminReportStatuses={};
+    var adminChatReportReadError='';
     function closeAdminReports(){
       var modal=document.getElementById('adminReportsModal');
       if(modal)modal.classList.add('hidden');
@@ -1216,29 +1217,85 @@
       var profile=document.getElementById('profileModal');if(profile)profile.classList.add('hidden');
       document.getElementById('adminReportsModal').classList.remove('hidden');
       document.getElementById('adminReportsList').textContent='신고 내역을 불러오는 중...';
-      Promise.all([db.ref('communityReports').limitToLast(100).once('value'),db.ref('communityReportStatuses').once('value')]).then(function(results){
+      // Board reports and chat-message reports are stored in separate paths.
+      // A chat read error must not hide working board moderation.
+      var chatRequest=db.ref('reports').limitToLast(100).once('value').then(function(snapshot){
+        return {ok:true,items:snapshot.val()||{}};
+      }).catch(function(error){
+        console.error('Admin chat report read failed',error);
+        return {ok:false,items:{},code:String((error&&error.code)||'unknown')};
+      });
+      Promise.all([
+        db.ref('communityReports').limitToLast(100).once('value'),
+        db.ref('communityReportStatuses').once('value'),
+        chatRequest
+      ]).then(function(results){
         if(!officialIsAdmin||document.getElementById('adminReportsModal').classList.contains('hidden'))return;
-        var raw=results[0].val()||{};
-        adminReportItems=Object.keys(raw).map(function(id){return {id:id,data:raw[id]};}).sort(function(a,b){return (b.data.createdAt||0)-(a.data.createdAt||0);});
+        var boardRaw=results[0].val()||{};
+        var boardItems=Object.keys(boardRaw).map(function(id){
+          return {id:id,data:boardRaw[id],source:'community'};
+        });
+        var chatResult=results[2];
+        var chatItems=Object.keys(chatResult.items).map(function(id){
+          return {id:id,data:chatResult.items[id],source:'chat'};
+        });
+        adminChatReportReadError=chatResult.ok?'':chatResult.code;
+        adminReportItems=boardItems.concat(chatItems).sort(function(a,b){
+          return (b.data.createdAt||0)-(a.data.createdAt||0);
+        });
         adminReportStatuses=results[1].val()||{};
         renderAdminReports();
-      }).catch(function(e){console.error('Admin report read',e);document.getElementById('adminReportsList').textContent='신고 목록을 읽지 못했습니다. Firebase 테스트 규칙을 게시했는지 확인하세요.';});
+      }).catch(function(e){
+        console.error('Admin report read',e);
+        document.getElementById('adminReportsList').textContent='게시판 신고 목록을 읽지 못했습니다. Firebase 보안 규칙을 확인하세요.';
+      });
     }
     function renderAdminReports(){
       var root=document.getElementById('adminReportsList');root.replaceChildren();
-      var pending=adminReportItems.filter(function(item){return !adminReportStatuses[item.id];}).length;
-      document.getElementById('adminReportCount').textContent='(미처리 '+pending+' / 최근 '+adminReportItems.length+'건)';
-      if(!adminReportItems.length){root.textContent='접수된 신고가 없습니다.';return;}
+      var pending=adminReportItems.filter(function(item){
+        return item.source==='community'&&!adminReportStatuses[item.id];
+      }).length;
+      var chatCount=adminReportItems.filter(function(item){return item.source==='chat';}).length;
+      document.getElementById('adminReportCount').textContent='(게시판 미처리 '+pending+' / 채팅 신고 '+chatCount+' / 최근 '+adminReportItems.length+'건)';
+      if(adminChatReportReadError){
+        var errorNotice=document.createElement('p');
+        errorNotice.className='text-xs text-red-700 bg-red-50 rounded-lg p-2';
+        errorNotice.textContent='채팅 신고 목록 읽기 실패 ('+adminChatReportReadError+'). Firebase의 reports 읽기 규칙 확인이 필요합니다.';
+        root.appendChild(errorNotice);
+      }
+      if(!adminReportItems.length){
+        var emptyNotice=document.createElement('p');
+        emptyNotice.className='text-sm text-slate-500 py-3';
+        emptyNotice.textContent=adminChatReportReadError?'확인 가능한 게시판 신고가 없습니다.':'접수된 신고가 없습니다.';
+        root.appendChild(emptyNotice);return;
+      }
       adminReportItems.forEach(function(item){
-        var d=item.data||{},st=adminReportStatuses[item.id];
+        var d=item.data||{},isChat=item.source==='chat';
+        var st=isChat?null:adminReportStatuses[item.id];
         var card=document.createElement('div');card.className='border border-slate-200 rounded-xl p-3 space-y-2';
         var heading=document.createElement('div');heading.className='font-bold text-slate-800';
-        heading.textContent=(d.kind==='comment'?'댓글':'게시글')+' 신고 · '+(d.cityId||'')+' · '+(st?'처리 완료':'미처리');card.appendChild(heading);
+        heading.textContent=isChat
+          ? '채팅 메시지 신고 · '+String(d.cityId||'')+' · Room #'+String(d.roomId||'')
+          : (d.kind==='comment'?'댓글':'게시글')+' 신고 · '+String(d.cityId||'')+' · '+(st?'처리 완료':'미처리');
+        card.appendChild(heading);
         var meta=document.createElement('p');meta.className='text-xs text-slate-500';
         var reasons=['괴롭힘·욕설','스팸·광고','부적절한 내용','기타'];
         meta.textContent='사유: '+(reasons[Number(d.reason)]||'기타')+' · '+(d.createdAt?new Date(d.createdAt).toLocaleString():'날짜 없음');card.appendChild(meta);
-        var content=document.createElement('div');content.className='bg-slate-50 rounded-lg p-2 text-sm whitespace-pre-wrap break-words';content.textContent=String(d.contentText||'').slice(0,2000);card.appendChild(content);
-        var author=document.createElement('p');author.className='text-xs text-slate-500 break-all';author.textContent='작성자: '+(d.sender||'알 수 없음')+' · 글 ID: '+(d.postId||'');card.appendChild(author);
+        var content=document.createElement('div');content.className='bg-slate-50 rounded-lg p-2 text-sm whitespace-pre-wrap break-words';
+        content.textContent=String(isChat?d.messageText:d.contentText||'').slice(0,2000);
+        card.appendChild(content);
+        var author=document.createElement('p');author.className='text-xs text-slate-500 break-all';
+        author.textContent='작성자: '+String(d.sender||'알 수 없음')+
+          (isChat?' · 메시지 ID: '+String(d.messageId||''):' · 글 ID: '+String(d.postId||''));
+        card.appendChild(author);
+        if(isChat){
+          // Chat reports are visible for review. Do not enable message deletion
+          // until the deployed Firebase rules and authorization are verified.
+          var note=document.createElement('p');note.className='text-xs text-amber-800';
+          note.textContent='채팅 신고 접수 기록입니다. 메시지 삭제·처리는 Firebase 관리자 권한 확인 후 지원합니다.';
+          card.appendChild(note);
+          root.appendChild(card);return;
+        }
         if(!st){
           var controls=document.createElement('div');controls.className='flex gap-2 flex-wrap';
           var review=document.createElement('button');review.type='button';review.className='px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs';review.textContent='검토 완료 (삭제 안 함)';review.onclick=function(){adminResolveReport(item,'reviewed');};controls.appendChild(review);
