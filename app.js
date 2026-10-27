@@ -868,13 +868,13 @@
       'zh-CN':{place:'分享的位置',close:'关闭',check:'📍 查看距当前位置的距离',again:'📍 重新查看距离',checking:'正在获取位置…',hint:'仅点击按钮时请求定位权限。（直线距离）',waiting:'请允许手机访问位置信息。',unsupported:'此设备不支持定位。',denied:'定位权限被拒绝。请检查手机中的应用定位权限。',timeout:'定位超时，请重试。',unavailable:'无法获取当前位置。请检查手机定位服务和应用权限。',insecure:'当前环境限制定位功能。',distance:'距当前位置的直线距离约 ',suffix:' · 实际行程距离可能不同。',missing:'此旧地点没有准确坐标，请作者重新选取地图标记。',mapError:'地图加载失败，请重试。'}
     };
     // Shared-place directions launch Google Maps without an additional API request.
-    // Google Maps offers transit routing in Korea; car and walking routes
-    // can be opened in Kakao Map through an official coordinate-based HTTPS link.
+    // Google Maps provides transit links; NAVER Maps mobile web provides
+    // place search followed by car/walking route selection without app install.
     var placeDirectionsText={
-      ko:{googleTransit:'🚆 Google 지도 대중교통',googleGeneral:'🌍 Google 지도 길찾기',kakao:'🚗🚶 카카오맵 자동차·도보'},
-      en:{googleTransit:'🚆 Google Maps transit',googleGeneral:'🌍 Google Maps directions',kakao:'🚗🚶 KakaoMap driving & walking'},
-      ja:{googleTransit:'🚆 Google マップ公共交通',googleGeneral:'🌍 Google マップ経路検索',kakao:'🚗🚶 KakaoMap 車・徒歩'},
-      'zh-CN':{googleTransit:'🚆 Google 地图公交路线',googleGeneral:'🌍 Google 地图路线',kakao:'🚗🚶 KakaoMap 驾车和步行'}
+      ko:{googleTransit:'🚆 Google 지도 대중교통',googleGeneral:'🌍 Google 지도 길찾기',naver:'🚗🚶 네이버 지도에서 장소·길찾기'},
+      en:{googleTransit:'🚆 Google Maps transit',googleGeneral:'🌍 Google Maps directions',naver:'🚗🚶 Find routes in NAVER Maps'},
+      ja:{googleTransit:'🚆 Google マップ公共交通',googleGeneral:'🌍 Google マップ経路検索',naver:'🚗🚶 NAVER マップで経路検索'},
+      'zh-CN':{googleTransit:'🚆 Google 地图公交路线',googleGeneral:'🌍 Google 地图路线',naver:'🚗🚶 在 NAVER 地图中查询路线'}
     };
     function isKoreaPlace(place){
       if(!validSavedPlace(place))return false;
@@ -909,19 +909,19 @@
           directionsLink.removeAttribute('href');
         }
       }
-      var kakaoLink=document.getElementById('viewPlaceKakaoDirectionsLink');
-      if(kakaoLink){
-        kakaoLink.classList.toggle('hidden',!koreanDestination);
-        kakaoLink.textContent=labels.kakao;
+      var naverLink=document.getElementById('viewPlaceNaverDirectionsLink');
+      if(naverLink){
+        naverLink.classList.toggle('hidden',!koreanDestination);
+        naverLink.textContent=labels.naver;
         if(koreanDestination){
-          // Official Kakao Maps HTTPS link, usable by mobile browsers and apps.
-          // This provides the destination; the user selects origin and route mode.
-          kakaoLink.href='https://map.kakao.com/link/to/'+
-            encodeURIComponent(String(place.name||place.address||'Destination').slice(0,100))+
-            ','+Number(place.lat)+','+Number(place.lng);
-          kakaoLink.target=routeTarget;
+          // HTTPS web search is accessible without installing the NAVER Maps
+          // app. After locating the destination, select Directions and mode.
+          var query=String(place.name||place.address||'').trim() ||
+            (Number(place.lat)+','+Number(place.lng));
+          naverLink.href='https://map.naver.com/p/search/'+encodeURIComponent(query.slice(0,180));
+          naverLink.target=routeTarget;
         }else{
-          kakaoLink.removeAttribute('href');
+          naverLink.removeAttribute('href');
         }
       }
       var dialog=document.getElementById('placeViewer');
@@ -1905,7 +1905,10 @@
     // Explicit exits use joinedAt=0 to display a notice immediately; brief
     // disconnections get a short grace period to avoid phantom departures.
     var pendingRoomLeaves = Object.create(null);
-    var ROOM_LEAVE_NOTICE_GRACE_MS = 5000;
+    // Backgrounding a WebView to read a map can temporarily disconnect Firebase.
+    // Delay only non-explicit disconnect notices; explicit room exits remain instant.
+    // A fully closed browser without an explicit exit will also be noticed later.
+    var ROOM_LEAVE_NOTICE_GRACE_MS = 60000;
     function clearPendingRoomLeaves() {
       Object.keys(pendingRoomLeaves).forEach(function(uid) {
         clearTimeout(pendingRoomLeaves[uid].timer);
