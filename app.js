@@ -1708,7 +1708,7 @@
       document.getElementById('officialTitle').focus();
     }
     async function deleteOfficialNotice(id){
-      if(!officialIsAdmin||!officialData[id]||!confirm(officialL()[8]))return;
+      if(!officialIsAdmin||!officialData[id]||!await ltConfirm(officialL()[8]))return;
       db.ref('officialNotices/'+currentCity.id+'/'+id).remove().catch(function(e){console.error(e);alert(officialL()[7]);});
     }
     function boardExpandLabel(expanded){
