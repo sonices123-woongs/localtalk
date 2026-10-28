@@ -818,13 +818,44 @@
         console.error('Presence update failed:', err);
       });
 
+      showCityCloudMenu();
+
+    }
+
+
+
+    function cloudTexts(){
+      return ({
+        ko:['어디부터 둘러볼까요?','실시간 채팅','여행자들과 질문하고 대화하기','공지 & 팁','한국 여행 정보와 추천','여행자 게시판','경험과 질문을 함께 나누기'],
+        en:['Where would you like to go?','Live Chat','Ask and chat with travelers','Notices & Tips','Korea travel guides and tips','Traveler Board','Share experiences and questions'],
+        ja:['どこから始めますか？','リアルタイムチャット','旅行者と質問・交流','お知らせ＆ヒント','韓国旅行ガイドと情報','旅行者掲示板','体験や質問を共有'],
+        'zh-CN':['想先看看什么？','实时聊天','与旅行者交流问答','公告与贴士','韩国旅行指南和资讯','旅行者论坛','分享旅行经验和问题']
+      })[currentLang]||[];
+    }
+    function refreshCityCloud(){
+      var a=cloudTexts(),keys=['cloudIntro','cloudChatTitle','cloudChatNote','cloudNoticeTitle','cloudNoticeNote','cloudTravelerTitle','cloudTravelerNote'];
+      keys.forEach(function(k,i){var el=document.getElementById(k);if(el)el.textContent=a[i]||'';});
+      if(currentCity&&document.getElementById('headerTitle'))document.getElementById('headerTitle').textContent=getCityName(currentCity);
+    }
+    function showCityCloudMenu(){
+      if(!currentCity)return;
+      currentView='cityMenu';
+      ['homeView','roomListView','chatView','mapView','boardView'].forEach(function(k){document.getElementById(k).classList.add('hidden');});
+      document.getElementById('cityCloudView').classList.remove('hidden');
+      document.getElementById('backBtn').classList.remove('hidden');
+      refreshCityCloud();
+    }
+    function openCityBoardDetail(section){
+      if(!currentCity||!requireAuth())return;
       currentView = 'board';
 
       document.getElementById('homeView').classList.add('hidden');
       document.getElementById('roomListView').classList.add('hidden');
       document.getElementById('chatView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
+      document.getElementById('cityCloudView').classList.add('hidden');
       document.getElementById('boardView').classList.remove('hidden');
+      document.getElementById('boardView').classList.add('lt-cloud-detail');
       
       document.getElementById('backBtn').classList.remove('hidden');
 
@@ -839,10 +870,9 @@
 
       renderBoardPosts();
       startCommunityListener();
-      selectBoardSection('notice');
+      selectBoardSection(section);
       startOfficialNotices();
     }
-
 
     // v16: public, city-scoped community board. Uses textContent for all user input.
     var communityRef=null, communityCallback=null, communityData={};
@@ -1967,6 +1997,7 @@
       currentView = 'roomList';
 
       document.getElementById('boardView').classList.add('hidden');
+      document.getElementById('cityCloudView').classList.add('hidden');
       document.getElementById('chatView').classList.add('hidden');
       document.getElementById('mapView').classList.add('hidden');
       document.getElementById('roomListView').classList.remove('hidden');
@@ -2539,7 +2570,9 @@
         openChatRoomList();
       } else if (currentView === 'roomList') {
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
-        openCityBoard(currentCity.id);
+        showCityCloudMenu();
+      } else if (currentView === 'board') {
+        showCityCloudMenu();
       } else {
         stopRoomListeners();
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
@@ -2552,6 +2585,7 @@
 
         document.getElementById('homeView').classList.remove('hidden');
         document.getElementById('boardView').classList.add('hidden');
+        document.getElementById('cityCloudView').classList.add('hidden');
         document.getElementById('roomListView').classList.add('hidden');
         document.getElementById('chatView').classList.add('hidden');
         document.getElementById('mapView').classList.add('hidden');
@@ -3201,6 +3235,7 @@
       }
       if (!I18N[lang]) return;
       currentLang = lang;
+      if(currentView==='cityMenu')refreshCityCloud();
       updateMyLocationLabels();
       // Local Talk Korea policy pages follow the app's selected language.
       var policyLinkText = {
