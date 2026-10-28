@@ -79,11 +79,15 @@
     function startAnonymousAuth() {
       var status = document.getElementById('authStatus');
       document.getElementById('authStatusText').textContent = uiText('authConnecting');
+      document.getElementById('authStatusText').classList.add('hidden');
+      document.getElementById('authLoadingVisual').classList.remove('hidden');
       document.getElementById('authRetry').classList.add('hidden');
       status.classList.remove('hidden');
       auth.signInAnonymously().catch(function(error) {
         console.error('Firebase authentication failed:', error.code);
         document.getElementById('authStatusText').textContent = uiText('authFailed') + ' (' + error.code + ')';
+        document.getElementById('authStatusText').classList.remove('hidden');
+        document.getElementById('authLoadingVisual').classList.add('hidden');
         document.getElementById('authRetry').classList.remove('hidden');
       });
     }
@@ -107,6 +111,8 @@
       authReady = false;
       console.error('Auth state error:', error);
       document.getElementById('authStatusText').textContent = uiText('authStateFailed');
+      document.getElementById('authStatusText').classList.remove('hidden');
+      document.getElementById('authLoadingVisual').classList.add('hidden');
       document.getElementById('authRetry').classList.remove('hidden');
     });
 
