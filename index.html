@@ -109,6 +109,28 @@ header {gap:6px;min-width:0}
 .city-photo-card {align-items:center!important}
 .city-photo-card .city-enter-label {align-self:center!important; background:#fff!important; color:#4338ca!important; font-size:17px!important; font-weight:800!important; padding:8px 13px!important; border-radius:9999px!important; box-shadow:0 2px 9px rgba(30,41,59,.13)!important; white-space:nowrap!important}
 .city-photo-card .city-enter-label i {font-size:15px!important}
+</style><style id="lt-cloud-menu-style">
+/* City choice: three floating clouds, not rigid navigation cards. */
+#cityCloudView{background:linear-gradient(180deg,#edf5ff 0%,#f8fbff 58%,#fff 100%);overflow-y:auto;}
+.lt-cloud-sky{position:relative;min-height:480px;padding:28px 10px 38px;overflow:hidden;}
+.lt-cloud-sky:before,.lt-cloud-sky:after{content:"";position:absolute;border-radius:50%;background:rgba(196,219,255,.23);pointer-events:none}
+.lt-cloud-sky:before{width:185px;height:185px;left:-115px;top:95px}
+.lt-cloud-sky:after{width:155px;height:155px;right:-90px;top:265px}
+.lt-cloud{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;text-align:center;position:relative;margin:0 auto 24px;min-height:112px;width:83%;padding:20px 30px;border-radius:49% 51% 48% 52% / 46% 48% 52% 54%;border:1px solid rgba(181,197,235,.65);box-shadow:0 12px 28px rgba(64,85,155,.13),inset 0 3px 10px rgba(255,255,255,.9);color:#312e81;background:linear-gradient(135deg,#fff 10%,#f5f0ff 95%);cursor:pointer;isolation:isolate;transition:transform .16s ease}
+.lt-cloud:before,.lt-cloud:after{content:"";position:absolute;z-index:-1;border-radius:50%;background:inherit;border-top:1px solid rgba(181,197,235,.5)}
+.lt-cloud:before{width:36%;height:83%;left:9%;top:-18%}
+.lt-cloud:after{width:37%;height:79%;right:10%;top:-15%}
+.lt-cloud:active{transform:scale(.97)}
+.lt-cloud:nth-of-type(1){margin-left:4%;transform:rotate(-2deg);background:linear-gradient(135deg,#fff,#eae9ff)}
+.lt-cloud:nth-of-type(2){margin-right:0;transform:rotate(2deg);background:linear-gradient(135deg,#fff,#f0eaff)}
+.lt-cloud:nth-of-type(3){margin-left:10%;transform:rotate(-1deg);background:linear-gradient(135deg,#fff,#e5f7ff)}
+.lt-cloud-label{font-size:17px;font-weight:800;line-height:1.25;position:relative}
+.lt-cloud-note{font-size:11px;font-weight:600;color:#64748b;line-height:1.3;position:relative}
+.lt-cloud-emoji{font-size:22px;line-height:1;position:relative}
+#boardView.lt-cloud-detail #boardFixedArea > div:first-child,
+#boardView.lt-cloud-detail #boardFixedArea > div[role="tablist"]{display:none!important}
+#boardView.lt-cloud-detail #boardFixedArea{padding-top:10px}
+@media(max-width:768px){.home-brand{font-size:calc(13px + 2pt)!important}.home-brand>span{font-size:calc(17px + 2pt)!important}}
 </style></head>
 <body>
 
@@ -259,6 +281,15 @@ header {gap:6px;min-width:0}
       </div>
     </main>
 
+    <!-- City choice: softly scattered cloud-shaped entry buttons -->
+    <main id="cityCloudView" class="hidden flex-1 w-full min-h-0">
+      <div class="lt-cloud-sky">
+        <p id="cloudIntro" class="text-center text-slate-500 text-sm font-semibold mb-8"></p>
+        <button type="button" class="lt-cloud" onclick="openChatRoomList()"><span class="lt-cloud-emoji">💬</span><span class="lt-cloud-label" id="cloudChatTitle"></span><span class="lt-cloud-note" id="cloudChatNote"></span></button>
+        <button type="button" class="lt-cloud" onclick="openCityBoardDetail('notice')"><span class="lt-cloud-emoji">📣</span><span class="lt-cloud-label" id="cloudNoticeTitle"></span><span class="lt-cloud-note" id="cloudNoticeNote"></span></button>
+        <button type="button" class="lt-cloud" onclick="openCityBoardDetail('traveler')"><span class="lt-cloud-emoji">💭</span><span class="lt-cloud-label" id="cloudTravelerTitle"></span><span class="lt-cloud-note" id="cloudTravelerNote"></span></button>
+      </div>
+    </main>
     <!-- [화면 2] 지역 게시판 메인 화면 -->
     <main id="boardView" class="hidden flex-1 w-full min-h-0">
       <div id="boardFixedArea" class="p-3 pb-1 space-y-2 shrink-0">
