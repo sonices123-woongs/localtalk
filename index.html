@@ -134,7 +134,14 @@ header {gap:6px;min-width:0}
 
   <div class="app-container sm:rounded-[36px] border-slate-700 sm:border-[8px]">
     <div id="authStatus" role="status" aria-live="polite" class="absolute inset-0 z-[110] bg-slate-900/90 text-white flex flex-col items-center justify-center p-8 text-center gap-4">
-      <p id="authStatusText" class="text-sm font-bold">안전한 연결을 준비하고 있습니다...</p>
+      <div id="authLoadingVisual" class="flex flex-col items-center gap-5" aria-label="Loading">
+        <div class="relative flex items-center justify-center w-20 h-20">
+          <div class="absolute inset-0 rounded-full border-4 border-slate-600/60 border-t-sky-300 animate-spin"></div>
+          <div class="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 text-white text-2xl" aria-hidden="true">💬</div>
+        </div>
+        <div class="text-2xl font-bold tracking-wide">Local Talk</div>
+      </div>
+      <p id="authStatusText" class="hidden text-sm font-bold"></p>
       <button id="authRetry" type="button" class="hidden bg-indigo-600 rounded-xl px-5 py-3 text-sm font-bold" onclick="startAnonymousAuth()">다시 시도</button>
     </div>
 
