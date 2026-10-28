@@ -826,8 +826,8 @@
 
     function cloudTexts(){
       return ({
-        ko:['어디부터 둘러볼까요?','실시간 채팅','여행자들과 질문하고 대화하기','공지 & 팁','한국 여행 정보와 추천','여행자 게시판','경험과 질문을 함께 나누기'],
-        en:['Where would you like to go?','Live Chat','Ask and chat with travelers','Notices & Tips','Korea travel guides and tips','Traveler Board','Share experiences and questions'],
+        ko:['어디로 이동할까요?','실시간 채팅','여행자들과 질문하고 대화하기','공지 & 팁','한국 여행 정보와 추천','여행자 게시판','경험과 질문을 함께 나누기'],
+        en:['Where would you like to go next?','Live Chat','Ask and chat with travelers','Notices & Tips','Korea travel guides and tips','Traveler Board','Share experiences and questions'],
         ja:['どこから始めますか？','リアルタイムチャット','旅行者と質問・交流','お知らせ＆ヒント','韓国旅行ガイドと情報','旅行者掲示板','体験や質問を共有'],
         'zh-CN':['想先看看什么？','实时聊天','与旅行者交流问答','公告与贴士','韩国旅行指南和资讯','旅行者论坛','分享旅行经验和问题']
       })[currentLang]||[];
