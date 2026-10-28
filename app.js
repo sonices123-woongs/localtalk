@@ -457,7 +457,7 @@
         boardBannerSub: 'Choose a room to start talking',
         boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> Essential Info & Tips',
         send: 'Send',
-        roomListTitle: ' Select Live Chat Room',
+        roomListTitle: ' Chat Rooms',
         roomFull: 'Full',
         roomEnter: 'Enter',
         roomNoticeTitle: 'Select Live Chat Room',
