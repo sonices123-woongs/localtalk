@@ -431,7 +431,7 @@
         boardBannerSub: '원하는 채팅방을 선택하여 소통해보세요',
         boardPostsTitle: '<i class="fas fa-bullhorn text-amber-500"></i> 필독 정보 & 지역 꿀팁',
         send: '전송',
-        roomListTitle: ' 실시간 대화방 선택',
+        roomListTitle: ' 실시간 대화방',
         roomFull: '정원 초과',
         roomEnter: '입장하기',
         roomNoticeTitle: '실시간 Q&A 대화방 선택',
