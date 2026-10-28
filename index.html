@@ -110,27 +110,27 @@ header {gap:6px;min-width:0}
 .city-photo-card .city-enter-label {align-self:center!important; background:#fff!important; color:#4338ca!important; font-size:17px!important; font-weight:800!important; padding:8px 13px!important; border-radius:9999px!important; box-shadow:0 2px 9px rgba(30,41,59,.13)!important; white-space:nowrap!important}
 .city-photo-card .city-enter-label i {font-size:15px!important}
 </style><style id="lt-cloud-menu-style">
-/* City choice: three floating clouds, not rigid navigation cards. */
-#cityCloudView{background:linear-gradient(180deg,#edf5ff 0%,#f8fbff 58%,#fff 100%);overflow-y:auto;}
-.lt-cloud-sky{position:relative;min-height:480px;padding:28px 10px 38px;overflow:hidden;}
-.lt-cloud-sky:before,.lt-cloud-sky:after{content:"";position:absolute;border-radius:50%;background:rgba(196,219,255,.23);pointer-events:none}
-.lt-cloud-sky:before{width:185px;height:185px;left:-115px;top:95px}
-.lt-cloud-sky:after{width:155px;height:155px;right:-90px;top:265px}
-.lt-cloud{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;text-align:center;position:relative;margin:0 auto 24px;min-height:112px;width:83%;padding:20px 30px;border-radius:49% 51% 48% 52% / 46% 48% 52% 54%;border:1px solid rgba(181,197,235,.65);box-shadow:0 12px 28px rgba(64,85,155,.13),inset 0 3px 10px rgba(255,255,255,.9);color:#312e81;background:linear-gradient(135deg,#fff 10%,#f5f0ff 95%);cursor:pointer;isolation:isolate;transition:transform .16s ease}
-.lt-cloud:before,.lt-cloud:after{content:"";position:absolute;z-index:-1;border-radius:50%;background:inherit;border-top:1px solid rgba(181,197,235,.5)}
-.lt-cloud:before{width:36%;height:83%;left:9%;top:-18%}
-.lt-cloud:after{width:37%;height:79%;right:10%;top:-15%}
-.lt-cloud:active{transform:scale(.97)}
-.lt-cloud:nth-of-type(1){margin-left:4%;transform:rotate(-2deg);background:linear-gradient(135deg,#fff,#eae9ff)}
-.lt-cloud:nth-of-type(2){margin-right:0;transform:rotate(2deg);background:linear-gradient(135deg,#fff,#f0eaff)}
-.lt-cloud:nth-of-type(3){margin-left:10%;transform:rotate(-1deg);background:linear-gradient(135deg,#fff,#e5f7ff)}
-.lt-cloud-label{font-size:17px;font-weight:800;line-height:1.25;position:relative}
+#cityCloudView{background:linear-gradient(180deg,#edf5ff 0%,#f8fbff 65%,#fff 100%);overflow-y:auto}
+#cityCloudView:not(.hidden){display:flex;flex-direction:column}
+.lt-cloud-sky{position:relative;flex:1;min-height:490px;width:100%;display:flex;flex-direction:column;justify-content:center;padding:32px 8px 38px;overflow:hidden;gap:14px}
+.lt-cloud-sky:before,.lt-cloud-sky:after{content:"";position:absolute;border-radius:50%;background:rgba(196,219,255,.19);pointer-events:none}
+.lt-cloud-sky:before{width:125px;height:125px;left:-88px;top:22%}
+.lt-cloud-sky:after{width:135px;height:135px;right:-93px;bottom:18%}
+#cloudIntro{text-align:center;font-size:16px;line-height:1.4;margin:0 0 12px;color:#64748b;font-weight:700}
+.lt-cloud{position:relative;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;text-align:center;flex-shrink:0;width:90%;height:132px;min-height:0;padding:20px 36px 12px;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20420%20190%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23ffffff%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e9ecff%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M91%20166%20C56%20168%2031%20151%2031%20124%20C31%2099%2051%2080%2083%2079%20C86%2054%20111%2040%20141%2045%20C155%2019%20188%2011%20213%2029%20C238%2013%20276%2024%20285%2052%20C319%2048%20345%2065%20349%2089%20C379%2090%20396%20106%20396%20127%20C396%20151%20377%20166%20347%20166%20Z%22%20fill%3D%22url(%23g)%22%20stroke%3D%22%23c9d5eb%22%20stroke-width%3D%221.5%22%2F%3E%3C%2Fsvg%3E");background-size:100% 100%;background-position:center;background-repeat:no-repeat;border:0;border-radius:0;box-shadow:none;color:#312e81;cursor:pointer;filter:drop-shadow(0 12px 12px rgba(74,91,140,.11));transition:filter .15s ease,transform .15s ease}
+.lt-cloud:nth-of-type(2){background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20420%20190%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23ffffff%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23f3ebff%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M91%20166%20C56%20168%2031%20151%2031%20124%20C31%2099%2051%2080%2083%2079%20C86%2054%20111%2040%20141%2045%20C155%2019%20188%2011%20213%2029%20C238%2013%20276%2024%20285%2052%20C319%2048%20345%2065%20349%2089%20C379%2090%20396%20106%20396%20127%20C396%20151%20377%20166%20347%20166%20Z%22%20fill%3D%22url(%23g)%22%20stroke%3D%22%23c9d5eb%22%20stroke-width%3D%221.5%22%2F%3E%3C%2Fsvg%3E");align-self:flex-end;width:89%}
+.lt-cloud:nth-of-type(3){background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20420%20190%22%20preserveAspectRatio%3D%22none%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x2%3D%220%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%23ffffff%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23e7f7ff%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Cpath%20d%3D%22M91%20166%20C56%20168%2031%20151%2031%20124%20C31%2099%2051%2080%2083%2079%20C86%2054%20111%2040%20141%2045%20C155%2019%20188%2011%20213%2029%20C238%2013%20276%2024%20285%2052%20C319%2048%20345%2065%20349%2089%20C379%2090%20396%20106%20396%20127%20C396%20151%20377%20166%20347%20166%20Z%22%20fill%3D%22url(%23g)%22%20stroke%3D%22%23c9d5eb%22%20stroke-width%3D%221.5%22%2F%3E%3C%2Fsvg%3E");align-self:flex-start;width:88%}
+.lt-cloud:nth-of-type(1){align-self:flex-start;margin-left:2%}
+.lt-cloud:active{filter:drop-shadow(0 5px 7px rgba(74,91,140,.12));transform:scale(.98)}
+.lt-cloud:before,.lt-cloud:after{display:none}
+.lt-cloud-emoji{display:none!important}
+.lt-cloud-label{font-size:calc(17px + 2pt);font-weight:800;line-height:1.2;position:relative}
 .lt-cloud-note{font-size:11px;font-weight:600;color:#64748b;line-height:1.3;position:relative}
-.lt-cloud-emoji{font-size:22px;line-height:1;position:relative}
 #boardView.lt-cloud-detail #boardFixedArea > div:first-child,
 #boardView.lt-cloud-detail #boardFixedArea > div[role="tablist"]{display:none!important}
 #boardView.lt-cloud-detail #boardFixedArea{padding-top:10px}
 @media(max-width:768px){.home-brand{font-size:calc(13px + 2pt)!important}.home-brand>span{font-size:calc(17px + 2pt)!important}}
+@media(max-height:660px){.lt-cloud-sky{min-height:420px;padding:16px 8px}.lt-cloud{height:111px}#cloudIntro{margin-bottom:4px}}
 </style></head>
 <body>
 
