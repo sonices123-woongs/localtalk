@@ -129,7 +129,23 @@ header {gap:6px;min-width:0}
 #boardView.lt-cloud-detail #boardFixedArea{padding-top:10px}
 @media(max-width:768px){.home-brand{font-size:calc(13px + 2pt)!important}.home-brand>span{font-size:calc(17px + 2pt)!important}}
 @media(max-height:670px){.lt-cloud-sky{gap:3px;padding:8px 8px}.lt-cloud{height:113px}#cityCloudView #cloudIntro{font-size:20px!important;margin-bottom:8px!important}}
-</style></head>
+</style><style id="profile-soft-ui">
+/* Soft onboarding only: keep all data fields, IDs and authentication logic intact. */
+#profileModal { backdrop-filter: blur(3px); }
+#profileModal > div { box-shadow:0 16px 45px rgba(15,23,42,.20); }
+#profileModal #profileTitle { font-size:18px!important; font-weight:750!important; line-height:1.35; }
+#profileModal #profileDescription { font-size:13px!important; line-height:1.45; }
+#profileModal #profileCountryLabel,
+#profileModal #profileNicknameLabel,
+#profileModal #profileLanguageLabel { font-size:15px!important; font-weight:700!important; line-height:1.4; }
+#profileModal #profileAutoTranslateLabel { font-size:14px!important; font-weight:600!important; }
+#profileModal #profilePrivacyNote { font-size:12px!important; line-height:1.5; }
+#profileModal #profileSaveButton { font-size:16px!important; }
+#profileModal #profileAdminSummary { font-size:11px!important; }
+#profileModal #modalCountry, #profileModal #modalNickname, #profileModal #profileLanguage { font-size:16px!important; }
+#authIntroHint { font-size:14px!important; }
+</style>
+</head>
 <body>
 
   <div class="app-container sm:rounded-[36px] border-slate-700 sm:border-[8px]">
@@ -140,14 +156,28 @@ header {gap:6px;min-width:0}
           <div class="flex items-center justify-center w-14 h-14 rounded-full bg-white/10 text-white text-2xl" aria-hidden="true">💬</div>
         </div>
         <div class="text-2xl font-bold tracking-wide">Local Talk</div>
+        <p id="authIntroHint" class="max-w-[250px] text-center text-sm leading-relaxed font-medium text-slate-200">앱을 이용하려면 간단한 국가와 별명 설정이 필요해요.</p>
       </div>
       <p id="authStatusText" class="hidden text-sm font-bold"></p>
       <button id="authRetry" type="button" class="hidden bg-indigo-600 rounded-xl px-5 py-3 text-sm font-bold" onclick="startAnonymousAuth()">다시 시도</button>
     </div>
 
+<script>
+  (function(){
+    var label=document.getElementById('authIntroHint');
+    if(!label)return;
+    var language=(navigator.language||'en').toLowerCase();
+    var copy=language.startsWith('ko')?'앱을 이용하려면 간단한 국가와 별명 설정이 필요해요.'
+      :language.startsWith('ja')?'アプリの利用には、国とニックネームの簡単な設定が必要です。'
+      :language.startsWith('zh')?'使用应用前，只需简单设置国家和昵称。'
+      :'To get started, simply choose your country and nickname.';
+    label.textContent=copy;
+  })();
+</script>
+
     <!-- 0. 최초 프로필 설정 모달 -->
-    <div id="profileModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
-      <div class="bg-white rounded-3xl p-6 w-full max-w-xs max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl space-y-4 border border-slate-100">
+    <div id="profileModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+      <div class="bg-white rounded-3xl p-5 w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-xl space-y-3 border border-slate-100">
         <div class="text-center space-y-1">
           <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto text-xl font-bold">
             <i class="fas fa-user-globe"></i>
