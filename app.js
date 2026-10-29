@@ -2013,6 +2013,8 @@
       if (!currentCity || !requireAuth()) return;
       currentView = 'roomList';
 
+      document.getElementById('homeView').classList.add('hidden');
+      document.getElementById('backBtn').classList.remove('hidden');
       document.getElementById('boardView').classList.add('hidden');
       document.getElementById('cityCloudView').classList.add('hidden');
       document.getElementById('chatView').classList.add('hidden');
