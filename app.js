@@ -808,8 +808,8 @@
             var labels = cloudTexts();
             menu = '<div class="lt-city-inline-menu">' +
               '<button type="button" onclick="openChatRoomList()"><span><strong>' + labels[1] + '</strong><small>' + labels[2] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
-              '<button type="button" onclick="openCityBoardDetail(\\'notice\\')"><span><strong>' + labels[3] + '</strong><small>' + labels[4] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
-              '<button type="button" onclick="openCityBoardDetail(\\'traveler\\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
+              '<button type="button" onclick="openCityBoardDetail(\'notice\')"><span><strong>' + labels[3] + '</strong><small>' + labels[4] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
+              '<button type="button" onclick="openCityBoardDetail(\'traveler\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
               '</div>';
           }
           listContainer.innerHTML += '<div class="lt-city-accordion">' + card + menu + '</div>';
