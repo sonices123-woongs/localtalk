@@ -789,15 +789,16 @@
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
           var cityToggleText = ({ko:['메뉴 보기','메뉴 접기'],en:['View menu','Hide menu'],ja:['メニューを見る','メニューを閉じる'],'zh-CN':['查看菜单','收起菜单']})[currentLang] || ['메뉴 보기','메뉴 접기'];
           var isCityExpanded = currentCity && currentView === 'home' && currentCity.id === city.id;
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.87) 0%,rgba(255,255,255,.87) 29%,rgba(255,255,255,.60) 39%,rgba(255,255,255,.08) 58%,rgba(255,255,255,0) 68%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.93) 0%,rgba(255,255,255,.88) 18%,rgba(255,255,255,.72) 36%,rgba(255,255,255,.43) 57%,rgba(255,255,255,.16) 78%,rgba(255,255,255,0) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
-                  '<h3 class="font-extrabold text-slate-900 text-base leading-tight">' + name + '</h3>' +
+                  '<h3 class="font-extrabold text-slate-900 text-lg leading-tight">' + name + '</h3>' +
                   '<span class="text-[10px] city-online-badge bg-emerald-50 text-emerald-700 font-bold px-1.5 py-0.5 rounded-full border border-emerald-100 shrink-0">' + realCount + ' ' + t.online + '</span>' +
                 '</div>' +
                 '<p class="city-place-highlights text-[11px] font-bold mt-1 leading-snug">' + subText.split(' · ').map(function(item,idx){return '<span class="city-place-item city-place-color-'+(idx%3)+'">'+item+'</span>';}).join('<span class="city-place-separator"> · </span>') + '</p>' +
               '</div>' +
+            '</div>' +
             '<span class="lt-city-toggle-hint">' + (isCityExpanded ? cityToggleText[1] : cityToggleText[0]) + ' <i class="fas fa-chevron-' + (isCityExpanded ? 'up' : 'down') + '"></i></span>' +
           '</div>';
           var expanded = currentCity && currentCity.id === city.id && currentView === 'home';
