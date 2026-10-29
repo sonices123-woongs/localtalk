@@ -797,10 +797,7 @@
                 '<p class="city-place-highlights text-[11px] font-bold mt-1 leading-snug">' + subText.split(' · ').map(function(item,idx){return '<span class="city-place-item city-place-color-'+(idx%3)+'">'+item+'</span>';}).join('<span class="city-place-separator"> · </span>') + '</p>' +
               '</div>' +
             '</div>' +
-            '<div class="text-xs font-bold city-enter-label text-indigo-600 shrink-0 flex items-center gap-1 ml-1">' +
-              '<span>' + t.enterShort + '</span>' +
-              '<i class="fas fa-chevron-right text-[10px]"></i>' +
-            '</div>' +
+
           '</div>';
           var expanded = currentCity && currentCity.id === city.id && currentView === 'home';
           var menu = '';
@@ -819,6 +816,16 @@
 
     function openCityBoard(cityId) {
       if (!requireAuth()) return;
+      if (currentView === 'home' && currentCity && currentCity.id === cityId) {
+        if (cityPresenceRef) {
+          cityPresenceRef.onDisconnect().cancel();
+          cityPresenceRef.remove();
+          cityPresenceRef = null;
+        }
+        currentCity = null;
+        renderCityList(document.getElementById('citySearchInput') ? document.getElementById('citySearchInput').value : '', lastCityCounts);
+        return;
+      }
       for (var i = 0, allCities = CITIES.concat(LEGACY_CITIES); i < allCities.length; i++) {
         if (allCities[i].id === cityId) {
           currentCity = allCities[i];
