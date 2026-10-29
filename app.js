@@ -789,7 +789,7 @@
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
           var cityToggleText = ({ko:['메뉴 보기','메뉴 접기'],en:['View menu','Hide menu'],ja:['メニューを見る','メニューを閉じる'],'zh-CN':['查看菜单','收起菜单']})[currentLang] || ['메뉴 보기','메뉴 접기'];
           var isCityExpanded = currentCity && currentView === 'home' && currentCity.id === city.id;
-          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.97) 0%,rgba(255,255,255,.97) 30%,rgba(255,255,255,.78) 39%,rgba(255,255,255,.45) 49%,rgba(255,255,255,0) 60%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
+          var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.84) 0%,rgba(255,255,255,.79) 18%,rgba(255,255,255,.63) 36%,rgba(255,255,255,.34) 57%,rgba(255,255,255,.07) 78%,rgba(255,255,255,0) 100%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
                 '<div class="flex items-center gap-2">' +
