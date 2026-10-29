@@ -807,7 +807,7 @@
             menu = '<div class="lt-city-inline-menu">' +
               '<button type="button" class="lt-menu-chat" onclick="openChatRoomList()"><span><strong>' + labels[1] + '</strong><small>' + labels[2] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
               '<button type="button" class="lt-menu-notice" onclick="openCityBoardDetail(\'notice\')"><span><strong>' + labels[3] + '</strong><small>' + labels[4] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
-              '<button type="button" onclick="openCityBoardDetail(\'traveler\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
+              '<button type="button" class="lt-menu-traveler" onclick="openCityBoardDetail(\'traveler\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
               '</div>';
           }
           listContainer.innerHTML += '<div class="lt-city-accordion">' + card + menu + '</div>';
