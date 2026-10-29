@@ -787,6 +787,8 @@
         var realCount = (activeCounts && activeCounts[city.id]) ? activeCounts[city.id] : 0;
 
         if (filter === '' || name.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || subText.toLowerCase().indexOf(filter.toLowerCase()) !== -1 || Object.values(city.subCities || {}).join(' ').toLowerCase().indexOf(filter.toLowerCase()) !== -1) {
+          var cityToggleText = ({ko:['메뉴 보기','메뉴 접기'],en:['View menu','Hide menu'],ja:['メニューを見る','メニューを閉じる'],'zh-CN':['查看菜单','收起菜单']})[currentLang] || ['메뉴 보기','메뉴 접기'];
+          var isCityExpanded = currentCity && currentView === 'home' && currentCity.id === city.id;
           var card = '<div onclick="openCityBoard(\'' + city.id + '\')" class="city-photo-card p-3.5 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-400 cursor-pointer flex items-center justify-between gap-3 w-full transition" style="' + (city.photo ? 'background-image:linear-gradient(90deg,rgba(255,255,255,.87) 0%,rgba(255,255,255,.87) 29%,rgba(255,255,255,.60) 39%,rgba(255,255,255,.08) 58%,rgba(255,255,255,0) 68%),url(&quot;'+city.photo+'&quot;)' : 'background:#fff') + '">' +
             '<div class="flex items-center gap-3 min-w-0 flex-1">' +
               '<div class="min-w-0 flex-1">' +
@@ -796,17 +798,16 @@
                 '</div>' +
                 '<p class="city-place-highlights text-[11px] font-bold mt-1 leading-snug">' + subText.split(' · ').map(function(item,idx){return '<span class="city-place-item city-place-color-'+(idx%3)+'">'+item+'</span>';}).join('<span class="city-place-separator"> · </span>') + '</p>' +
               '</div>' +
-            '</div>' +
-
+            '<span class="lt-city-toggle-hint">' + (isCityExpanded ? cityToggleText[1] : cityToggleText[0]) + ' <i class="fas fa-chevron-' + (isCityExpanded ? 'up' : 'down') + '"></i></span>' +
           '</div>';
           var expanded = currentCity && currentCity.id === city.id && currentView === 'home';
           var menu = '';
           if (expanded) {
             var labels = cloudTexts();
             menu = '<div class="lt-city-inline-menu">' +
-              '<button type="button" onclick="openChatRoomList()"><span><strong>' + labels[1] + '</strong><small>' + labels[2] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
-              '<button type="button" onclick="openCityBoardDetail(\'notice\')"><span><strong>' + labels[3] + '</strong><small>' + labels[4] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
-              '<button type="button" onclick="openCityBoardDetail(\'traveler\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
+              '<button type="button" class="lt-menu-chat" onclick="openChatRoomList()"><span><strong>' + labels[1] + '</strong><small>' + labels[2] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
+              '<button type="button" class="lt-menu-notice" onclick="openCityBoardDetail(\'notice\')"><span><strong>' + labels[3] + '</strong><small>' + labels[4] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
+              '<button type="button" onclick="openCityBoardDetail(\'traveler\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><b class="lt-city-menu-enter">' + t.enterShort + '</b></button>' +
               '</div>';
           }
           listContainer.innerHTML += '<div class="lt-city-accordion">' + card + menu + '</div>';
