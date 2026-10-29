@@ -802,7 +802,17 @@
               '<i class="fas fa-chevron-right text-[10px]"></i>' +
             '</div>' +
           '</div>';
-          listContainer.innerHTML += card;
+          var expanded = currentCity && currentCity.id === city.id && currentView === 'home';
+          var menu = '';
+          if (expanded) {
+            var labels = cloudTexts();
+            menu = '<div class="lt-city-inline-menu">' +
+              '<button type="button" onclick="openChatRoomList()"><span><strong>' + labels[1] + '</strong><small>' + labels[2] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
+              '<button type="button" onclick="openCityBoardDetail(\\'notice\\')"><span><strong>' + labels[3] + '</strong><small>' + labels[4] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
+              '<button type="button" onclick="openCityBoardDetail(\\'traveler\\')"><span><strong>' + labels[5] + '</strong><small>' + labels[6] + '</small></span><i class="fas fa-chevron-right"></i></button>' +
+              '</div>';
+          }
+          listContainer.innerHTML += '<div class="lt-city-accordion">' + card + menu + '</div>';
         }
       }
     }
@@ -845,11 +855,12 @@
     }
     function showCityCloudMenu(){
       if(!currentCity)return;
-      currentView='cityMenu';
-      ['homeView','roomListView','chatView','mapView','boardView'].forEach(function(k){document.getElementById(k).classList.add('hidden');});
-      document.getElementById('cityCloudView').classList.remove('hidden');
-      document.getElementById('backBtn').classList.remove('hidden');
-      refreshCityCloud();
+      currentView='home';
+      ['roomListView','chatView','mapView','boardView','cityCloudView'].forEach(function(k){document.getElementById(k).classList.add('hidden');});
+      document.getElementById('homeView').classList.remove('hidden');
+      document.getElementById('backBtn').classList.add('hidden');
+      document.getElementById('headerTitle').innerHTML = '<span class="home-brand">Korea<span>Local Talk</span></span>';
+      renderCityList(document.getElementById('citySearchInput') ? document.getElementById('citySearchInput').value : '', lastCityCounts);
     }
     function openCityBoardDetail(section){
       if(!currentCity||!requireAuth())return;
@@ -3242,6 +3253,7 @@
       if (!I18N[lang]) return;
       currentLang = lang;
       if(currentView==='cityMenu')refreshCityCloud();
+      if(currentView==='home')setTimeout(function(){renderCityList(document.getElementById('citySearchInput') ? document.getElementById('citySearchInput').value : '',lastCityCounts);},0);
       updateMyLocationLabels();
       // Local Talk Korea policy pages follow the app's selected language.
       var policyLinkText = {
