@@ -448,7 +448,7 @@ header {gap:6px;min-width:0}
 
     <!-- [화면 4] 개별 채팅방 화면 -->
     <div id="chatView" class="hidden flex-1 flex-col overflow-hidden w-full relative bg-slate-50 pb-12">
-      <main class="flex-1 p-4 space-y-3.5 scroll-area w-full pb-4" id="chatScrollArea">
+      <main class="flex-1 min-h-0 flex flex-col gap-3.5 p-4 scroll-area w-full pb-4" id="chatScrollArea">
         <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3.5 text-xs text-indigo-800 flex items-start gap-2.5 w-full">
           <i class="fas fa-info-circle text-indigo-500 mt-0.5 shrink-0 text-sm"></i>
           <div class="min-w-0 flex-1">
@@ -458,7 +458,7 @@ header {gap:6px;min-width:0}
           </div>
         </div>
 
-        <div id="messageList" class="space-y-3.5 w-full"></div>
+        <div id="messageList" class="space-y-3.5 w-full mt-auto shrink-0"></div>
       </main>
 
       <footer id="chatInputBar" class="bg-white border-t border-slate-200 px-3.5 py-2.5 flex gap-2 items-center shrink-0 z-40 w-full">
