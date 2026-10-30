@@ -750,6 +750,35 @@
     }
 
     var lastCityCounts = {};
+    // City presence is a lightweight heartbeat, separate from room membership.
+    var CITY_PRESENCE_REFRESH_MS = 30000;
+    var CITY_PRESENCE_MAX_AGE_MS = 120000;
+    var cityPresenceHeartbeatTimer = null;
+    var cityPresenceServerOffset = 0;
+    db.ref('.info/serverTimeOffset').on('value', function(snapshot) {
+      cityPresenceServerOffset = Number(snapshot.val()) || 0;
+    });
+    function refreshCityPresence() {
+      if (!authReady || !myUserId || !currentCity || !cityPresenceRef) return;
+      cityPresenceRef.update({
+        cityId: currentCity.id,
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+      }).catch(function(err) { console.error('City presence heartbeat failed:', err); });
+    }
+    function startCityPresenceHeartbeat() {
+      if (cityPresenceHeartbeatTimer) clearInterval(cityPresenceHeartbeatTimer);
+      cityPresenceHeartbeatTimer = setInterval(function() {
+        refreshCityPresence();
+        // Expire stale records visually even when Firebase receives no writes.
+        if (cityPresenceListenerRef && currentView === 'home') {
+          renderCityList(document.getElementById('citySearchInput') ? document.getElementById('citySearchInput').value : '', lastCityCounts);
+        }
+      }, CITY_PRESENCE_REFRESH_MS);
+    }
+    function stopCityPresenceHeartbeat() {
+      if (cityPresenceHeartbeatTimer) clearInterval(cityPresenceHeartbeatTimer);
+      cityPresenceHeartbeatTimer = null;
+    }
     function listenCityUsers() {
       if (!authReady || cityPresenceListenerRef) return;
       var presenceRef = db.ref('presence');
@@ -757,10 +786,12 @@
       presenceRef.on('value', function(snapshot) {
         var data = snapshot.val() || {};
         var counts = {};
-
+        var now = Date.now() + cityPresenceServerOffset;
         for (var key in data) {
           var userObj = data[key];
-          if (userObj && userObj.cityId) {
+          var seen = userObj && Number(userObj.lastSeen);
+          if (userObj && userObj.cityId && Number.isFinite(seen) &&
+              seen <= now + 10000 && now - seen < CITY_PRESENCE_MAX_AGE_MS) {
             counts[userObj.cityId] = (counts[userObj.cityId] || 0) + 1;
           }
         }
@@ -819,9 +850,10 @@
     function openCityBoard(cityId) {
       if (!requireAuth()) return;
       if (currentView === 'home' && currentCity && currentCity.id === cityId) {
+        stopCityPresenceHeartbeat();
         if (cityPresenceRef) {
-          cityPresenceRef.onDisconnect().cancel();
           cityPresenceRef.remove();
+          cityPresenceRef.onDisconnect().cancel();
           cityPresenceRef = null;
         }
         currentCity = null;
@@ -842,6 +874,7 @@
       cityPresenceRef.set({ cityId: currentCity.id, lastSeen: firebase.database.ServerValue.TIMESTAMP }).catch(function(err) {
         console.error('Presence update failed:', err);
       });
+      startCityPresenceHeartbeat();
 
       showCityCloudMenu();
 
@@ -2605,6 +2638,7 @@
         stopRoomListeners();
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
         if (currentRoomUsersRef) leaveCurrentRoom();
+        stopCityPresenceHeartbeat();
         if (cityPresenceRef) { cityPresenceRef.remove(); cityPresenceRef = null; }
         stopOfficialNotices();
         currentCity = null;
