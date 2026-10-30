@@ -3174,10 +3174,14 @@
         return m && !roomEntryMessageKeys.has(m.id);
       });
       if (visibleMsgs.length === 0 && roomNoticeQueue.length === 0) {
+        // Center a friendly prompt only when the room has no visible conversation.
+        container.className = 'flex-1 min-h-0 w-full flex items-center justify-center';
         var empty = document.createElement('div');
-        empty.className = 'text-center py-10 text-slate-400 text-xs';
-        empty.textContent = t.noMsg;
+        empty.className = 'text-center text-slate-400 text-sm font-medium px-4';
+        empty.textContent = ({ko:'💬 대화를 시작해 보세요!',en:'💬 Start a conversation!',ja:'💬 会話を始めましょう！','zh-CN':'💬 开始聊天吧！'})[currentLang] || '💬 Start a conversation!';
         container.appendChild(empty);
+      } else {
+        container.className = 'space-y-3.5 w-full mt-auto shrink-0';
       }
       function addNotices(position) {
         roomNoticeQueue.forEach(function(notice) {
