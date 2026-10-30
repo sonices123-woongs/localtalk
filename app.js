@@ -2626,7 +2626,19 @@
       return roomLeaveInFlight;
     }
 
+    var mapReturnToChat = false;
     async function goBack() {
+      if (currentView === 'map' && mapReturnToChat && currentRoomUsersRef && currentRoom) {
+        mapReturnToChat = false;
+        currentView = 'chat';
+        document.getElementById('mapView').classList.add('hidden');
+        document.getElementById('chatView').classList.remove('hidden');
+        document.getElementById('chatView').classList.add('flex');
+        var cityName = getCityName(currentCity);
+        document.getElementById('headerTitle').innerText = cityName + ' Room #' + currentRoom;
+        document.getElementById('headerSub').innerText = (I18N[currentLang] || I18N['ko']).appSub;
+        return;
+      }
       if (currentView === 'chat') {
         var leaveConfirm = await ltConfirm(uiText('leaveConfirm'));
         if (!leaveConfirm) return;
@@ -2682,11 +2694,8 @@
         goBack();
       } else if (tabName === 'map') {
         tMap.className = "flex flex-col items-center gap-0.5 text-indigo-600 font-bold transition";
-        if (currentRoomUsersRef) {
-          stopRoomListeners();
-          leaveCurrentRoom();
-          currentRoom = null;
-        }
+        // Keep the current room connection and message listeners alive while viewing the map.
+        mapReturnToChat = !!(currentView === 'chat' && currentRoomUsersRef && currentRoom);
         if (roomListListenerRef) { roomListListenerRef.off(); roomListListenerRef = null; }
         currentView = 'map';
 
