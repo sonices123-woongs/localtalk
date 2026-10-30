@@ -541,7 +541,7 @@
         ['#placePicker strong',t.placeTitle], ['#placePicker .p-3.border-t button',t.placeShare]
       ];
       items.forEach(function(item) { var el=document.querySelector(item[0]); if(el) el.textContent=item[1]; });
-      var placeBtn=document.getElementById('sharePlaceButton');if(placeBtn) placeBtn.textContent=t.place;
+      var placeBtn=document.getElementById('sharePlaceButton');if(placeBtn) placeBtn.textContent='📍';
       var searchBtn=document.getElementById('placeSearchButton');if(searchBtn) searchBtn.textContent=t.search;
       var placeInput=document.getElementById('placeSearchInput');if(placeInput) placeInput.placeholder=t.placeSearch;
       var help=document.getElementById('placeHelp');if(help) help.textContent=t.placeHelp;
