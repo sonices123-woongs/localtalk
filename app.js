@@ -750,6 +750,7 @@
     }
 
     var lastCityCounts = {};
+    var lastCityPresenceData = {};
     // City presence is a lightweight heartbeat, separate from room membership.
     var CITY_PRESENCE_REFRESH_MS = 30000;
     var CITY_PRESENCE_MAX_AGE_MS = 120000;
@@ -769,22 +770,15 @@
       if (cityPresenceHeartbeatTimer) clearInterval(cityPresenceHeartbeatTimer);
       cityPresenceHeartbeatTimer = setInterval(function() {
         refreshCityPresence();
-        // Expire stale records visually even when Firebase receives no writes.
-        if (cityPresenceListenerRef && currentView === 'home') {
-          renderCityList(document.getElementById('citySearchInput') ? document.getElementById('citySearchInput').value : '', lastCityCounts);
-        }
+        // The independent presence-count timer handles expiry.
       }, CITY_PRESENCE_REFRESH_MS);
     }
     function stopCityPresenceHeartbeat() {
       if (cityPresenceHeartbeatTimer) clearInterval(cityPresenceHeartbeatTimer);
       cityPresenceHeartbeatTimer = null;
     }
-    function listenCityUsers() {
-      if (!authReady || cityPresenceListenerRef) return;
-      var presenceRef = db.ref('presence');
-      cityPresenceListenerRef = presenceRef;
-      presenceRef.on('value', function(snapshot) {
-        var data = snapshot.val() || {};
+    function recalculateCityCounts() {
+        var data = lastCityPresenceData;
         var counts = {};
         var now = Date.now() + cityPresenceServerOffset;
         for (var key in data) {
@@ -796,9 +790,21 @@
           }
         }
         lastCityCounts = counts;
-        renderCityList(document.getElementById('citySearch').value, counts);
+        if (currentView === 'home') renderCityList(document.getElementById('citySearch').value, counts);
+    }
+    function listenCityUsers() {
+      if (!authReady || cityPresenceListenerRef) return;
+      var presenceRef = db.ref('presence');
+      cityPresenceListenerRef = presenceRef;
+      presenceRef.on('value', function(snapshot) {
+        lastCityPresenceData = snapshot.val() || {};
+        recalculateCityCounts();
       });
     }
+    // Expire old presence even if nobody writes to Firebase.
+    setInterval(function() {
+      if (authReady && cityPresenceListenerRef) recalculateCityCounts();
+    }, 30000);
 
     function renderCityList(filterKeyword, liveCounts) {
       var filter = filterKeyword || '';
