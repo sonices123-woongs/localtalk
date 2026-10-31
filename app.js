@@ -1659,6 +1659,7 @@
     function selectBoardSection(section){
       boardSection=section==='traveler'?'traveler':'notice';
       var n=boardSection==='notice', t=officialL();
+      updateOfficialSearchUI();
       document.getElementById('boardNoticePanel').classList.toggle('hidden',!n);
       document.getElementById('boardTravelerPanel').classList.toggle('hidden',n);
       document.getElementById('communityToolbar').classList.toggle('hidden',n);
