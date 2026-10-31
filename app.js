@@ -1888,7 +1888,7 @@
       var storedTitle=officialCategoryTitle(document.getElementById('officialCategory').value,title);
       var blocks=officialBlocks.filter(function(b){return b.type==='image'||b.text.trim();});
       var storedBody=officialEncodeBlocks(blocks);
-      if(!title||!blocks.length||storedTitle.length>120||storedBody.length>4000){alert('제목 또는 내용이 너무 깁니다. 사진 URL을 줄이거나 본문을 짧게 작성해 주세요.');return;}
+      if(!title||!blocks.length||storedTitle.length>120||storedBody.length>12000){alert('제목 또는 내용이 너무 깁니다. 사진 URL을 줄이거나 본문을 짧게 작성해 주세요.');return;}
       var ref=db.ref('officialNotices/'+currentCity.id);
       var task=officialEditId?ref.child(officialEditId).update({title:storedTitle,body:storedBody}):
         ref.push().set({uid:auth.currentUser.uid,title:storedTitle,body:storedBody,createdAt:firebase.database.ServerValue.TIMESTAMP});
