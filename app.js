@@ -1893,7 +1893,7 @@
       var task=officialEditId?ref.child(officialEditId).update({title:storedTitle,body:storedBody}):
         ref.push().set({uid:auth.currentUser.uid,title:storedTitle,body:storedBody,createdAt:firebase.database.ServerValue.TIMESTAMP});
       task.then(function(){closeOfficialNoticeEditor();document.getElementById('officialTitle').value='';})
-        .catch(function(e){console.error(e);alert(officialL()[7]);});
+        .catch(function(e){console.error('Official notice save failed',e);alert(officialL()[7]+' ('+(e&&e.code?String(e.code):'unknown')+')');});
     }
     function editOfficialNotice(id){
       var p=officialData[id];if(!officialIsAdmin||!p)return;
